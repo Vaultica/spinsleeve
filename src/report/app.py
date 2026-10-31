@@ -140,22 +140,22 @@ HTML_TEMPLATE = """
         <!-- KPI Metrics Ribbon -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Saved Albums</p>
-                <p class="text-2xl font-black mt-1 text-white">{{ kpis.total_albums }}</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Filtered Albums</p>
+                <p id="kpiTotalAlbums" class="text-2xl font-black mt-1 text-white">{{ kpis.total_albums }}</p>
             </div>
             <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Library Explored</p>
-                <p class="text-2xl font-black mt-1 text-[#1DB954]">{{ kpis.pct_explored }}%</p>
-                <p class="text-[11px] text-gray-500 mt-0.5">{{ kpis.played_albums }} played / {{ kpis.unplayed_albums }} unplayed</p>
+                <p id="kpiPctExplored" class="text-2xl font-black mt-1 text-[#1DB954]">{{ kpis.pct_explored }}%</p>
+                <p id="kpiPlayedSubtext" class="text-[11px] text-gray-500 mt-0.5">{{ kpis.played_albums }} played / {{ kpis.unplayed_albums }} unplayed</p>
             </div>
             <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Total Album Plays</p>
-                <p class="text-2xl font-black mt-1 text-white">{{ kpis.total_plays }}</p>
+                <p id="kpiTotalPlays" class="text-2xl font-black mt-1 text-white">{{ kpis.total_plays }}</p>
             </div>
             <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Most Played Album</p>
-                <p class="text-base font-bold mt-1 text-white truncate" title="{{ kpis.top_album }}">{{ kpis.top_album }}</p>
-                <p class="text-[11px] text-[#1DB954] mt-0.5">{{ kpis.top_album_plays }} album plays</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Top Album in Selection</p>
+                <p id="kpiTopAlbum" class="text-base font-bold mt-1 text-white truncate" title="{{ kpis.top_album }}">{{ kpis.top_album }}</p>
+                <p id="kpiTopAlbumPlays" class="text-[11px] text-[#1DB954] mt-0.5">{{ kpis.top_album_plays }} album plays</p>
             </div>
         </div>
 
@@ -346,7 +346,50 @@ HTML_TEMPLATE = """
             });
 
             displayLimit = PAGE_STEP;
+            updateKpis(filteredAlbums);
             renderGrid();
+        }
+
+        function updateKpis(albums) {
+            const count = albums.length;
+            document.getElementById("kpiTotalAlbums").innerText = count.toLocaleString();
+
+            if (count === 0) {
+                document.getElementById("kpiPctExplored").innerText = "0%";
+                document.getElementById("kpiPlayedSubtext").innerText = "0 played / 0 unplayed";
+                document.getElementById("kpiTotalPlays").innerText = "0";
+                document.getElementById("kpiTopAlbum").innerText = "None";
+                document.getElementById("kpiTopAlbum").title = "None";
+                document.getElementById("kpiTopAlbumPlays").innerText = "0 album plays";
+                return;
+            }
+
+            const played = albums.filter(a => (a.album_track_plays || 0) > 0).length;
+            const unplayed = count - played;
+            const pct = ((played / count) * 100).toFixed(1);
+            document.getElementById("kpiPctExplored").innerText = `${pct}%`;
+            document.getElementById("kpiPlayedSubtext").innerText = `${played} played / ${unplayed} unplayed`;
+
+            const totalPlays = albums.reduce((sum, a) => sum + (a.album_track_plays || 0), 0);
+            document.getElementById("kpiTotalPlays").innerText = totalPlays.toLocaleString();
+
+            // Find top album by album_plays in filtered set
+            let top = albums[0];
+            for (let a of albums) {
+                if ((a.album_plays || 0) > (top.album_plays || 0)) {
+                    top = a;
+                }
+            }
+
+            if (top && (top.album_plays || 0) > 0) {
+                document.getElementById("kpiTopAlbum").innerText = top.album_name;
+                document.getElementById("kpiTopAlbum").title = top.album_name;
+                document.getElementById("kpiTopAlbumPlays").innerText = `${top.album_plays} album plays`;
+            } else {
+                document.getElementById("kpiTopAlbum").innerText = top ? top.album_name : "None";
+                document.getElementById("kpiTopAlbum").title = top ? top.album_name : "None";
+                document.getElementById("kpiTopAlbumPlays").innerText = "0 album plays";
+            }
         }
 
         function loadMore() {
