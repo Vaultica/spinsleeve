@@ -99,7 +99,7 @@ EXPLORER_HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Album Playlist Explorer</title>
+    <title>SpinSleeve - Spotify Album Dashboard</title>
     <!-- Spotify Green Tab Icon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="alternate icon" href="https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico">
@@ -124,7 +124,7 @@ EXPLORER_HTML_TEMPLATE = """
                     <svg class="w-9 h-9 text-[#1DB954]" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.674.466-1.026.25-2.813-1.718-6.353-2.106-10.523-1.153-.404.093-.812-.162-.905-.566-.093-.404.162-.812.566-.905 4.567-1.043 8.47-.6 11.637 1.348.353.215.466.674.251 1.026zm1.467-3.265c-.27.44-.847.578-1.287.308-3.22-1.979-8.127-2.553-11.936-1.396-.498.151-1.03-.135-1.182-.633-.151-.498.135-1.03.633-1.182 4.354-1.32 9.776-.682 13.464 1.616.44.27.578.847.308 1.287zm.126-3.414c-3.86-2.292-10.228-2.504-13.916-1.385-.593.18-1.224-.16-1.404-.753-.18-.593.16-1.224.753-1.404 4.242-1.288 11.278-1.042 15.736 1.605.534.317.708 1.01.392 1.544-.318.535-1.01.71-1.545.394z"/>
                     </svg>
-                    <h1 class="text-3xl font-extrabold tracking-tight text-white">Spotify Album Dashboard</h1>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Personal catalog & smart playlist explorer</p>
             </div>
@@ -790,6 +790,252 @@ RECOMMEND_HTML_TEMPLATE = """
 </body>
 </html>
 """
+
+
+# ==============================================================================
+# BRAND ICONS: 3 Distinct Turntable + Spotify Concepts
+# ==============================================================================
+ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Turntable Plinth -->
+  <rect x="5" y="5" width="90" height="90" rx="16" fill="#181D22" stroke="#28323C" stroke-width="3"/>
+  <!-- Recessed Platter Bed -->
+  <circle cx="44" cy="50" r="33" fill="#0C0F12" stroke="#21272E" stroke-width="2"/>
+  <!-- Spotify Platter -->
+  <circle cx="44" cy="50" r="27" fill="#1DB954"/>
+  <!-- Spotify Soundwaves in black -->
+  <path d="M33 42c6-1.5 13-1 18 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M35 48c5-1 10-0.5 14 2" stroke="#0C0F12" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M37 54c3.5-0.5 7.5-0.2 10.5 1.5" stroke="#0C0F12" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Center Spindle -->
+  <circle cx="44" cy="50" r="3" fill="#181D22"/>
+  <!-- Tonearm Pivot -->
+  <circle cx="79" cy="25" r="7" fill="#28323C" stroke="#9CA3AF" stroke-width="2"/>
+  <circle cx="79" cy="25" r="3" fill="#1DB954"/>
+  <!-- Tonearm Rod -->
+  <path d="M77 29 L63 60 L53 64" stroke="#E5E7EB" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Cartridge / Headshell -->
+  <rect x="47" y="60" width="8" height="6" rx="1.5" fill="#1DB954" transform="rotate(-20 51 63)"/>
+  <!-- Power Switch & Pitch Control -->
+  <circle cx="16" cy="80" r="3.5" fill="#1DB954"/>
+  <rect x="23" y="78.5" width="6" height="3" rx="1" fill="#4B5563"/>
+</svg>"""
+
+ICON_B_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Circular Turntable Deck -->
+  <circle cx="50" cy="50" r="45" fill="#12161A" stroke="#28323C" stroke-width="3"/>
+  <!-- Vinyl Grooves -->
+  <circle cx="43" cy="51" r="33" fill="#0C0F12" stroke="#1F2937" stroke-width="1.5"/>
+  <circle cx="43" cy="51" r="25" fill="#1DB954"/>
+  <!-- Spotify Soundwave Arcs -->
+  <path d="M33 44c5.5-1.5 12-1 16 1.8" stroke="#0C0F12" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M35 50c4.5-1 9-0.5 13 1.5" stroke="#0C0F12" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M37 55c3-0.5 6.5-0.2 9 1.2" stroke="#0C0F12" stroke-width="2" stroke-linecap="round"/>
+  <!-- Spindle -->
+  <circle cx="43" cy="51" r="2.5" fill="#0C0F12"/>
+  <!-- Minimalist Tonearm -->
+  <circle cx="78" cy="23" r="6" fill="#374151" stroke="#9CA3AF" stroke-width="2"/>
+  <path d="M76 27 L64 61 L54 65" stroke="#F3F4F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="48" y="61" width="7" height="5" rx="1" fill="#1DB954" transform="rotate(-20 51.5 63.5)"/>
+</svg>"""
+
+ICON_C_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Minimalist Rounded Badge -->
+  <rect x="6" y="6" width="88" height="88" rx="22" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
+  <!-- Spotify Vinyl Record -->
+  <circle cx="42" cy="52" r="28" fill="#181D22"/>
+  <circle cx="42" cy="52" r="20" fill="#1DB954"/>
+  <path d="M34 47c4-1 8.5-0.7 11.5 1.2" stroke="#0C0F12" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M36 51c3-0.8 6.5-0.4 9 1" stroke="#0C0F12" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="42" cy="52" r="2.5" fill="#0C0F12"/>
+  <!-- Stylus Arm Wrapping the Corner -->
+  <circle cx="80" cy="22" r="6" fill="#1DB954"/>
+  <path d="M78 26 C 78 52, 65 64, 52 64" stroke="#E5E7EB" stroke-width="3.5" stroke-linecap="round"/>
+  <rect x="45" y="60" width="8" height="6" rx="1.5" fill="#1DB954" transform="rotate(-10 49 63)"/>
+</svg>"""
+
+ICONS_PREVIEW_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinSleeve - Icon Showcase</title>
+    <link rel="icon" type="image/svg+xml" id="faviconLink" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
+        .card-bg { background-color: #181d22; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-10">
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 pb-4 border-b border-gray-800 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-extrabold text-white">SpinSleeve Icon Concepts</h1>
+                <p class="text-xs text-gray-400 mt-1">Comparing 3 Turntable + Spotify logo designs across large and favicon scales</p>
+            </div>
+            <a href="/" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition">
+                ← Back to App
+            </a>
+        </header>
+
+        <!-- Live Favicon Notice -->
+        <div class="bg-[#1DB954]/10 border border-[#1DB954]/30 rounded-xl p-3.5 mb-8 text-xs text-gray-300 flex items-center justify-between">
+            <span>💡 <strong>Interactive Test:</strong> Click the "Apply to Tab" button under any concept to test it live on your active browser tab icon!</span>
+            <span id="activeNotice" class="text-[#1DB954] font-bold">Active: Default Spotify</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <!-- Concept A -->
+            <div class="card-bg p-6 rounded-2xl border border-gray-800 flex flex-col justify-between shadow-xl">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#1DB954] bg-[#1DB954]/15 px-2.5 py-1 rounded-full">Concept A</span>
+                    <h3 class="text-lg font-bold text-white mt-3">The Hi-Fi Plinth</h3>
+                    <p class="text-xs text-gray-400 mt-1 mb-5">Classic turntable chassis with a Spotify logo platter and detailed tonearm.</p>
+
+                    <!-- Large Display -->
+                    <div class="bg-[#11151a] rounded-xl p-6 flex items-center justify-center mb-4">
+                        <div class="w-28 h-28" id="svgHolderA"></div>
+                    </div>
+
+                    <!-- Header Mockup Scale -->
+                    <div class="bg-[#11151a] rounded-lg p-3 mb-3 flex items-center gap-3 border border-gray-800">
+                        <div class="w-9 h-9" id="smallSvgA"></div>
+                        <div>
+                            <span class="text-lg font-black text-white">SpinSleeve</span>
+                            <span class="text-[10px] text-gray-400 block -mt-1">Header Display</span>
+                        </div>
+                    </div>
+
+                    <!-- Favicon Scale -->
+                    <div class="bg-[#11151a] rounded-lg p-3 flex items-center justify-between text-xs text-gray-400 border border-gray-800">
+                        <span>Chrome Tab Scale:</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6" id="favA"></div>
+                            <span class="text-[11px] text-gray-500">24px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="applyFavicon('A')" class="mt-5 w-full bg-gray-800 hover:bg-[#1DB954] hover:text-black text-gray-200 text-xs font-bold py-2.5 rounded-xl transition border border-gray-700">
+                    Apply to Tab Icon
+                </button>
+            </div>
+
+            <!-- Concept B -->
+            <div class="card-bg p-6 rounded-2xl border border-gray-800 flex flex-col justify-between shadow-xl">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#1DB954] bg-[#1DB954]/15 px-2.5 py-1 rounded-full">Concept B</span>
+                    <h3 class="text-lg font-bold text-white mt-3">The Minimalist Deck</h3>
+                    <p class="text-xs text-gray-400 mt-1 mb-5">Circular audiophile platter with dark outer vinyl grooves and high contrast.</p>
+
+                    <!-- Large Display -->
+                    <div class="bg-[#11151a] rounded-xl p-6 flex items-center justify-center mb-4">
+                        <div class="w-28 h-28" id="svgHolderB"></div>
+                    </div>
+
+                    <!-- Header Mockup Scale -->
+                    <div class="bg-[#11151a] rounded-lg p-3 mb-3 flex items-center gap-3 border border-gray-800">
+                        <div class="w-9 h-9" id="smallSvgB"></div>
+                        <div>
+                            <span class="text-lg font-black text-white">SpinSleeve</span>
+                            <span class="text-[10px] text-gray-400 block -mt-1">Header Display</span>
+                        </div>
+                    </div>
+
+                    <!-- Favicon Scale -->
+                    <div class="bg-[#11151a] rounded-lg p-3 flex items-center justify-between text-xs text-gray-400 border border-gray-800">
+                        <span>Chrome Tab Scale:</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6" id="favB"></div>
+                            <span class="text-[11px] text-gray-500">24px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="applyFavicon('B')" class="mt-5 w-full bg-gray-800 hover:bg-[#1DB954] hover:text-black text-gray-200 text-xs font-bold py-2.5 rounded-xl transition border border-gray-700">
+                    Apply to Tab Icon
+                </button>
+            </div>
+
+            <!-- Concept C -->
+            <div class="card-bg p-6 rounded-2xl border border-gray-800 flex flex-col justify-between shadow-xl">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#1DB954] bg-[#1DB954]/15 px-2.5 py-1 rounded-full">Concept C</span>
+                    <h3 class="text-lg font-bold text-white mt-3">The Wave Badge</h3>
+                    <p class="text-xs text-gray-400 mt-1 mb-5">Rounded app badge where the tonearm curves smoothly into the Spotify label.</p>
+
+                    <!-- Large Display -->
+                    <div class="bg-[#11151a] rounded-xl p-6 flex items-center justify-center mb-4">
+                        <div class="w-28 h-28" id="svgHolderC"></div>
+                    </div>
+
+                    <!-- Header Mockup Scale -->
+                    <div class="bg-[#11151a] rounded-lg p-3 mb-3 flex items-center gap-3 border border-gray-800">
+                        <div class="w-9 h-9" id="smallSvgC"></div>
+                        <div>
+                            <span class="text-lg font-black text-white">SpinSleeve</span>
+                            <span class="text-[10px] text-gray-400 block -mt-1">Header Display</span>
+                        </div>
+                    </div>
+
+                    <!-- Favicon Scale -->
+                    <div class="bg-[#11151a] rounded-lg p-3 flex items-center justify-between text-xs text-gray-400 border border-gray-800">
+                        <span>Chrome Tab Scale:</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6" id="favC"></div>
+                            <span class="text-[11px] text-gray-500">24px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="applyFavicon('C')" class="mt-5 w-full bg-gray-800 hover:bg-[#1DB954] hover:text-black text-gray-200 text-xs font-bold py-2.5 rounded-xl transition border border-gray-700">
+                    Apply to Tab Icon
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SVGS = {
+            A: `{{ svg_a | safe }}`,
+            B: `{{ svg_b | safe }}`,
+            C: `{{ svg_c | safe }}`
+        };
+
+        document.getElementById('svgHolderA').innerHTML = SVGS.A;
+        document.getElementById('smallSvgA').innerHTML = SVGS.A;
+        document.getElementById('favA').innerHTML = SVGS.A;
+
+        document.getElementById('svgHolderB').innerHTML = SVGS.B;
+        document.getElementById('smallSvgB').innerHTML = SVGS.B;
+        document.getElementById('favB').innerHTML = SVGS.B;
+
+        document.getElementById('svgHolderC').innerHTML = SVGS.C;
+        document.getElementById('smallSvgC').innerHTML = SVGS.C;
+        document.getElementById('favC').innerHTML = SVGS.C;
+
+        function applyFavicon(concept) {
+            const encoded = encodeURIComponent(SVGS[concept]);
+            const link = document.getElementById('faviconLink');
+            link.href = `data:image/svg+xml,${encoded}`;
+            document.getElementById('activeNotice').innerText = `Active Tab Icon: Concept ${concept}! (Look at your browser tab)`;
+        }
+    </script>
+</body>
+</html>
+"""
+
+
+@app.route("/icons")
+def icon_showcase():
+    return render_template_string(
+        ICONS_PREVIEW_HTML,
+        svg_a=ICON_A_SVG,
+        svg_b=ICON_B_SVG,
+        svg_c=ICON_C_SVG
+    )
 
 
 @app.route("/favicon.svg")
