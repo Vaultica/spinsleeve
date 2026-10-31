@@ -2,11 +2,11 @@
 
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
 [![Google Cloud Run](https://img.shields.io/badge/GCP-Cloud%20Run-orange.svg)](https://cloud.google.com/run)
-[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-Cloud%20Run-1DB954.svg)](https://spotify-dashboard-service-759946514926.europe-west2.run.app)
+[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-vaultica.github.io%2Fspotify--dash-1DB954.svg)](https://vaultica.github.io/spotify-dash/)
 [![BigQuery](https://img.shields.io/badge/Storage-BigQuery-blue.svg)](https://cloud.google.com/bigquery)
 [![dbt](https://img.shields.io/badge/Transform-dbt-orange.svg)](https://www.getdbt.com/)
 
-An automated, serverless data pipeline that continuously extracts personal Spotify listening history and saved albums, archives the raw JSON to Google Cloud Storage, loads records into BigQuery, transforms the data using dbt, and provides an interactive, visual **[Album Playlist Explorer](https://spotify-dashboard-service-759946514926.europe-west2.run.app)** running on Google Cloud Run.
+An automated, serverless data pipeline that continuously extracts personal Spotify listening history and saved albums, archives the raw JSON to Google Cloud Storage, loads records into BigQuery, transforms the data using dbt, and provides an interactive, visual **[Album Playlist Explorer](https://vaultica.github.io/spotify-dash/)** running on Google Cloud Run.
 
 ---
 
