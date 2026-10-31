@@ -3,7 +3,7 @@ import json
 import time
 from collections import Counter
 from datetime import datetime
-from flask import Flask, render_template_string, jsonify, request
+from flask import Flask, render_template_string, jsonify, request, Response
 from google.cloud import bigquery
 
 app = Flask(__name__)
@@ -87,7 +87,13 @@ def fetch_album_data():
     return _cached_data
 
 
-HTML_TEMPLATE = """
+SPOTIFY_FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.674.466-1.026.25-2.813-1.718-6.353-2.106-10.523-1.153-.404.093-.812-.162-.905-.566-.093-.404.162-.812.566-.905 4.567-1.043 8.47-.6 11.637 1.348.353.215.466.674.251 1.026zm1.467-3.265c-.27.44-.847.578-1.287.308-3.22-1.979-8.127-2.553-11.936-1.396-.498.151-1.03-.135-1.182-.633-.151-.498.135-1.03.633-1.182 4.354-1.32 9.776-.682 13.464 1.616.44.27.578.847.308 1.287zm.126-3.414c-3.86-2.292-10.228-2.504-13.916-1.385-.593.18-1.224-.16-1.404-.753-.18-.593.16-1.224.753-1.404 4.242-1.288 11.278-1.042 15.736 1.605.534.317.708 1.01.392 1.544-.318.535-1.01.71-1.545.394z"/></svg>"""
+
+
+# ==============================================================================
+# TAB 1: LIBRARY EXPLORER (The working, tested dashboard)
+# ==============================================================================
+EXPLORER_HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -103,9 +109,6 @@ HTML_TEMPLATE = """
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
-        .spotify-green { color: #1DB954; }
-        .bg-spotify-green { background-color: #1DB954; }
-        .bg-spotify-green:hover { background-color: #1ed760; }
         .card-bg { background-color: #181d22; }
         .card-bg:hover { background-color: #21272e; }
         .badge-fav { background: linear-gradient(135deg, #1DB954 0%, #15803d 100%); }
@@ -115,18 +118,18 @@ HTML_TEMPLATE = """
 
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-6 border-b border-gray-800 gap-4">
+        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
             <div>
                 <div class="flex items-center gap-3">
                     <svg class="w-9 h-9 text-[#1DB954]" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.674.466-1.026.25-2.813-1.718-6.353-2.106-10.523-1.153-.404.093-.812-.162-.905-.566-.093-.404.162-.812.566-.905 4.567-1.043 8.47-.6 11.637 1.348.353.215.466.674.251 1.026zm1.467-3.265c-.27.44-.847.578-1.287.308-3.22-1.979-8.127-2.553-11.936-1.396-.498.151-1.03-.135-1.182-.633-.151-.498.135-1.03.633-1.182 4.354-1.32 9.776-.682 13.464 1.616.44.27.578.847.308 1.287zm.126-3.414c-3.86-2.292-10.228-2.504-13.916-1.385-.593.18-1.224-.16-1.404-.753-.18-.593.16-1.224.753-1.404 4.242-1.288 11.278-1.042 15.736 1.605.534.317.708 1.01.392 1.544-.318.535-1.01.71-1.545.394z"/>
                     </svg>
-                    <h1 class="text-3xl font-extrabold tracking-tight text-white">Album Playlist Explorer</h1>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-white">Spotify Album Dashboard</h1>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">Smart library browser powered by BigQuery & Cloud Run</p>
+                <p class="text-xs text-gray-400 mt-1">Personal catalog & smart playlist explorer</p>
             </div>
 
-            <!-- Header Quick Actions -->
+            <!-- Quick Action Links -->
             <div class="flex items-center gap-3">
                 <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white bg-gray-800/80 hover:bg-gray-700 px-3.5 py-2 rounded-lg border border-gray-700 transition">
                     Reset Filters
@@ -137,7 +140,18 @@ HTML_TEMPLATE = """
             </div>
         </header>
 
-        <!-- KPI Metrics Ribbon -->
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
+            <a href="/" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
+                <span>📚</span> Library Explorer
+            </a>
+            <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>✨</span> Recommend Next Listen
+                <span class="bg-[#1DB954]/20 text-[#1DB954] text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+            </a>
+        </nav>
+
+        <!-- KPI Metrics Ribbon (Updates Dynamically) -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Filtered Albums</p>
@@ -209,7 +223,7 @@ HTML_TEMPLATE = """
 
         <!-- Album Grid -->
         <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            <!-- Dynamically populated via JavaScript -->
+            <!-- Populated via JavaScript -->
         </div>
 
         <!-- Load More Container -->
@@ -308,28 +322,24 @@ HTML_TEMPLATE = """
             const sort = document.getElementById("sortFilter").value;
 
             filteredAlbums = ALL_ALBUMS.filter(a => {
-                // Search filter
                 if (query) {
                     const matchName = a.album_name && a.album_name.toLowerCase().includes(query);
                     const matchArtist = a.album_artist_name && a.album_artist_name.toLowerCase().includes(query);
                     if (!matchName && !matchArtist) return false;
                 }
 
-                // Genre filter
                 if (genre) {
                     if (!a.album_genres || !a.album_genres.toLowerCase().includes(genre)) {
                         return false;
                     }
                 }
 
-                // Status filter
                 if (status === "favorites" && a.album_track_plays === 0) return false;
                 if (status === "unplayed" && a.album_track_plays > 0) return false;
 
                 return true;
             });
 
-            // Sorting
             filteredAlbums.sort((a, b) => {
                 if (sort === "most_played") {
                     return (b.album_plays || 0) - (a.album_plays || 0);
@@ -373,7 +383,6 @@ HTML_TEMPLATE = """
             const totalPlays = albums.reduce((sum, a) => sum + (a.album_track_plays || 0), 0);
             document.getElementById("kpiTotalPlays").innerText = totalPlays.toLocaleString();
 
-            // Find top album by album_plays in filtered set
             let top = albums[0];
             for (let a of albums) {
                 if ((a.album_plays || 0) > (top.album_plays || 0)) {
@@ -405,7 +414,6 @@ HTML_TEMPLATE = """
             onFilterChange();
         }
 
-        // Initial render
         document.addEventListener("DOMContentLoaded", () => {
             onFilterChange();
         });
@@ -415,13 +423,378 @@ HTML_TEMPLATE = """
 """
 
 
-SPOTIFY_FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.674.466-1.026.25-2.813-1.718-6.353-2.106-10.523-1.153-.404.093-.812-.162-.905-.566-.093-.404.162-.812.566-.905 4.567-1.043 8.47-.6 11.637 1.348.353.215.466.674.251 1.026zm1.467-3.265c-.27.44-.847.578-1.287.308-3.22-1.979-8.127-2.553-11.936-1.396-.498.151-1.03-.135-1.182-.633-.151-.498.135-1.03.633-1.182 4.354-1.32 9.776-.682 13.464 1.616.44.27.578.847.308 1.287zm.126-3.414c-3.86-2.292-10.228-2.504-13.916-1.385-.593.18-1.224-.16-1.404-.753-.18-.593.16-1.224.753-1.404 4.242-1.288 11.278-1.042 15.736 1.605.534.317.708 1.01.392 1.544-.318.535-1.01.71-1.545.394z"/></svg>"""
+# ==============================================================================
+# TAB 2: RECOMMEND MY NEXT LISTEN (The new recommendation concierge)
+# ==============================================================================
+RECOMMEND_HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Listen Concierge - Spotify Dash</title>
+    <!-- Spotify Green Tab Icon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
+        .card-bg { background-color: #181d22; }
+        .card-bg:hover { background-color: #21272e; }
+        .spotlight-card { background: linear-gradient(145deg, #181d22 0%, #12161a 100%); }
+        .spotlight-card:hover { border-color: #1DB954; }
+        .pill-active { background-color: #1DB954; color: #000; font-weight: 700; }
+        .pill-inactive { background-color: #1b2127; color: #9ca3af; border: 1px solid #28323c; }
+        .pill-inactive:hover { background-color: #28323c; color: #fff; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <svg class="w-9 h-9 text-[#1DB954]" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.674.466-1.026.25-2.813-1.718-6.353-2.106-10.523-1.153-.404.093-.812-.162-.905-.566-.093-.404.162-.812.566-.905 4.567-1.043 8.47-.6 11.637 1.348.353.215.466.674.251 1.026zm1.467-3.265c-.27.44-.847.578-1.287.308-3.22-1.979-8.127-2.553-11.936-1.396-.498.151-1.03-.135-1.182-.633-.151-.498.135-1.03.633-1.182 4.354-1.32 9.776-.682 13.464 1.616.44.27.578.847.308 1.287zm.126-3.414c-3.86-2.292-10.228-2.504-13.916-1.385-.593.18-1.224-.16-1.404-.753-.18-.593.16-1.224.753-1.404 4.242-1.288 11.278-1.042 15.736 1.605.534.317.708 1.01.392 1.544-.318.535-1.01.71-1.545.394z"/>
+                    </svg>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-white">Next Listen Concierge</h1>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Smart recommendation engine powered by your personal listening history</p>
+            </div>
+
+            <!-- Quick Action Links -->
+            <div class="flex items-center gap-3">
+                <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition shadow-md flex items-center gap-1.5">
+                    <span>🎲</span> Spin Again
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
+            <a href="/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📚</span> Library Explorer
+            </a>
+            <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
+                <span>✨</span> Recommend Next Listen
+            </a>
+        </nav>
+
+        <!-- Control Deck: Filter & Preference Configurator -->
+        <div class="card-bg p-5 rounded-2xl border border-gray-800 mb-8 shadow-lg">
+            <div class="space-y-4">
+                <!-- 1. Listening Mode -->
+                <div>
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">1. Listening Mode</label>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button onclick="setMode('discover')" id="modeBtn-discover" class="pill-active px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
+                            <span>🔍</span> Discover (Never Played: {{ kpis.unplayed_albums }} albums)
+                        </button>
+                        <button onclick="setMode('favorites')" id="modeBtn-favorites" class="pill-inactive px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
+                            <span>⭐</span> Favorites (Heavy Rotation: {{ kpis.played_albums }} albums)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Mood & Vibe -->
+                <div>
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">2. Mood & Vibe</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-3.5 py-1.5 rounded-lg text-xs transition">🌌 Any Vibe</button>
+                        <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">🌙 Late Night / Chill</button>
+                        <button onclick="setVibe('energetic')" id="vibeBtn-energetic" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">⚡ Energetic / Focus</button>
+                        <button onclick="setVibe('mellow')" id="vibeBtn-mellow" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">☕ Mellow / Acoustic</button>
+                        <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">📻 Crate Digger / Vintage</button>
+                    </div>
+                </div>
+
+                <!-- 3. Era & Genre Refinement -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-800/80">
+                    <div>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">3. Era Preference</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-3 py-1.5 rounded-lg text-xs transition">Any Era</button>
+                            <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-3 py-1.5 rounded-lg text-xs transition">✨ Recent (2018+)</button>
+                            <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-3 py-1.5 rounded-lg text-xs transition">💿 2000s & 2010s</button>
+                            <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-3 py-1.5 rounded-lg text-xs transition">📼 Vintage (< 2000)</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">4. Specific Sub-Genre (Optional)</label>
+                        <select id="genreSelect" onchange="onGenreSelect(this.value)" class="w-full bg-[#11151a] border border-gray-700/80 rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
+                            <option value="">Any Genre</option>
+                            {% for g in top_genres %}
+                            <option value="{{ g }}">{{ g|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Top 3 Spotlight Picks -->
+        <div class="mb-10">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#1DB954] animate-pulse"></span>
+                    <h2 class="text-xl font-black text-white tracking-tight">Top 3 Spotlight Picks For You</h2>
+                </div>
+                <div class="text-xs text-gray-400">
+                    <span id="poolCountText">Calculating candidates...</span>
+                </div>
+            </div>
+
+            <!-- Spotlight 3 Cards Container -->
+            <div id="spotlightContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <!-- Dynamically populated via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Section: Ranked Candidate Pool Below -->
+        <div>
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-800">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300">All Matching Candidates</h3>
+                <span class="text-xs text-gray-500" id="candidateSubtext"></span>
+            </div>
+            <div id="candidateGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <!-- Dynamically populated via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation Engine Logic -->
+    <script>
+        const ALL_ALBUMS = {{ albums | tojson }};
+        let selectedMode = 'discover';
+        let selectedVibe = 'all';
+        let selectedEra = 'all';
+        let selectedGenre = '';
+        let currentSeed = Math.random();
+
+        const VIBES = {
+            all: { name: "Any Vibe", keywords: [] },
+            chill: {
+                name: "Late Night / Chill",
+                keywords: ["ambient", "dream pop", "downtempo", "jazz", "soul", "trip hop", "lo-fi", "slowcore", "chill", "folk", "r&b", "bossa", "art pop"]
+            },
+            energetic: {
+                name: "Energetic / Focus",
+                keywords: ["electronic", "post-punk", "afrobeat", "dance", "synthpop", "funk", "rock", "punk", "techno", "house", "krautrock", "disco", "garage"]
+            },
+            mellow: {
+                name: "Mellow / Acoustic",
+                keywords: ["acoustic", "singer-songwriter", "chamber pop", "folk", "indie folk", "country", "americana", "classical", "piano"]
+            },
+            vintage: {
+                name: "Crate Digger / Vintage",
+                keywords: ["classic soul", "hard bop", "psych rock", "afro-cuban", "reggae", "motown", "funk", "blues", "vintage", "70s", "60s"]
+            }
+        };
+
+        const ERAS = {
+            all: { min: 1900, max: 2099 },
+            recent: { min: 2018, max: 2099 },
+            modern: { min: 2000, max: 2017 },
+            classic: { min: 1900, max: 1999 }
+        };
+
+        function setMode(mode) {
+            selectedMode = mode;
+            document.getElementById('modeBtn-discover').className = mode === 'discover' ? 'pill-active px-4 py-2 rounded-xl text-xs transition flex items-center gap-2' : 'pill-inactive px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
+            document.getElementById('modeBtn-favorites').className = mode === 'favorites' ? 'pill-active px-4 py-2 rounded-xl text-xs transition flex items-center gap-2' : 'pill-inactive px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
+            spinAgain();
+        }
+
+        function setVibe(vibe) {
+            selectedVibe = vibe;
+            ['all', 'chill', 'energetic', 'mellow', 'vintage'].forEach(v => {
+                const btn = document.getElementById(`vibeBtn-${v}`);
+                if (btn) btn.className = v === vibe ? 'pill-active px-3.5 py-1.5 rounded-lg text-xs transition' : 'pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition';
+            });
+            spinAgain();
+        }
+
+        function setEra(era) {
+            selectedEra = era;
+            ['all', 'recent', 'modern', 'classic'].forEach(e => {
+                const btn = document.getElementById(`eraBtn-${e}`);
+                if (btn) btn.className = e === era ? 'pill-active px-3 py-1.5 rounded-lg text-xs transition' : 'pill-inactive px-3 py-1.5 rounded-lg text-xs transition';
+            });
+            spinAgain();
+        }
+
+        function onGenreSelect(genre) {
+            selectedGenre = genre.toLowerCase();
+            spinAgain();
+        }
+
+        function spinAgain() {
+            currentSeed = Math.random();
+            renderRecommendations();
+        }
+
+        function computeRankedCandidates(seed) {
+            const era = ERAS[selectedEra];
+
+            // Filter base pool
+            let pool = ALL_ALBUMS.filter(a => {
+                // Mode
+                if (selectedMode === 'discover' && (a.album_track_plays || 0) > 0) return false;
+                if (selectedMode === 'favorites' && (a.album_track_plays || 0) === 0) return false;
+
+                // Specific Genre
+                if (selectedGenre && (!a.album_genres || !a.album_genres.toLowerCase().includes(selectedGenre))) {
+                    return false;
+                }
+
+                // Era
+                const yr = parseInt(a.release_year) || 0;
+                if (yr > 0 && (yr < era.min || yr > era.max)) return false;
+
+                return true;
+            });
+
+            // Score albums
+            const scored = pool.map((a, idx) => {
+                let score = 1.0;
+                const genres = (a.album_genres || "").toLowerCase();
+
+                // Vibe Matching
+                if (selectedVibe !== 'all') {
+                    const kws = VIBES[selectedVibe].keywords;
+                    let matches = 0;
+                    for (let kw of kws) {
+                        if (genres.includes(kw)) matches++;
+                    }
+                    score *= (matches > 0 ? (1.5 + matches * 0.4) : 0.3);
+                }
+
+                // Mode weighting
+                if (selectedMode === 'favorites') {
+                    // Logarithmic scale so top favorites rank high
+                    score *= (1 + Math.log10(1 + (a.album_plays || 1)));
+                } else {
+                    // In discover mode, slightly favor covers with art and verified years
+                    if (a.album_image_url) score *= 1.15;
+                }
+
+                // Serendipity Jitter for Spin Again
+                const hash = ((idx * 1337 + seed * 99991) % 100) / 100;
+                score *= (0.8 + hash * 0.4);
+
+                return { ...a, recScore: score };
+            });
+
+            scored.sort((a, b) => b.recScore - a.recScore);
+            return scored;
+        }
+
+        function renderRecommendations() {
+            const candidates = computeRankedCandidates(currentSeed);
+            document.getElementById('poolCountText').innerText = `Matched ${candidates.length.toLocaleString()} albums in your library`;
+            document.getElementById('candidateSubtext').innerText = `Showing top matching recommendations`;
+
+            const spotlight = document.getElementById('spotlightContainer');
+            const grid = document.getElementById('candidateGrid');
+
+            if (candidates.length === 0) {
+                spotlight.innerHTML = `
+                    <div class="col-span-full card-bg p-8 rounded-2xl text-center text-gray-500 border border-gray-800">
+                        <p class="text-base font-semibold text-gray-300">No albums matched this exact combination.</p>
+                        <p class="text-xs text-gray-500 mt-1">Try switching to "Any Vibe" or "Any Era" to widen your candidate pool.</p>
+                    </div>
+                `;
+                grid.innerHTML = "";
+                return;
+            }
+
+            // Top 3 Spotlight
+            const top3 = candidates.slice(0, 3);
+            let spotlightHtml = "";
+            top3.forEach((a, i) => {
+                const img = a.album_image_url || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&q=80";
+                const badgeLabel = selectedMode === 'discover' 
+                    ? (i === 0 ? "✨ #1 Top Discovery" : `🎯 Recommendation #${i+1}`)
+                    : (i === 0 ? "🔥 #1 Heavy Rotation" : `⭐ Favorite Pick #${i+1}`);
+
+                const genres = a.album_genres ? a.album_genres.split(", ").slice(0, 3).join(" • ") : "Curated Release";
+                const playsText = a.album_plays > 0 ? `${a.album_plays} plays logged` : "Never played";
+
+                spotlightHtml += `
+                    <div class="spotlight-card border border-gray-800/80 rounded-2xl p-4 flex flex-col justify-between shadow-xl transition duration-300">
+                        <div>
+                            <div class="flex items-center justify-between mb-3 text-[11px]">
+                                <span class="bg-[#1DB954]/20 text-[#1DB954] font-bold px-2.5 py-1 rounded-full border border-[#1DB954]/30">${badgeLabel}</span>
+                                <span class="text-gray-400 font-medium">${a.release_year}</span>
+                            </div>
+
+                            <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-900 mb-3.5 shadow-md">
+                                <img src="${img}" alt="${a.album_name}" class="w-full h-full object-cover">
+                            </div>
+
+                            <h3 class="font-extrabold text-base text-white truncate" title="${a.album_name}">${a.album_name}</h3>
+                            <p class="text-xs font-semibold text-gray-300 truncate mt-0.5">${a.album_artist_name}</p>
+                            <p class="text-[11px] text-gray-500 truncate mt-1">${genres}</p>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-gray-800/60 flex items-center justify-between">
+                            <span class="text-[11px] text-gray-400 font-medium">${playsText}</span>
+                            <a href="${a.album_url}" target="_blank" rel="noopener noreferrer"
+                               class="bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
+                                <span>▶</span> Play on Spotify
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+            spotlight.innerHTML = spotlightHtml;
+
+            // Rest of Candidates
+            const remaining = candidates.slice(3, 27);
+            let gridHtml = "";
+            for (let a of remaining) {
+                const img = a.album_image_url || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80";
+                const plays = a.album_plays > 0 ? `🔥 ${a.album_plays} plays` : '✨ Unplayed';
+
+                gridHtml += `
+                    <a href="${a.album_url}" target="_blank" rel="noopener noreferrer"
+                       class="card-bg group block rounded-xl p-3 border border-gray-800/80 hover:border-gray-700 transition duration-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-900 mb-2.5">
+                                <img src="${img}" alt="${a.album_name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                                <div class="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-[10px] text-gray-200 px-2 py-0.5 rounded-full font-bold">
+                                    ${plays}
+                                </div>
+                            </div>
+                            <h4 class="font-bold text-xs text-white truncate group-hover:text-[#1DB954] transition" title="${a.album_name}">${a.album_name}</h4>
+                            <p class="text-[11px] text-gray-400 truncate mt-0.5">${a.album_artist_name}</p>
+                        </div>
+                        <div class="mt-2 text-[10px] text-gray-500 flex justify-between">
+                            <span>${a.release_year}</span>
+                            <span class="text-[#1DB954]">▶ Play</span>
+                        </div>
+                    </a>
+                `;
+            }
+            grid.innerHTML = gridHtml;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            renderRecommendations();
+        });
+    </script>
+</body>
+</html>
+"""
 
 
 @app.route("/favicon.svg")
 @app.route("/favicon.ico")
 def favicon():
-    from flask import Response
     return Response(SPOTIFY_FAVICON_SVG, mimetype="image/svg+xml")
 
 
@@ -429,7 +802,18 @@ def favicon():
 def index():
     data = fetch_album_data()
     return render_template_string(
-        HTML_TEMPLATE,
+        EXPLORER_HTML_TEMPLATE,
+        albums=data["albums"],
+        top_genres=data["top_genres"],
+        kpis=data["kpis"]
+    )
+
+
+@app.route("/recommend")
+def recommend():
+    data = fetch_album_data()
+    return render_template_string(
+        RECOMMEND_HTML_TEMPLATE,
         albums=data["albums"],
         top_genres=data["top_genres"],
         kpis=data["kpis"]
