@@ -463,7 +463,7 @@ RECOMMEND_HTML_TEMPLATE = """
                     </svg>
                     <h1 class="text-3xl font-extrabold tracking-tight text-white">Crate Digger</h1>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">Smart vinyl crate & personalized album recommender</p>
+                <p class="text-xs text-gray-400 mt-1">Smart recommendation engine powered by listening history</p>
             </div>
 
             <!-- Quick Action Links -->
