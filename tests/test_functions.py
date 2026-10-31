@@ -90,6 +90,35 @@ class TestSpotifyFunctions(unittest.TestCase):
         self.assertIn("track_album_artists_0_name", df_passed.columns)
         self.assertEqual(df_passed.iloc[0]["track_name"], "Test Track")
 
+    @patch("pandas_gbq.to_gbq")
+    def test_load_all_albums_bq(self, mock_to_gbq):
+        sample_albums = [
+            {
+                "added_at": "2026-10-31T10:00:00Z",
+                "album": {
+                    "id": "alb123",
+                    "name": "Sample Album",
+                    "album_type": "album",
+                    "label": "Test Label",
+                    "release_date": "2026-01-01",
+                    "total_tracks": 10,
+                    "uri": "spotify:album:alb123",
+                    "artists": [{"id": "art456", "name": "Sample Artist"}],
+                    "images": [{"height": 640, "url": "https://example.com/cover.jpg", "width": 640}]
+                }
+            }
+        ]
+        genres_map = {"art456": "indie rock, post-punk"}
+        res = main.load_all_albums_bq(sample_albums, artist_genres_map=genres_map)
+        self.assertEqual(res, "dataset loaded to BQ")
+        self.assertTrue(mock_to_gbq.called)
+
+        df_passed = mock_to_gbq.call_args[0][0]
+        self.assertIn("album_image_url", df_passed.columns)
+        self.assertIn("album_genres", df_passed.columns)
+        self.assertEqual(df_passed.iloc[0]["album_image_url"], "https://example.com/cover.jpg")
+        self.assertEqual(df_passed.iloc[0]["album_genres"], "indie rock, post-punk")
+
     @patch("main.get_spotify_client")
     def test_get_recently_played_error_handling(self, mock_client):
         mock_client.side_effect = Exception("Spotify API 401 Unauthorized")

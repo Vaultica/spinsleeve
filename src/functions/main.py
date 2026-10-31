@@ -196,14 +196,51 @@ def load_albums_bq(albums):
     return "dataset loaded to BQ"
 
 
-def load_all_albums_bq(albums):
-    """Replaces all_albums table with full library scan."""
+def fetch_artist_genres(sp, artist_ids):
+    """
+    Fetches genres for a list of artist IDs from Spotify in batches of 50.
+    Returns a dict mapping artist_id -> comma-separated genres string.
+    """
+    artist_genres = {}
+    valid_ids = list(set([aid for aid in artist_ids if aid]))
+    logger.info("Fetching genres for %d unique artists...", len(valid_ids))
+
+    for i in range(0, len(valid_ids), 50):
+        batch = valid_ids[i:i + 50]
+        try:
+            res = sp.artists(batch)
+            for artist in res.get("artists", []):
+                if artist and "id" in artist:
+                    genres = artist.get("genres", [])
+                    artist_genres[artist["id"]] = ", ".join(genres)
+        except Exception as e:
+            logger.warning("Error fetching artist genres for batch: %s", e)
+
+    return artist_genres
+
+
+def load_all_albums_bq(albums, artist_genres_map=None):
+    """Replaces all_albums table with full library scan, including images and genres."""
     if not albums:
         logger.info("No albums provided to load into BigQuery.")
         return "No albums to load"
 
     dic_flattened = [flatten_json(d) for d in albums]
     df = pd.DataFrame(dic_flattened)
+
+    # Extract best available cover image (prefer 640px or 300px)
+    if "album_images_0_url" in df.columns:
+        df["album_image_url"] = df["album_images_0_url"]
+    elif "album_images_1_url" in df.columns:
+        df["album_image_url"] = df["album_images_1_url"]
+    else:
+        df["album_image_url"] = None
+
+    # Map genres if available
+    if artist_genres_map and "album_artists_0_id" in df.columns:
+        df["album_genres"] = df["album_artists_0_id"].map(artist_genres_map).fillna("")
+    else:
+        df["album_genres"] = ""
 
     expected_cols = [
         "album_uri",
@@ -214,7 +251,9 @@ def load_all_albums_bq(albums):
         "album_label",
         "album_release_date",
         "album_tracks_total",
-        "album_id"
+        "album_id",
+        "album_image_url",
+        "album_genres"
     ]
     for col in expected_cols:
         if col not in df.columns:
@@ -373,6 +412,16 @@ def get_all_saved_albums(request):
             results = sp.next(results)
             albums.extend(results.get("items", []))
 
+        # Collect artist IDs to enrich with genres
+        artist_ids = []
+        for item in albums:
+            album_obj = item.get("album", {})
+            artists = album_obj.get("artists", [])
+            if artists and "id" in artists[0]:
+                artist_ids.append(artists[0]["id"])
+
+        artist_genres_map = fetch_artist_genres(sp, artist_ids)
+
         timestr = time.strftime("%Y%m%d_%H%M%S")
         folders = time.strftime("%Y/%m/%d")
         all_albums_json = json.dumps(albums, sort_keys=True, indent=2)
@@ -380,7 +429,7 @@ def get_all_saved_albums(request):
         destination_blob = f"spotify/{folders}/all_albums_{timestr}.json"
         upload_blob(BUCKET_NAME, all_albums_json, destination_blob)
 
-        load_all_albums_bq(albums)
+        load_all_albums_bq(albums, artist_genres_map=artist_genres_map)
 
         return (
             json.dumps({

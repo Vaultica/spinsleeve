@@ -4,14 +4,16 @@ with source_data as (
 
   select
      added_at,
-     album_artists_0_name	                                as album_artist_name,
+     album_artists_0_name                                 as album_artist_name,
      albums.album_name,
      album_type,
      album_label,
      album_release_date,
      album_tracks_total,
-     play.no_albums                                       as album_track_plays,
-     round(play.no_albums / album_tracks_total, 1)        as album_plays,
+     album_image_url,
+     album_genres,
+     coalesce(play.no_albums, 0)                          as album_track_plays,
+     round(coalesce(play.no_albums, 0) / nullif(album_tracks_total, 0), 1) as album_plays,
      concat('https://open.spotify.com/album/' , album_id) as album_url,
   from {{ source('spotify', 'all_albums') }} albums
   left join {{ ref('spotify', 'most_played_albums') }} play
