@@ -94,6 +94,9 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spotify Album Playlist Explorer</title>
+    <!-- Spotify Green Tab Icon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -367,6 +370,16 @@ HTML_TEMPLATE = """
 </body>
 </html>
 """
+
+
+SPOTIFY_FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.674.466-1.026.25-2.813-1.718-6.353-2.106-10.523-1.153-.404.093-.812-.162-.905-.566-.093-.404.162-.812.566-.905 4.567-1.043 8.47-.6 11.637 1.348.353.215.466.674.251 1.026zm1.467-3.265c-.27.44-.847.578-1.287.308-3.22-1.979-8.127-2.553-11.936-1.396-.498.151-1.03-.135-1.182-.633-.151-.498.135-1.03.633-1.182 4.354-1.32 9.776-.682 13.464 1.616.44.27.578.847.308 1.287zm.126-3.414c-3.86-2.292-10.228-2.504-13.916-1.385-.593.18-1.224-.16-1.404-.753-.18-.593.16-1.224.753-1.404 4.242-1.288 11.278-1.042 15.736 1.605.534.317.708 1.01.392 1.544-.318.535-1.01.71-1.545.394z"/></svg>"""
+
+
+@app.route("/favicon.svg")
+@app.route("/favicon.ico")
+def favicon():
+    from flask import Response
+    return Response(SPOTIFY_FAVICON_SVG, mimetype="image/svg+xml")
 
 
 @app.route("/")
