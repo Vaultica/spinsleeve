@@ -233,15 +233,63 @@ def load_all_albums_bq(albums):
     return "dataset loaded to BQ"
 
 
+def get_latest_played_timestamp(lookback_minutes=10):
+    """
+    Queries BigQuery for the latest played_at timestamp in the landing table
+    and subtracts a safety lookback buffer (default: 10 mins).
+    Returns epoch timestamp in milliseconds, or None if table is empty.
+    """
+    try:
+        client = bigquery.Client(project=PROJECT_ID)
+        query = (
+            f"SELECT MAX(played_at) as max_played_at "
+            f"FROM `{PROJECT_ID}.{DATASET_NAME}.play_history_new` "
+            f"WHERE played_at IS NOT NULL AND played_at != 'href'"
+        )
+        query_job = client.query(query)
+        results = list(query_job.result())
+        if results and results[0].max_played_at:
+            max_dt = pd.to_datetime(results[0].max_played_at)
+            buffer_dt = max_dt - pd.Timedelta(minutes=lookback_minutes)
+            epoch_ms = int(buffer_dt.timestamp() * 1000)
+            logger.info(
+                "Latest BQ play: %s. Querying Spotify with %dm buffer: %s (epoch ms: %s)",
+                max_dt, lookback_minutes, buffer_dt, epoch_ms
+            )
+            return epoch_ms
+    except Exception as e:
+        logger.warning("Could not determine latest played timestamp from BQ: %s", e)
+    return None
+
+
 @functions_framework.http
 def get_recently_played(request):
     """
     Cloud Function HTTP handler: Fetches recently played tracks
     from Spotify, archives to GCS, and appends to BigQuery.
+    Uses after cursor with lookback buffer to guarantee zero track loss.
     """
     try:
         sp = get_spotify_client()
-        recent_tracks = sp.current_user_recently_played(limit=50)
+        after_ms = get_latest_played_timestamp(lookback_minutes=10)
+
+        if after_ms:
+            recent_tracks = sp.current_user_recently_played(limit=50, after=after_ms)
+        else:
+            recent_tracks = sp.current_user_recently_played(limit=50)
+
+        items = recent_tracks.get("items", [])
+        if not items:
+            logger.info("No new tracks found since last ingestion window.")
+            return (
+                json.dumps({
+                    "status": "success",
+                    "tracks_loaded": 0,
+                    "message": "No new tracks in window"
+                }),
+                200,
+                {"Content-Type": "application/json"}
+            )
 
         timestr = time.strftime("%Y%m%d_%H%M%S")
         folders = time.strftime("%Y/%m/%d")
@@ -252,7 +300,7 @@ def get_recently_played(request):
 
         load_tracks_bq(recent_tracks)
 
-        item_count = len(recent_tracks.get("items", []))
+        item_count = len(items)
         return (
             json.dumps({
                 "status": "success",

@@ -47,6 +47,20 @@ class TestSpotifyFunctions(unittest.TestCase):
             main.get_spotify_client()
         self.assertIn("Missing SPOTIPY_REFRESH_TOKEN", str(ctx.exception))
 
+    @patch("main.bigquery.Client")
+    def test_get_latest_played_timestamp(self, mock_bq_client):
+        mock_instance = MagicMock()
+        mock_bq_client.return_value = mock_instance
+        mock_row = MagicMock()
+        mock_row.max_played_at = "2026-10-31T12:00:00.000Z"
+        mock_instance.query.return_value.result.return_value = [mock_row]
+
+        epoch_ms = main.get_latest_played_timestamp(lookback_minutes=10)
+        # 12:00:00 - 10m = 11:50:00
+        expected_dt = main.pd.to_datetime("2026-10-31T11:50:00.000Z")
+        expected_ms = int(expected_dt.timestamp() * 1000)
+        self.assertEqual(epoch_ms, expected_ms)
+
     @patch("pandas_gbq.to_gbq")
     def test_load_tracks_bq(self, mock_to_gbq):
         sample_tracks = {
