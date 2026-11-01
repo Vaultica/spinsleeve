@@ -100,9 +100,9 @@ EXPLORER_HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpinSleeve - Spotify Album Dashboard</title>
-    <!-- SpinSleeve Hi-Fi Plinth Tab Icon (Inlined SVG Data URI) -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect x='5' y='5' width='90' height='90' rx='16' fill='%23181D22' stroke='%2328323C' stroke-width='3'/%3E%3Ccircle cx='44' cy='50' r='33' fill='%230C0F12' stroke='%2321272E' stroke-width='2'/%3E%3Ccircle cx='44' cy='50' r='27' fill='%231DB954'/%3E%3Cpath d='M33 42c6-1.5 13-1 18 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M35 48c5-1 10-0.5 14 2' stroke='%230C0F12' stroke-width='2.8' stroke-linecap='round'/%3E%3Cpath d='M37 54c3.5-0.5 7.5-0.2 10.5 1.5' stroke='%230C0F12' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='50' r='3' fill='%23181D22'/%3E%3Ccircle cx='79' cy='25' r='7' fill='%2328323C' stroke='%239CA3AF' stroke-width='2'/%3E%3Ccircle cx='79' cy='25' r='3' fill='%231DB954'/%3E%3Cpath d='M77 29 L63 60 L53 64' stroke='%23E5E7EB' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='47' y='60' width='8' height='6' rx='1.5' fill='%231DB954' transform='rotate(-20 51 63)'/%3E%3Ccircle cx='16' cy='80' r='3.5' fill='%231DB954'/%3E%3Crect x='23' y='78.5' width='6' height='3' rx='1' fill='%234B5563'/%3E%3C/svg%3E">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
+    <!-- SpinSleeve Full-Bleed Turntable Tab Icon (Max size & high legibility) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Ccircle cx='48' cy='52' r='46' fill='%230C0F12' stroke='%231DB954' stroke-width='3'/%3E%3Ccircle cx='48' cy='52' r='40' fill='%231DB954'/%3E%3Cpath d='M30 40c9-2.5 19-1.5 27 3' stroke='%230C0F12' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M33 49c8-1.8 16-1 22 2.5' stroke='%230C0F12' stroke-width='4.2' stroke-linecap='round'/%3E%3Cpath d='M36 58c6-1.2 12-0.5 17 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='52' r='5' fill='%230C0F12'/%3E%3Ccircle cx='86' cy='14' r='9' fill='%23181D22' stroke='%239CA3AF' stroke-width='3'/%3E%3Ccircle cx='86' cy='14' r='4' fill='%231DB954'/%3E%3Cpath d='M83 19 L66 62 L52 68' stroke='%23FFFFFF' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='43' y='63' width='11' height='8' rx='2' fill='%230C0F12' stroke='%231DB954' stroke-width='1.5' transform='rotate(-22 48 67)'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -433,9 +433,9 @@ RECOMMEND_HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crate Digger - Spotify Dash</title>
-    <!-- SpinSleeve Hi-Fi Plinth Tab Icon (Inlined SVG Data URI) -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect x='5' y='5' width='90' height='90' rx='16' fill='%23181D22' stroke='%2328323C' stroke-width='3'/%3E%3Ccircle cx='44' cy='50' r='33' fill='%230C0F12' stroke='%2321272E' stroke-width='2'/%3E%3Ccircle cx='44' cy='50' r='27' fill='%231DB954'/%3E%3Cpath d='M33 42c6-1.5 13-1 18 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M35 48c5-1 10-0.5 14 2' stroke='%230C0F12' stroke-width='2.8' stroke-linecap='round'/%3E%3Cpath d='M37 54c3.5-0.5 7.5-0.2 10.5 1.5' stroke='%230C0F12' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='50' r='3' fill='%23181D22'/%3E%3Ccircle cx='79' cy='25' r='7' fill='%2328323C' stroke='%239CA3AF' stroke-width='2'/%3E%3Ccircle cx='79' cy='25' r='3' fill='%231DB954'/%3E%3Cpath d='M77 29 L63 60 L53 64' stroke='%23E5E7EB' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='47' y='60' width='8' height='6' rx='1.5' fill='%231DB954' transform='rotate(-20 51 63)'/%3E%3Ccircle cx='16' cy='80' r='3.5' fill='%231DB954'/%3E%3Crect x='23' y='78.5' width='6' height='3' rx='1' fill='%234B5563'/%3E%3C/svg%3E">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
+    <!-- SpinSleeve Full-Bleed Turntable Tab Icon (Max size & high legibility) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Ccircle cx='48' cy='52' r='46' fill='%230C0F12' stroke='%231DB954' stroke-width='3'/%3E%3Ccircle cx='48' cy='52' r='40' fill='%231DB954'/%3E%3Cpath d='M30 40c9-2.5 19-1.5 27 3' stroke='%230C0F12' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M33 49c8-1.8 16-1 22 2.5' stroke='%230C0F12' stroke-width='4.2' stroke-linecap='round'/%3E%3Cpath d='M36 58c6-1.2 12-0.5 17 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='52' r='5' fill='%230C0F12'/%3E%3Ccircle cx='86' cy='14' r='9' fill='%23181D22' stroke='%239CA3AF' stroke-width='3'/%3E%3Ccircle cx='86' cy='14' r='4' fill='%231DB954'/%3E%3Cpath d='M83 19 L66 62 L52 68' stroke='%23FFFFFF' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='43' y='63' width='11' height='8' rx='2' fill='%230C0F12' stroke='%231DB954' stroke-width='1.5' transform='rotate(-22 48 67)'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -796,28 +796,23 @@ RECOMMEND_HTML_TEMPLATE = """
 # BRAND ICONS: 3 Distinct Turntable + Spotify Concepts
 # ==============================================================================
 ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Turntable Plinth -->
-  <rect x="5" y="5" width="90" height="90" rx="16" fill="#181D22" stroke="#28323C" stroke-width="3"/>
-  <!-- Recessed Platter Bed -->
-  <circle cx="44" cy="50" r="33" fill="#0C0F12" stroke="#21272E" stroke-width="2"/>
-  <!-- Spotify Platter -->
-  <circle cx="44" cy="50" r="27" fill="#1DB954"/>
-  <!-- Spotify Soundwaves in black -->
-  <path d="M33 42c6-1.5 13-1 18 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
-  <path d="M35 48c5-1 10-0.5 14 2" stroke="#0C0F12" stroke-width="2.8" stroke-linecap="round"/>
-  <path d="M37 54c3.5-0.5 7.5-0.2 10.5 1.5" stroke="#0C0F12" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Vinyl Platter Base / Dark Rim -->
+  <circle cx="48" cy="52" r="46" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
+  <!-- Spotify Green Core Platter -->
+  <circle cx="48" cy="52" r="40" fill="#1DB954"/>
+  <!-- Spotify Soundwaves in Bold Black -->
+  <path d="M30 40c9-2.5 19-1.5 27 3" stroke="#0C0F12" stroke-width="5" stroke-linecap="round"/>
+  <path d="M33 49c8-1.8 16-1 22 2.5" stroke="#0C0F12" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M36 58c6-1.2 12-0.5 17 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
   <!-- Center Spindle -->
-  <circle cx="44" cy="50" r="3" fill="#181D22"/>
-  <!-- Tonearm Pivot -->
-  <circle cx="79" cy="25" r="7" fill="#28323C" stroke="#9CA3AF" stroke-width="2"/>
-  <circle cx="79" cy="25" r="3" fill="#1DB954"/>
-  <!-- Tonearm Rod -->
-  <path d="M77 29 L63 60 L53 64" stroke="#E5E7EB" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Cartridge / Headshell -->
-  <rect x="47" y="60" width="8" height="6" rx="1.5" fill="#1DB954" transform="rotate(-20 51 63)"/>
-  <!-- Power Switch & Pitch Control -->
-  <circle cx="16" cy="80" r="3.5" fill="#1DB954"/>
-  <rect x="23" y="78.5" width="6" height="3" rx="1" fill="#4B5563"/>
+  <circle cx="48" cy="52" r="5" fill="#0C0F12"/>
+  <!-- Tonearm Pivot (Top-Right) -->
+  <circle cx="86" cy="14" r="9" fill="#181D22" stroke="#9CA3AF" stroke-width="3"/>
+  <circle cx="86" cy="14" r="4" fill="#1DB954"/>
+  <!-- Metallic Tonearm Rod in Bright White -->
+  <path d="M83 19 L66 62 L52 68" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Cartridge / Headshell Needle -->
+  <rect x="43" y="63" width="11" height="8" rx="2" fill="#0C0F12" stroke="#1DB954" stroke-width="1.5" transform="rotate(-22 48 67)"/>
 </svg>"""
 
 ICON_B_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
