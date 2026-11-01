@@ -5,7 +5,7 @@ import urllib.parse
 from collections import Counter
 from datetime import datetime
 import requests
-from flask import Flask, render_template_string, jsonify, request, Response
+from flask import Flask, render_template_string, jsonify, request, Response, redirect
 from google.cloud import bigquery
 
 app = Flask(__name__)
@@ -452,7 +452,7 @@ EXPLORER_HTML_TEMPLATE = """
                 const genres = a.album_genres ? a.album_genres.split(", ").slice(0, 2).join(" • ") : "";
                 const safeArtist = (a.album_artist_name || "").replace(/'/g, "\\'");
                 const safeAlbum = (a.album_name || "").replace(/'/g, "\\'");
-                const appleSearchUrl = `https://music.apple.com/us/search?term=${encodeURIComponent(a.album_artist_name + ' ' + a.album_name)}`;
+                const appleOpenUrl = `/open/apple?artist=${encodeURIComponent(a.album_artist_name)}&album=${encodeURIComponent(a.album_name)}`;
 
                 html += `
                     <div class="card-bg group block rounded-xl p-3 border border-gray-800/80 hover:border-gray-700 transition duration-200 shadow-sm hover:shadow-lg flex flex-col justify-between relative cursor-pointer"
@@ -498,7 +498,7 @@ EXPLORER_HTML_TEMPLATE = """
                         <div class="mt-2.5 pt-2 border-t border-gray-800/60 flex items-center justify-between text-[10px] text-gray-500">
                             <span>${a.release_year}</span>
                             <div class="flex items-center gap-1.5">
-                                <a href="${appleSearchUrl}" target="_blank" rel="noopener noreferrer"
+                                <a href="${appleOpenUrl}" target="_blank" rel="noopener noreferrer"
                                    onclick="event.stopPropagation()"
                                    class="text-[10px] font-semibold text-[#FA233B] bg-[#FA233B]/10 hover:bg-[#FA233B] hover:text-white border border-[#FA233B]/30 px-1.5 py-0.5 rounded transition flex items-center gap-1"
                                    title="Play on Apple Music">
@@ -1031,7 +1031,7 @@ RECOMMEND_HTML_TEMPLATE = """
                 const playsText = a.album_plays > 0 ? `${a.album_plays} plays logged` : "Never played";
                 const safeArtist = (a.album_artist_name || "").replace(/'/g, "\\'");
                 const safeAlbum = (a.album_name || "").replace(/'/g, "\\'");
-                const appleSearchUrl = `https://music.apple.com/us/search?term=${encodeURIComponent(a.album_artist_name + ' ' + a.album_name)}`;
+                const appleOpenUrl = `/open/apple?artist=${encodeURIComponent(a.album_artist_name)}&album=${encodeURIComponent(a.album_name)}`;
 
                 spotlightHtml += `
                     <div class="spotlight-card border border-gray-800/80 rounded-2xl p-4 flex flex-col justify-between shadow-xl transition duration-300 relative"
@@ -1059,7 +1059,7 @@ RECOMMEND_HTML_TEMPLATE = """
                         <div class="mt-4 pt-3 border-t border-gray-800/60 flex items-center justify-between gap-2">
                             <span class="text-[11px] text-gray-400 font-medium">${playsText}</span>
                             <div class="flex items-center gap-1.5">
-                                <a href="${appleSearchUrl}" target="_blank" rel="noopener noreferrer"
+                                <a href="${appleOpenUrl}" target="_blank" rel="noopener noreferrer"
                                    class="bg-[#FA233B]/15 hover:bg-[#FA233B] hover:text-white text-[#FA233B] border border-[#FA233B]/30 text-xs font-bold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow">
                                     🍎 Apple Music
                                 </a>
@@ -1082,7 +1082,7 @@ RECOMMEND_HTML_TEMPLATE = """
                 const plays = a.album_plays > 0 ? `🔥 ${a.album_plays} plays` : '✨ Unplayed';
                 const safeArtist = (a.album_artist_name || "").replace(/'/g, "\\'");
                 const safeAlbum = (a.album_name || "").replace(/'/g, "\\'");
-                const appleSearchUrl = `https://music.apple.com/us/search?term=${encodeURIComponent(a.album_artist_name + ' ' + a.album_name)}`;
+                const appleCandidateOpenUrl = `/open/apple?artist=${encodeURIComponent(a.album_artist_name)}&album=${encodeURIComponent(a.album_name)}`;
 
                 gridHtml += `
                     <div class="card-bg group block rounded-xl p-3 border border-gray-800/80 hover:border-gray-700 transition duration-200 shadow-sm flex flex-col justify-between relative cursor-pointer"
@@ -1104,7 +1104,7 @@ RECOMMEND_HTML_TEMPLATE = """
                         </div>
                         <div class="mt-2 pt-1.5 border-t border-gray-800/60 text-[10px] text-gray-500 flex justify-between items-center">
                             <span>${a.release_year}</span>
-                            <a href="${appleSearchUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
+                            <a href="${appleCandidateOpenUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
                                class="text-[9px] font-semibold text-[#FA233B] bg-[#FA233B]/10 hover:bg-[#FA233B] hover:text-white border border-[#FA233B]/30 px-1.5 py-0.5 rounded transition">
                                 🍎 Apple
                             </a>
@@ -1178,6 +1178,44 @@ def api_preview():
 
     _preview_cache[key] = payload
     return jsonify(payload)
+
+
+@app.route("/open/apple")
+def open_apple():
+    """
+    Resolves the exact Apple Music album ID and redirects directly
+    to the album view in the Apple Music app on iOS / macOS.
+    """
+    artist = request.args.get("artist", "").strip()
+    album = request.args.get("album", "").strip()
+    if not artist and not album:
+        return redirect("https://music.apple.com")
+
+    key = f"{artist.lower()}::{album.lower()}"
+    # Check if already resolved in preview cache
+    if key in _preview_cache and _preview_cache[key].get("apple_music_url"):
+        return redirect(_preview_cache[key]["apple_music_url"])
+
+    term = f"{artist} {album}"
+    try:
+        res = requests.get(
+            "https://itunes.apple.com/search",
+            params={"term": term, "entity": "album", "limit": 1},
+            timeout=3.5
+        )
+        data = res.json()
+        if data.get("resultCount", 0) > 0:
+            am_url = data["results"][0].get("collectionViewUrl")
+            if am_url:
+                if key not in _preview_cache:
+                    _preview_cache[key] = {}
+                _preview_cache[key]["apple_music_url"] = am_url
+                return redirect(am_url)
+    except Exception:
+        pass
+
+    fallback_url = f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}"
+    return redirect(fallback_url)
 
 
 @app.route("/icons")
