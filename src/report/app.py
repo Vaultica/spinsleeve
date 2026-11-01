@@ -796,17 +796,32 @@ RECOMMEND_HTML_TEMPLATE = """
 # BRAND ICONS: 3 Distinct Turntable + Spotify Concepts
 # ==============================================================================
 ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Vinyl Platter Base / Dark Rim -->
-  <circle cx="48" cy="52" r="46" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
-  <!-- Spotify Green Core Platter -->
-  <circle cx="48" cy="52" r="40" fill="#1DB954"/>
-  <!-- Spotify Soundwaves in Bold Black -->
-  <path d="M30 40c9-2.5 19-1.5 27 3" stroke="#0C0F12" stroke-width="5" stroke-linecap="round"/>
-  <path d="M33 49c8-1.8 16-1 22 2.5" stroke="#0C0F12" stroke-width="4.2" stroke-linecap="round"/>
-  <path d="M36 58c6-1.2 12-0.5 17 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- Center Spindle -->
-  <circle cx="48" cy="52" r="5" fill="#0C0F12"/>
-  <!-- Tonearm Pivot (Top-Right) -->
+  <defs>
+    <style>
+      @keyframes spin33 {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .spin-record {
+        transform-origin: 48px 52px;
+        animation: spin33 1.8s linear infinite;
+      }
+    </style>
+  </defs>
+  <!-- Spinning Vinyl Platter (33 RPM = 1.80s per revolution) -->
+  <g class="spin-record">
+    <!-- Vinyl Platter Base / Dark Rim -->
+    <circle cx="48" cy="52" r="46" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
+    <!-- Spotify Green Core Platter -->
+    <circle cx="48" cy="52" r="40" fill="#1DB954"/>
+    <!-- Spotify Soundwaves in Bold Black -->
+    <path d="M30 40c9-2.5 19-1.5 27 3" stroke="#0C0F12" stroke-width="5" stroke-linecap="round"/>
+    <path d="M33 49c8-1.8 16-1 22 2.5" stroke="#0C0F12" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M36 58c6-1.2 12-0.5 17 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Center Spindle -->
+    <circle cx="48" cy="52" r="5" fill="#0C0F12"/>
+  </g>
+  <!-- Stationary Tonearm & Pivot (Does NOT rotate) -->
   <circle cx="86" cy="14" r="9" fill="#181D22" stroke="#9CA3AF" stroke-width="3"/>
   <circle cx="86" cy="14" r="4" fill="#1DB954"/>
   <!-- Metallic Tonearm Rod in Bright White -->
