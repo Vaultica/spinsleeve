@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import urllib.parse
@@ -1153,7 +1154,9 @@ def api_preview():
         data = res.json()
         if data.get("resultCount", 0) > 0:
             result = data["results"][0]
-            am_url = result.get("collectionViewUrl") or result.get("trackViewUrl")
+            raw_url = result.get("collectionViewUrl") or result.get("trackViewUrl") or ""
+            m = re.search(r"/album/(?:[^/]+/)?(\d+)", raw_url)
+            am_url = f"https://geo.music.apple.com/album/{m.group(1)}?app=music&ls=1" if m else raw_url
             payload = {
                 "status": "success",
                 "preview_url": result.get("previewUrl"),
@@ -1164,7 +1167,7 @@ def api_preview():
             payload = {
                 "status": "not_found",
                 "preview_url": None,
-                "apple_music_url": f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}",
+                "apple_music_url": f"https://geo.music.apple.com/search?term={urllib.parse.quote(term)}&app=music",
                 "track_name": None
             }
     except Exception as e:
@@ -1172,7 +1175,7 @@ def api_preview():
             "status": "error",
             "message": str(e),
             "preview_url": None,
-            "apple_music_url": f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}",
+            "apple_music_url": f"https://geo.music.apple.com/search?term={urllib.parse.quote(f'{artist} {album}')}&app=music",
             "track_name": None
         }
 
@@ -1180,42 +1183,77 @@ def api_preview():
     return jsonify(payload)
 
 
+APPLE_REDIRECT_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opening Apple Music...</title>
+    <meta http-equiv="refresh" content="0; url={{ geo_url | safe }}">
+    <script>
+        // Direct client-side navigation preserves iOS Universal Links
+        window.location.replace("{{ geo_url | safe }}");
+    </script>
+</head>
+<body style="background-color: #0c0f12; color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center;">
+    <div>
+        <p style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Opening Apple Music...</p>
+        <p style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 1.25rem;">
+            If the album doesn't open automatically:
+        </p>
+        <a href="{{ geo_url | safe }}" style="background-color: #FA233B; color: #fff; font-size: 0.85rem; font-weight: 700; padding: 10px 20px; border-radius: 12px; text-decoration: none; display: inline-block;">
+            Tap to Open Album
+        </a>
+    </div>
+</body>
+</html>
+"""
+
+
 @app.route("/open/apple")
 def open_apple():
     """
-    Resolves the exact Apple Music album ID and redirects directly
-    to the album view in the Apple Music app on iOS / macOS.
+    Resolves the exact Apple Music album ID, constructs an international
+    geo-routing link (geo.music.apple.com with app=music), and renders
+    a client-side redirect so iOS Universal Links open directly to the album.
     """
     artist = request.args.get("artist", "").strip()
     album = request.args.get("album", "").strip()
     if not artist and not album:
-        return redirect("https://music.apple.com")
+        return redirect("https://geo.music.apple.com?app=music")
 
     key = f"{artist.lower()}::{album.lower()}"
-    # Check if already resolved in preview cache
+    geo_url = None
+
     if key in _preview_cache and _preview_cache[key].get("apple_music_url"):
-        return redirect(_preview_cache[key]["apple_music_url"])
+        raw_url = _preview_cache[key]["apple_music_url"]
+        m = re.search(r"/album/(?:[^/]+/)?(\d+)", raw_url)
+        if m:
+            geo_url = f"https://geo.music.apple.com/album/{m.group(1)}?app=music&ls=1"
 
-    term = f"{artist} {album}"
-    try:
-        res = requests.get(
-            "https://itunes.apple.com/search",
-            params={"term": term, "entity": "album", "limit": 1},
-            timeout=3.5
-        )
-        data = res.json()
-        if data.get("resultCount", 0) > 0:
-            am_url = data["results"][0].get("collectionViewUrl")
-            if am_url:
-                if key not in _preview_cache:
-                    _preview_cache[key] = {}
-                _preview_cache[key]["apple_music_url"] = am_url
-                return redirect(am_url)
-    except Exception:
-        pass
+    if not geo_url:
+        term = f"{artist} {album}"
+        try:
+            res = requests.get(
+                "https://itunes.apple.com/search",
+                params={"term": term, "entity": "album", "limit": 1},
+                timeout=3.5
+            )
+            data = res.json()
+            if data.get("resultCount", 0) > 0:
+                raw_url = data["results"][0].get("collectionViewUrl", "")
+                m = re.search(r"/album/(?:[^/]+/)?(\d+)", raw_url)
+                if m:
+                    geo_url = f"https://geo.music.apple.com/album/{m.group(1)}?app=music&ls=1"
+        except Exception:
+            pass
 
-    fallback_url = f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}"
-    return redirect(fallback_url)
+    if not geo_url:
+        fallback_term = urllib.parse.quote(f"{artist} {album}")
+        geo_url = f"https://geo.music.apple.com/search?term={fallback_term}&app=music"
+
+    return render_template_string(APPLE_REDIRECT_HTML, geo_url=geo_url)
 
 
 @app.route("/icons")
