@@ -223,6 +223,10 @@ EXPLORER_HTML_TEMPLATE = """
                 <span>📻</span> Crate Digger
                 <span class="bg-[#1DB954]/20 text-[#1DB954] text-[9px] font-bold px-1.5 py-0.5 rounded-full">RECOMMENDER</span>
             </a>
+            <a href="/prototype" class="px-4 py-2 rounded-lg text-xs font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition flex items-center gap-2">
+                <span>🔄</span> Sleeve Flip Prototype
+                <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full">20 ALBUMS</span>
+            </a>
         </nav>
 
         <!-- KPI Metrics Ribbon (Updates Dynamically) -->
@@ -687,6 +691,10 @@ RECOMMEND_HTML_TEMPLATE = """
             </a>
             <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
                 <span>📻</span> Crate Digger
+            </a>
+            <a href="/prototype" class="px-4 py-2 rounded-lg text-xs font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition flex items-center gap-2">
+                <span>🔄</span> Sleeve Flip Prototype
+                <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full">20 ALBUMS</span>
             </a>
         </nav>
 
@@ -1294,6 +1302,455 @@ def recommend():
         kpis=data["kpis"],
         brand_icon=ICON_A_SVG
     )
+
+
+PROTOTYPE_HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinSleeve - Vinyl Flip & Liner Notes Prototype</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0c0f12; color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .card-bg { background-color: #14181f; }
+        .perspective-1200 { perspective: 1200px; -webkit-perspective: 1200px; }
+        .transform-style-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .sleeve-card.is-flipped .sleeve-card-inner { transform: rotateY(180deg); }
+        .sleeve-card-inner { transition: transform 0.65s cubic-bezier(0.25, 1, 0.5, 1); }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        .sheen-layer {
+            background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-6 border-b border-gray-800 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 to-black border border-amber-500/30">
+                    <span class="text-xl">🔄</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                        SpinSleeve
+                        <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">PROTOTYPE</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Vinyl Sleeve 3D Flip &amp; Liner Notes Exploration (20 Sample Albums)</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <a href="/" class="px-3.5 py-1.5 rounded-lg border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition">
+                    ← Back to Library Explorer
+                </a>
+                <a href="/recommend" class="px-3.5 py-1.5 rounded-lg border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition">
+                    📻 Crate Digger
+                </a>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
+            <a href="/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📚</span> Library Explorer
+            </a>
+            <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📻</span> Crate Digger
+            </a>
+            <a href="/prototype" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-2">
+                <span>🔄</span> Sleeve Flip Prototype
+                <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full">20 ENRICHED</span>
+            </a>
+        </nav>
+
+        <!-- Prototype Instructions Box -->
+        <div class="bg-gradient-to-r from-amber-950/20 to-gray-900 border border-amber-500/30 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">💡</span>
+                <div>
+                    <h3 class="text-sm font-bold text-amber-200">Interactive Prototype: Test Both Experiences</h3>
+                    <p class="text-xs text-gray-400">
+                        1) Click <strong>"🔄 Flip Jacket"</strong> to test pure 60fps in-grid 3D flip. 
+                        2) Click <strong>"📖 12&quot; Gatefold"</strong> to lift the album out and inspect full liner notes &amp; reviews.
+                    </p>
+                </div>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-amber-400/80 bg-black/40 px-3 py-1.5 rounded-lg border border-amber-500/20 shrink-0">
+                Data: BigQuery + Wikipedia + Discogs
+            </span>
+        </div>
+
+        <!-- 20 ALBUMS GRID -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {% for a in albums %}
+            <div class="sleeve-card relative h-[450px] perspective-1200" id="card-{{ a.album_id }}">
+                <div class="sleeve-card-inner relative w-full h-full transform-style-3d rounded-2xl shadow-xl">
+                    
+                    <!-- FRONT COVER (Face 1) -->
+                    <div class="card-face card-front absolute inset-0 w-full h-full backface-hidden card-bg border border-gray-800 rounded-2xl overflow-hidden flex flex-col p-3 shadow-lg">
+                        <!-- Cover Art with Sheen & Badges -->
+                        <div class="relative w-full aspect-square rounded-xl overflow-hidden mb-3 bg-black">
+                            <img src="{{ a.album_image_url }}" alt="{{ a.album_name }}" class="w-full h-full object-cover">
+                            <div class="sheen-layer absolute inset-0"></div>
+
+                            <!-- Critical Rating Badges (Top Right) -->
+                            <div class="absolute top-2 right-2 flex flex-col items-end gap-1 z-10">
+                                {% if a.pitchfork_score %}
+                                <span class="bg-red-950/90 border border-red-500/50 text-red-200 text-[10px] font-black px-2 py-0.5 rounded shadow backdrop-blur-md">
+                                    P4K {{ a.pitchfork_score }}
+                                </span>
+                                {% endif %}
+                                {% if a.metacritic_score %}
+                                <span class="bg-emerald-950/90 border border-emerald-500/50 text-emerald-200 text-[10px] font-black px-2 py-0.5 rounded shadow backdrop-blur-md">
+                                    MC {{ a.metacritic_score }}
+                                </span>
+                                {% endif %}
+                                {% if a.discogs_rating %}
+                                <span class="bg-amber-950/90 border border-amber-500/50 text-amber-200 text-[10px] font-bold px-2 py-0.5 rounded shadow backdrop-blur-md">
+                                    ★ {{ a.discogs_rating }}
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Era Pill (Bottom Left) -->
+                            <div class="absolute bottom-2 left-2 z-10">
+                                <span class="bg-black/75 backdrop-blur-md text-gray-300 text-[9px] font-mono px-2 py-0.5 rounded-full border border-gray-700">
+                                    {{ a.release_year }} • {{ a.era_group }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Info -->
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-sm font-bold text-white truncate leading-snug">{{ a.album_name }}</h3>
+                            <p class="text-xs text-gray-400 truncate">{{ a.artist_name }}</p>
+                            {% if a.styles %}
+                            <p class="text-[10px] text-gray-500 truncate mt-0.5">{{ a.styles }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Action Buttons -->
+                        <div class="mt-3 pt-2.5 border-t border-gray-800 flex items-center gap-2">
+                            <button onclick="toggleCardFlip('{{ a.album_id }}')" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center gap-1.5 border border-gray-700">
+                                <span>🔄</span> Flip
+                            </button>
+                            <button onclick="openGatefoldModal('{{ a.album_id }}')" class="flex-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-[11px] font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center gap-1.5 border border-amber-500/30">
+                                <span>📖</span> 12" Gatefold
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BACK COVER (Face 2 - The Reverse Jacket) -->
+                    <div class="card-face card-back absolute inset-0 w-full h-full backface-hidden rotate-y-180 bg-[#121620] border border-amber-500/40 rounded-2xl overflow-hidden flex flex-col p-4 shadow-2xl">
+                        <!-- Reverse Jacket Spine Banner -->
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-800 mb-2">
+                            <span class="text-[9px] font-mono tracking-widest text-amber-400 uppercase font-black">● REVERSE SLEEVE JACKET</span>
+                            <button onclick="toggleCardFlip('{{ a.album_id }}')" class="text-xs text-gray-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-gray-800">
+                                ✕
+                            </button>
+                        </div>
+
+                        <!-- Title & Artist -->
+                        <div class="mb-2">
+                            <h4 class="text-xs font-bold text-white leading-tight line-clamp-1">{{ a.album_name }}</h4>
+                            <p class="text-[10px] text-amber-300/80 font-mono truncate">{{ a.artist_name }} ({{ a.release_year }})</p>
+                        </div>
+
+                        <!-- Score Pills -->
+                        <div class="flex flex-wrap gap-1 mb-2">
+                            {% if a.pitchfork_score %}
+                            <span class="text-[9px] font-black bg-red-950/60 border border-red-600/40 text-red-300 px-1.5 py-0.5 rounded">
+                                P4K {{ a.pitchfork_score }}
+                            </span>
+                            {% endif %}
+                            {% if a.metacritic_score %}
+                            <span class="text-[9px] font-black bg-emerald-950/60 border border-emerald-600/40 text-emerald-300 px-1.5 py-0.5 rounded">
+                                MC {{ a.metacritic_score }}
+                            </span>
+                            {% endif %}
+                            {% if a.discogs_rating %}
+                            <span class="text-[9px] font-bold bg-amber-950/60 border border-amber-600/40 text-amber-300 px-1.5 py-0.5 rounded">
+                                ★ {{ a.discogs_rating }} ({{ a.discogs_votes|int }} votes)
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Body scroll area -->
+                        <div class="flex-1 overflow-y-auto text-[11px] text-gray-300 space-y-2.5 pr-1 custom-scroll">
+                            {% if a.album_description %}
+                            <div>
+                                <span class="text-[9px] font-mono uppercase text-gray-400 font-bold block mb-0.5">Background &amp; Story</span>
+                                <p class="text-gray-300 text-[10.5px] leading-relaxed line-clamp-4">{{ a.album_description }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if a.personnel %}
+                            <div>
+                                <span class="text-[9px] font-mono uppercase text-gray-400 font-bold block mb-0.5">Personnel &amp; Credits</span>
+                                <ul class="text-[10px] text-gray-400 space-y-0.5">
+                                    {% for p in a.personnel[:4] %}
+                                    <li class="truncate">• {{ p }}</li>
+                                    {% endfor %}
+                                    {% if a.personnel|length > 4 %}
+                                    <li class="text-amber-400/90 text-[9px] font-mono italic">+ {{ a.personnel|length - 4 }} more credits...</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Back footer actions -->
+                        <div class="mt-2.5 pt-2 border-t border-gray-800 flex items-center gap-2">
+                            <button onclick="toggleCardFlip('{{ a.album_id }}')" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] font-bold py-1.5 rounded-lg transition text-center">
+                                🔄 Flip Front
+                            </button>
+                            <button onclick="openGatefoldModal('{{ a.album_id }}')" class="flex-1 bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-black py-1.5 rounded-lg transition text-center shadow-md">
+                                📖 12" Gatefold
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 12-INCH GATEFOLD SLEEVE MODAL -->
+    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="relative w-full max-w-4xl max-h-[90vh] bg-[#12161f] border border-amber-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+            
+            <!-- Close Button -->
+            <button onclick="closeGatefoldModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/60 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700 text-sm">
+                ✕
+            </button>
+
+            <!-- Left Panel: 12" Sleeve Front & Acclaim -->
+            <div class="w-full md:w-5/12 bg-black/40 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800 shrink-0">
+                <div>
+                    <div class="relative aspect-square rounded-2xl overflow-hidden shadow-2xl mb-4 border border-gray-700/60">
+                        <img id="mCover" src="" alt="Album Cover" class="w-full h-full object-cover">
+                    </div>
+                    <h2 id="mTitle" class="text-lg font-black text-white leading-snug"></h2>
+                    <p id="mArtist" class="text-sm text-gray-300 font-medium"></p>
+                    <p id="mMeta" class="text-xs text-amber-300/80 font-mono mt-0.5"></p>
+
+                    <!-- Score Badges in Modal -->
+                    <div id="mScores" class="flex flex-wrap gap-1.5 mt-3"></div>
+                </div>
+
+                <!-- Streaming Links -->
+                <div class="mt-6 pt-4 border-t border-gray-800/80 space-y-2">
+                    <div class="flex items-center gap-2">
+                        <a id="mSpotify" href="#" target="_blank" class="flex-1 bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-black py-2 rounded-xl text-center transition shadow">
+                            Open Spotify
+                        </a>
+                        <a id="mApple" href="#" target="_blank" class="flex-1 bg-[#FA233B] hover:bg-[#fb4a5d] text-white text-xs font-black py-2 rounded-xl text-center transition shadow">
+                            Apple Music
+                        </a>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-gray-400 pt-1">
+                        <a id="mWiki" href="#" target="_blank" class="hover:text-white underline">Wikipedia Article ↗</a>
+                        <a id="mDiscogs" href="#" target="_blank" class="hover:text-white underline">Discogs Release ↗</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: The Inner Gatefold & Complete Liner Notes -->
+            <div class="w-full md:w-7/12 p-6 flex flex-col overflow-y-auto custom-scroll max-h-[85vh]">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-800 mb-4">
+                    <span class="text-xs font-mono font-bold tracking-widest text-amber-400 uppercase">
+                        📜 COMPLETE LINER NOTES &amp; BACKGROUND
+                    </span>
+                    <span id="mStyles" class="text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded-full border border-gray-700"></span>
+                </div>
+
+                <!-- Story Section -->
+                <div class="mb-6">
+                    <h4 class="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-2">Album Narrative &amp; Critical Reception</h4>
+                    <p id="mStory" class="text-xs text-gray-300 leading-relaxed bg-black/20 p-4 rounded-xl border border-gray-800/60"></p>
+                </div>
+
+                <!-- Personnel Roster Section -->
+                <div>
+                    <h4 class="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-2 flex items-center justify-between">
+                        <span>Production &amp; Musician Credits</span>
+                        <span id="mPersonnelCount" class="text-[10px] text-amber-400 font-normal"></span>
+                    </h4>
+                    <div id="mPersonnelList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Data Store for Modal -->
+    <script>
+        const prototypeAlbums = {{ albums | tojson }};
+
+        function toggleCardFlip(albumId) {
+            const card = document.getElementById(`card-${albumId}`);
+            if (card) {
+                card.classList.toggle('is-flipped');
+            }
+        }
+
+        function openGatefoldModal(albumId) {
+            const a = prototypeAlbums.find(x => x.album_id === albumId);
+            if (!a) return;
+
+            document.getElementById('mCover').src = a.album_image_url;
+            document.getElementById('mTitle').textContent = a.album_name;
+            document.getElementById('mArtist').textContent = a.artist_name;
+            document.getElementById('mMeta').textContent = `${a.release_year} • ${a.era_group}`;
+            document.getElementById('mStyles').textContent = a.styles || a.era_group;
+            document.getElementById('mStory').textContent = a.album_description || "No editorial background notes recorded for this release.";
+
+            // Scores
+            const scoresDiv = document.getElementById('mScores');
+            scoresDiv.innerHTML = '';
+            if (a.pitchfork_score) {
+                scoresDiv.innerHTML += `<span class="bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-black px-2.5 py-1 rounded-lg">Pitchfork: ${a.pitchfork_score}</span>`;
+            }
+            if (a.metacritic_score) {
+                scoresDiv.innerHTML += `<span class="bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-black px-2.5 py-1 rounded-lg">Metacritic: ${a.metacritic_score}</span>`;
+            }
+            if (a.allmusic_score) {
+                scoresDiv.innerHTML += `<span class="bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs font-black px-2.5 py-1 rounded-lg">AllMusic: ${a.allmusic_score}</span>`;
+            }
+            if (a.discogs_rating) {
+                scoresDiv.innerHTML += `<span class="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs font-bold px-2.5 py-1 rounded-lg">Discogs: ${a.discogs_rating}★ (${a.discogs_votes || 0} ratings)</span>`;
+            }
+
+            // Links
+            document.getElementById('mSpotify').href = a.spotify_url;
+            document.getElementById('mApple').href = `/open/apple?artist=${encodeURIComponent(a.artist_name)}&album=${encodeURIComponent(a.album_name)}`;
+            
+            const wikiLink = document.getElementById('mWiki');
+            if (a.wikipedia_url) {
+                wikiLink.href = a.wikipedia_url;
+                wikiLink.style.display = 'inline';
+            } else {
+                wikiLink.style.display = 'none';
+            }
+
+            const discogsLink = document.getElementById('mDiscogs');
+            if (a.discogs_url) {
+                discogsLink.href = a.discogs_url;
+                discogsLink.style.display = 'inline';
+            } else {
+                discogsLink.style.display = 'none';
+            }
+
+            // Personnel
+            const pList = document.getElementById('mPersonnelList');
+            pList.innerHTML = '';
+            const pCount = document.getElementById('mPersonnelCount');
+            if (a.personnel && a.personnel.length > 0) {
+                pCount.textContent = `${a.personnel.length} contributors`;
+                a.personnel.forEach(p => {
+                    pList.innerHTML += `
+                        <div class="bg-black/30 border border-gray-800/80 rounded-lg p-2 text-[11px] text-gray-300 flex items-center gap-1.5">
+                            <span class="text-amber-400 text-xs">•</span>
+                            <span class="truncate">${p}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                pCount.textContent = '0 contributors';
+                pList.innerHTML = '<p class="text-xs text-gray-500 col-span-2">No detailed personnel credits available for this release.</p>';
+            }
+
+            document.getElementById('gatefoldModal').classList.remove('hidden');
+        }
+
+        function closeGatefoldModal() {
+            document.getElementById('gatefoldModal').classList.add('hidden');
+        }
+
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeGatefoldModal();
+        });
+
+        // Close on background click
+        document.getElementById('gatefoldModal').addEventListener('click', (e) => {
+            if (e.target.id === 'gatefoldModal') closeGatefoldModal();
+        });
+    </script>
+</body>
+</html>
+"""
+
+
+def fetch_prototype_data():
+    client = bigquery.Client(project=PROJECT_ID)
+    query = f"""
+    SELECT 
+      e.album_id,
+      e.artist_name,
+      e.album_name,
+      e.release_year,
+      e.era_group,
+      e.styles,
+      e.pitchfork_score,
+      e.metacritic_score,
+      e.allmusic_score,
+      e.discogs_rating,
+      e.discogs_votes,
+      e.album_description,
+      e.personnel,
+      e.wikipedia_url,
+      e.discogs_url,
+      f.album_image_url,
+      f.album_url as spotify_url,
+      COALESCE(f.album_plays, 0) as album_plays
+    FROM `{PROJECT_ID}.{DATASET_NAME}.album_enriched_metadata` e
+    LEFT JOIN `{PROJECT_ID}.{DATASET_NAME}.all_albums_features` f
+      ON e.album_id = REGEXP_EXTRACT(f.album_url, r"album/([a-zA-Z0-9]+)")
+    ORDER BY e.release_year DESC
+    LIMIT 20
+    """
+    df = client.query(query).to_dataframe()
+    albums = []
+    for _, row in df.iterrows():
+        p_str = row["personnel"] or ""
+        p_list = [p.strip() for p in p_str.split("•") if p.strip()] if p_str else []
+        albums.append({
+            "album_id": row["album_id"],
+            "artist_name": row["artist_name"],
+            "album_name": row["album_name"],
+            "release_year": row["release_year"],
+            "era_group": row["era_group"],
+            "styles": row["styles"],
+            "pitchfork_score": row["pitchfork_score"],
+            "metacritic_score": row["metacritic_score"],
+            "allmusic_score": row["allmusic_score"],
+            "discogs_rating": row["discogs_rating"],
+            "discogs_votes": row["discogs_votes"],
+            "album_description": row["album_description"],
+            "personnel": p_list,
+            "wikipedia_url": row["wikipedia_url"],
+            "discogs_url": row["discogs_url"],
+            "album_image_url": row["album_image_url"] or "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80",
+            "spotify_url": row["spotify_url"] or f"https://open.spotify.com/album/{row['album_id']}",
+            "album_plays": row["album_plays"]
+        })
+    return albums
+
+
+@app.route("/prototype")
+def prototype():
+    albums = fetch_prototype_data()
+    return render_template_string(PROTOTYPE_HTML_TEMPLATE, albums=albums)
 
 
 @app.route("/api/albums")
