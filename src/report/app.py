@@ -24,10 +24,10 @@ _cache_time = 0
 _preview_cache = {}
 
 
-def fetch_album_data():
+def fetch_album_data(force_refresh=False):
     global _cached_data, _cache_time
     now = time.time()
-    if _cached_data is not None and (now - _cache_time) < CACHE_TTL:
+    if not force_refresh and _cached_data is not None and (now - _cache_time) < CACHE_TTL:
         return _cached_data
 
     client = bigquery.Client(project=PROJECT_ID)
@@ -1897,7 +1897,8 @@ def favicon():
 
 @app.route("/")
 def index():
-    data = fetch_album_data()
+    force_refresh = request.args.get("refresh") in ("1", "true")
+    data = fetch_album_data(force_refresh=force_refresh)
     return render_template_string(
         EXPLORER_HTML_TEMPLATE,
         albums=data["albums"],
@@ -1909,7 +1910,8 @@ def index():
 
 @app.route("/recommend")
 def recommend():
-    data = fetch_album_data()
+    force_refresh = request.args.get("refresh") in ("1", "true")
+    data = fetch_album_data(force_refresh=force_refresh)
     return render_template_string(
         RECOMMEND_HTML_TEMPLATE,
         albums=data["albums"],
