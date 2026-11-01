@@ -1,8 +1,10 @@
 import os
 import json
 import time
+import urllib.parse
 from collections import Counter
 from datetime import datetime
+import requests
 from flask import Flask, render_template_string, jsonify, request, Response
 from google.cloud import bigquery
 
@@ -15,6 +17,9 @@ DATASET_NAME = os.getenv("BQ_DATASET", "spotify")
 CACHE_TTL = 600  # 10 minutes
 _cached_data = None
 _cache_time = 0
+
+# Cache for audio preview & Apple Music lookups
+_preview_cache = {}
 
 
 def fetch_album_data():
@@ -87,11 +92,72 @@ def fetch_album_data():
     return _cached_data
 
 
-SPOTIFY_FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.674.466-1.026.25-2.813-1.718-6.353-2.106-10.523-1.153-.404.093-.812-.162-.905-.566-.093-.404.162-.812.566-.905 4.567-1.043 8.47-.6 11.637 1.348.353.215.466.674.251 1.026zm1.467-3.265c-.27.44-.847.578-1.287.308-3.22-1.979-8.127-2.553-11.936-1.396-.498.151-1.03-.135-1.182-.633-.151-.498.135-1.03.633-1.182 4.354-1.32 9.776-.682 13.464 1.616.44.27.578.847.308 1.287zm.126-3.414c-3.86-2.292-10.228-2.504-13.916-1.385-.593.18-1.224-.16-1.404-.753-.18-.593.16-1.224.753-1.404 4.242-1.288 11.278-1.042 15.736 1.605.534.317.708 1.01.392 1.544-.318.535-1.01.71-1.545.394z"/></svg>"""
+# ==============================================================================
+# BRAND ICONS: 3 Distinct Turntable + Spotify Concepts
+# ==============================================================================
+ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <style>
+      @keyframes spin33 {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .spin-record {
+        transform-origin: 48px 52px;
+        animation: spin33 1.8s linear infinite;
+      }
+    </style>
+  </defs>
+  <!-- Spinning Vinyl Platter (33 RPM = 1.80s per revolution) -->
+  <g class="spin-record">
+    <!-- Vinyl Platter Base / Dark Rim -->
+    <circle cx="48" cy="52" r="46" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
+    <!-- Spotify Green Core Platter -->
+    <circle cx="48" cy="52" r="40" fill="#1DB954"/>
+    <!-- Spotify Soundwaves in Bold Black -->
+    <path d="M30 40c9-2.5 19-1.5 27 3" stroke="#0C0F12" stroke-width="5" stroke-linecap="round"/>
+    <path d="M33 49c8-1.8 16-1 22 2.5" stroke="#0C0F12" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M36 58c6-1.2 12-0.5 17 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Center Spindle -->
+    <circle cx="48" cy="52" r="5" fill="#0C0F12"/>
+  </g>
+  <!-- Stationary Tonearm & Pivot (Does NOT rotate) -->
+  <circle cx="86" cy="14" r="9" fill="#181D22" stroke="#9CA3AF" stroke-width="3"/>
+  <circle cx="86" cy="14" r="4" fill="#1DB954"/>
+  <!-- Metallic Tonearm Rod in Bright White -->
+  <path d="M83 19 L66 62 L52 68" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Cartridge / Headshell Needle -->
+  <rect x="43" y="63" width="11" height="8" rx="2" fill="#0C0F12" stroke="#1DB954" stroke-width="1.5" transform="rotate(-22 48 67)"/>
+</svg>"""
+
+ICON_B_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <circle cx="50" cy="50" r="45" fill="#12161A" stroke="#28323C" stroke-width="3"/>
+  <circle cx="43" cy="51" r="33" fill="#0C0F12" stroke="#1F2937" stroke-width="1.5"/>
+  <circle cx="43" cy="51" r="25" fill="#1DB954"/>
+  <path d="M33 44c5.5-1.5 12-1 16 1.8" stroke="#0C0F12" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M35 50c4.5-1 9-0.5 13 1.5" stroke="#0C0F12" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M37 55c3-0.5 6.5-0.2 9 1.2" stroke="#0C0F12" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="43" cy="51" r="2.5" fill="#0C0F12"/>
+  <circle cx="78" cy="23" r="6" fill="#374151" stroke="#9CA3AF" stroke-width="2"/>
+  <path d="M76 27 L64 61 L54 65" stroke="#F3F4F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="48" y="61" width="7" height="5" rx="1" fill="#1DB954" transform="rotate(-20 51.5 63.5)"/>
+</svg>"""
+
+ICON_C_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <rect x="6" y="6" width="88" height="88" rx="22" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
+  <circle cx="42" cy="52" r="28" fill="#181D22"/>
+  <circle cx="42" cy="52" r="20" fill="#1DB954"/>
+  <path d="M34 47c4-1 8.5-0.7 11.5 1.2" stroke="#0C0F12" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M36 51c3-0.8 6.5-0.4 9 1" stroke="#0C0F12" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="42" cy="52" r="2.5" fill="#0C0F12"/>
+  <circle cx="80" cy="22" r="6" fill="#1DB954"/>
+  <path d="M78 26 C 78 52, 65 64, 52 64" stroke="#E5E7EB" stroke-width="3.5" stroke-linecap="round"/>
+  <rect x="45" y="60" width="8" height="6" rx="1.5" fill="#1DB954" transform="rotate(-10 49 63)"/>
+</svg>"""
 
 
 # ==============================================================================
-# TAB 1: LIBRARY EXPLORER (The working, tested dashboard)
+# TAB 1: LIBRARY EXPLORER
 # ==============================================================================
 EXPLORER_HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -100,7 +166,7 @@ EXPLORER_HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpinSleeve - Spotify Album Dashboard</title>
-    <!-- SpinSleeve Full-Bleed Turntable Tab Icon (Max size & high legibility) -->
+    <!-- SpinSleeve Full-Bleed Turntable Tab Icon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Ccircle cx='48' cy='52' r='46' fill='%230C0F12' stroke='%231DB954' stroke-width='3'/%3E%3Ccircle cx='48' cy='52' r='40' fill='%231DB954'/%3E%3Cpath d='M30 40c9-2.5 19-1.5 27 3' stroke='%230C0F12' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M33 49c8-1.8 16-1 22 2.5' stroke='%230C0F12' stroke-width='4.2' stroke-linecap='round'/%3E%3Cpath d='M36 58c6-1.2 12-0.5 17 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='52' r='5' fill='%230C0F12'/%3E%3Ccircle cx='86' cy='14' r='9' fill='%23181D22' stroke='%239CA3AF' stroke-width='3'/%3E%3Ccircle cx='86' cy='14' r='4' fill='%231DB954'/%3E%3Cpath d='M83 19 L66 62 L52 68' stroke='%23FFFFFF' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='43' y='63' width='11' height='8' rx='2' fill='%230C0F12' stroke='%231DB954' stroke-width='1.5' transform='rotate(-22 48 67)'/%3E%3C/svg%3E">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -129,12 +195,19 @@ EXPLORER_HTML_TEMPLATE = """
                 <p class="text-xs text-gray-400 mt-1">Personal catalog & smart playlist explorer</p>
             </div>
 
-            <!-- Quick Action Links -->
-            <div class="flex items-center gap-3">
-                <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white bg-gray-800/80 hover:bg-gray-700 px-3.5 py-2 rounded-lg border border-gray-700 transition">
-                    Reset Filters
+            <!-- Header Quick Actions & Audio Preview Controls -->
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Hover Audio Mute/Unmute Toggle -->
+                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
+                        class="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition"
+                        title="Toggle 30-second audio snippet on album hover">
+                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
                 </button>
-                <a href="https://open.spotify.com" target="_blank" class="text-xs font-semibold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition shadow-sm">
+
+                <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white bg-gray-800/80 hover:bg-gray-700 px-3 py-2 rounded-lg border border-gray-700 transition">
+                    Reset
+                </button>
+                <a href="https://open.spotify.com" target="_blank" class="text-xs font-semibold text-black bg-[#1DB954] hover:bg-[#1ed760] px-3.5 py-2 rounded-lg transition shadow-sm">
                     Open Spotify
                 </a>
             </div>
@@ -193,7 +266,7 @@ EXPLORER_HTML_TEMPLATE = """
                     </select>
                 </div>
 
-                <!-- Status Filter (Played / Unplayed / All) -->
+                <!-- Status Filter -->
                 <div>
                     <select id="statusFilter" class="w-full bg-[#11151a] border border-gray-700/80 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition" onchange="onFilterChange()">
                         <option value="all">All Albums</option>
@@ -217,7 +290,7 @@ EXPLORER_HTML_TEMPLATE = """
             <!-- Active Results Bar -->
             <div class="flex items-center justify-between mt-3.5 pt-3 border-t border-gray-800 text-xs text-gray-400">
                 <span>Showing <strong id="visibleCount" class="text-white">0</strong> of <strong class="text-white">{{ kpis.total_albums }}</strong> albums</span>
-                <span id="filterDescription" class="italic text-gray-500"></span>
+                <span id="filterDescription" class="italic text-gray-500">Hover over any album to preview 30s audio</span>
             </div>
         </div>
 
@@ -234,12 +307,123 @@ EXPLORER_HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Album Data Payload for Client-side Sorting & Filtering -->
+    <!-- Floating Audio Preview Banner -->
+    <div id="previewToast" class="fixed bottom-5 right-5 z-50 bg-[#161a1f]/95 backdrop-blur-md border border-[#1DB954]/50 shadow-2xl rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 transform translate-y-28 opacity-0 pointer-events-none max-w-sm">
+        <div class="w-9 h-9 rounded-full bg-[#1DB954]/20 flex items-center justify-center flex-shrink-0 border border-[#1DB954]/40">
+            <span class="text-sm animate-pulse">🎵</span>
+        </div>
+        <div class="flex-grow min-w-0">
+            <p class="text-xs font-bold text-white truncate" id="toastTrack">Previewing Track</p>
+            <p class="text-[11px] text-gray-400 truncate" id="toastArtist">Artist • Album</p>
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+            <a id="toastAppleLink" href="#" target="_blank" class="text-[10px] bg-[#FA233B]/20 text-[#FA233B] hover:bg-[#FA233B] hover:text-white px-2 py-1 rounded font-bold border border-[#FA233B]/30 transition" title="Open in Apple Music">
+                🍎 Apple
+            </a>
+            <button onclick="stopPreview()" class="text-gray-400 hover:text-white p-1 text-sm font-bold">✕</button>
+        </div>
+    </div>
+
     <script>
         const ALL_ALBUMS = {{ albums | tojson }};
         let filteredAlbums = [...ALL_ALBUMS];
         let displayLimit = 48;
         const PAGE_STEP = 48;
+
+        // Hover Audio Preview Controller
+        let hoverTimer = null;
+        let activeAudio = new Audio();
+        let currentHoverKey = null;
+        let isAudioEnabled = true;
+        const previewUrlCache = new Map();
+
+        activeAudio.volume = 0.75;
+        activeAudio.addEventListener('ended', () => hidePreviewToast());
+
+        function toggleHoverAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const btnText = document.getElementById('audioText');
+            const btnIcon = document.getElementById('audioIcon');
+            if (isAudioEnabled) {
+                btnText.innerText = 'Hover Audio: ON';
+                btnIcon.innerText = '🔊';
+            } else {
+                stopPreview();
+                btnText.innerText = 'Hover Audio: MUTED';
+                btnIcon.innerText = '🔇';
+            }
+        }
+
+        function onCardHover(artist, album, spotifyUrl, cardEl) {
+            if (!isAudioEnabled) return;
+            const key = `${artist.toLowerCase()}::${album.toLowerCase()}`;
+            currentHoverKey = key;
+
+            if (hoverTimer) clearTimeout(hoverTimer);
+
+            // 350ms debounce
+            hoverTimer = setTimeout(async () => {
+                if (currentHoverKey !== key) return;
+
+                let data = previewUrlCache.get(key);
+                if (!data) {
+                    try {
+                        const res = await fetch(`/api/preview?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`);
+                        data = await res.json();
+                        previewUrlCache.set(key, data);
+                    } catch (e) {
+                        return;
+                    }
+                }
+
+                if (currentHoverKey !== key) return;
+
+                if (data && data.preview_url) {
+                    activeAudio.src = data.preview_url;
+                    activeAudio.play().then(() => {
+                        showPreviewToast(artist, album, data.track_name || 'Preview Snippet', data.apple_music_url, spotifyUrl);
+                        const pulse = cardEl.querySelector('.audio-pulse');
+                        if (pulse) pulse.classList.remove('hidden');
+                    }).catch(e => {});
+                }
+            }, 350);
+        }
+
+        function onCardLeave(cardEl) {
+            if (hoverTimer) clearTimeout(hoverTimer);
+            currentHoverKey = null;
+            stopPreview();
+            if (cardEl) {
+                const pulse = cardEl.querySelector('.audio-pulse');
+                if (pulse) pulse.classList.add('hidden');
+            }
+        }
+
+        function stopPreview() {
+            activeAudio.pause();
+            activeAudio.currentTime = 0;
+            hidePreviewToast();
+            document.querySelectorAll('.audio-pulse').forEach(el => el.classList.add('hidden'));
+        }
+
+        function showPreviewToast(artist, album, track, appleUrl, spotifyUrl) {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            document.getElementById('toastTrack').innerText = track;
+            document.getElementById('toastArtist').innerText = `${artist} • ${album}`;
+            const amLink = document.getElementById('toastAppleLink');
+            if (amLink && appleUrl) amLink.href = appleUrl;
+
+            toast.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }
+
+        function hidePreviewToast() {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            toast.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+        }
 
         function renderGrid() {
             const grid = document.getElementById("albumGrid");
@@ -266,10 +450,15 @@ EXPLORER_HTML_TEMPLATE = """
                     : `<span class="bg-gray-800 text-gray-400 text-[10px] px-2 py-0.5 rounded-full">New</span>`;
 
                 const genres = a.album_genres ? a.album_genres.split(", ").slice(0, 2).join(" • ") : "";
+                const safeArtist = (a.album_artist_name || "").replace(/'/g, "\\'");
+                const safeAlbum = (a.album_name || "").replace(/'/g, "\\'");
+                const appleSearchUrl = `https://music.apple.com/us/search?term=${encodeURIComponent(a.album_artist_name + ' ' + a.album_name)}`;
 
                 html += `
-                    <a href="${a.album_url}" target="_blank" rel="noopener noreferrer"
-                       class="card-bg group block rounded-xl p-3 border border-gray-800/80 hover:border-gray-700 transition duration-200 shadow-sm hover:shadow-lg flex flex-col justify-between">
+                    <div class="card-bg group block rounded-xl p-3 border border-gray-800/80 hover:border-gray-700 transition duration-200 shadow-sm hover:shadow-lg flex flex-col justify-between relative cursor-pointer"
+                         onmouseenter="onCardHover('${safeArtist}', '${safeAlbum}', '${a.album_url}', this)"
+                         onmouseleave="onCardLeave(this)"
+                         onclick="window.open('${a.album_url}', '_blank')">
                         <div>
                             <!-- Album Cover -->
                             <div class="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-900 mb-2.5">
@@ -279,6 +468,11 @@ EXPLORER_HTML_TEMPLATE = """
                                 <!-- Floating Play Badge overlay -->
                                 <div class="absolute top-2 right-2">
                                     ${playsBadge}
+                                </div>
+
+                                <!-- Audio Playing Badge Indicator -->
+                                <div class="audio-pulse hidden absolute bottom-2 left-2 bg-black/85 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-bold text-[#1DB954] border border-[#1DB954]/50 shadow-md flex items-center gap-1 z-20">
+                                    <span>🎵</span> <span class="animate-pulse">Previewing</span>
                                 </div>
 
                                 <!-- Hover Play Button -->
@@ -300,12 +494,19 @@ EXPLORER_HTML_TEMPLATE = """
                             </p>
                         </div>
 
-                        <!-- Footer tags -->
+                        <!-- Footer tags & Apple Music Link -->
                         <div class="mt-2.5 pt-2 border-t border-gray-800/60 flex items-center justify-between text-[10px] text-gray-500">
                             <span>${a.release_year}</span>
-                            <span class="truncate max-w-[100px] text-right" title="${a.album_genres}">${genres}</span>
+                            <div class="flex items-center gap-1.5">
+                                <a href="${appleSearchUrl}" target="_blank" rel="noopener noreferrer"
+                                   onclick="event.stopPropagation()"
+                                   class="text-[10px] font-semibold text-[#FA233B] bg-[#FA233B]/10 hover:bg-[#FA233B] hover:text-white border border-[#FA233B]/30 px-1.5 py-0.5 rounded transition flex items-center gap-1"
+                                   title="Play on Apple Music">
+                                    🍎 Apple
+                                </a>
+                            </div>
                         </div>
-                    </a>
+                    </div>
                 `;
             }
 
@@ -424,7 +625,7 @@ EXPLORER_HTML_TEMPLATE = """
 
 
 # ==============================================================================
-# TAB 2: CRATE DIGGER (Smart personalized album recommender)
+# TAB 2: CRATE DIGGER (With Apple Music & Audio Previews)
 # ==============================================================================
 RECOMMEND_HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -433,7 +634,7 @@ RECOMMEND_HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crate Digger - Spotify Dash</title>
-    <!-- SpinSleeve Full-Bleed Turntable Tab Icon (Max size & high legibility) -->
+    <!-- SpinSleeve Full-Bleed Turntable Tab Icon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Ccircle cx='48' cy='52' r='46' fill='%230C0F12' stroke='%231DB954' stroke-width='3'/%3E%3Ccircle cx='48' cy='52' r='40' fill='%231DB954'/%3E%3Cpath d='M30 40c9-2.5 19-1.5 27 3' stroke='%230C0F12' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M33 49c8-1.8 16-1 22 2.5' stroke='%230C0F12' stroke-width='4.2' stroke-linecap='round'/%3E%3Cpath d='M36 58c6-1.2 12-0.5 17 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='52' r='5' fill='%230C0F12'/%3E%3Ccircle cx='86' cy='14' r='9' fill='%23181D22' stroke='%239CA3AF' stroke-width='3'/%3E%3Ccircle cx='86' cy='14' r='4' fill='%231DB954'/%3E%3Cpath d='M83 19 L66 62 L52 68' stroke='%23FFFFFF' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='43' y='63' width='11' height='8' rx='2' fill='%230C0F12' stroke='%231DB954' stroke-width='1.5' transform='rotate(-22 48 67)'/%3E%3C/svg%3E">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -467,7 +668,11 @@ RECOMMEND_HTML_TEMPLATE = """
             </div>
 
             <!-- Quick Action Links -->
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2.5">
+                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
+                        class="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
+                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
+                </button>
                 <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition shadow-md flex items-center gap-1.5">
                     <span>🎲</span> Spin Again
                 </button>
@@ -508,7 +713,7 @@ RECOMMEND_HTML_TEMPLATE = """
                         <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">🌙 Late Night / Chill</button>
                         <button onclick="setVibe('energetic')" id="vibeBtn-energetic" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">⚡ Energetic / Focus</button>
                         <button onclick="setVibe('mellow')" id="vibeBtn-mellow" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">☕ Mellow / Acoustic</button>
-                        <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">📻 Crate Digger / Vintage</button>
+                        <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">📻 Vintage Classics</button>
                     </div>
                 </div>
 
@@ -550,7 +755,7 @@ RECOMMEND_HTML_TEMPLATE = """
 
             <!-- Spotlight 3 Cards Container -->
             <div id="spotlightContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <!-- Dynamically populated via JavaScript -->
+                <!-- Populated via JavaScript -->
             </div>
         </div>
 
@@ -561,8 +766,25 @@ RECOMMEND_HTML_TEMPLATE = """
                 <span class="text-xs text-gray-500" id="candidateSubtext"></span>
             </div>
             <div id="candidateGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <!-- Dynamically populated via JavaScript -->
+                <!-- Populated via JavaScript -->
             </div>
+        </div>
+    </div>
+
+    <!-- Floating Audio Preview Banner -->
+    <div id="previewToast" class="fixed bottom-5 right-5 z-50 bg-[#161a1f]/95 backdrop-blur-md border border-[#1DB954]/50 shadow-2xl rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 transform translate-y-28 opacity-0 pointer-events-none max-w-sm">
+        <div class="w-9 h-9 rounded-full bg-[#1DB954]/20 flex items-center justify-center flex-shrink-0 border border-[#1DB954]/40">
+            <span class="text-sm animate-pulse">🎵</span>
+        </div>
+        <div class="flex-grow min-w-0">
+            <p class="text-xs font-bold text-white truncate" id="toastTrack">Previewing Track</p>
+            <p class="text-[11px] text-gray-400 truncate" id="toastArtist">Artist • Album</p>
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+            <a id="toastAppleLink" href="#" target="_blank" class="text-[10px] bg-[#FA233B]/20 text-[#FA233B] hover:bg-[#FA233B] hover:text-white px-2 py-1 rounded font-bold border border-[#FA233B]/30 transition" title="Open in Apple Music">
+                🍎 Apple
+            </a>
+            <button onclick="stopPreview()" class="text-gray-400 hover:text-white p-1 text-sm font-bold">✕</button>
         </div>
     </div>
 
@@ -574,6 +796,100 @@ RECOMMEND_HTML_TEMPLATE = """
         let selectedEra = 'all';
         let selectedGenre = '';
         let currentSeed = Math.random();
+
+        // Hover Audio Preview Controller
+        let hoverTimer = null;
+        let activeAudio = new Audio();
+        let currentHoverKey = null;
+        let isAudioEnabled = true;
+        const previewUrlCache = new Map();
+
+        activeAudio.volume = 0.75;
+        activeAudio.addEventListener('ended', () => hidePreviewToast());
+
+        function toggleHoverAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const btnText = document.getElementById('audioText');
+            const btnIcon = document.getElementById('audioIcon');
+            if (isAudioEnabled) {
+                btnText.innerText = 'Hover Audio: ON';
+                btnIcon.innerText = '🔊';
+            } else {
+                stopPreview();
+                btnText.innerText = 'Hover Audio: MUTED';
+                btnIcon.innerText = '🔇';
+            }
+        }
+
+        function onCardHover(artist, album, spotifyUrl, cardEl) {
+            if (!isAudioEnabled) return;
+            const key = `${artist.toLowerCase()}::${album.toLowerCase()}`;
+            currentHoverKey = key;
+
+            if (hoverTimer) clearTimeout(hoverTimer);
+
+            hoverTimer = setTimeout(async () => {
+                if (currentHoverKey !== key) return;
+
+                let data = previewUrlCache.get(key);
+                if (!data) {
+                    try {
+                        const res = await fetch(`/api/preview?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`);
+                        data = await res.json();
+                        previewUrlCache.set(key, data);
+                    } catch (e) {
+                        return;
+                    }
+                }
+
+                if (currentHoverKey !== key) return;
+
+                if (data && data.preview_url) {
+                    activeAudio.src = data.preview_url;
+                    activeAudio.play().then(() => {
+                        showPreviewToast(artist, album, data.track_name || 'Preview Snippet', data.apple_music_url, spotifyUrl);
+                        const pulse = cardEl.querySelector('.audio-pulse');
+                        if (pulse) pulse.classList.remove('hidden');
+                    }).catch(e => {});
+                }
+            }, 350);
+        }
+
+        function onCardLeave(cardEl) {
+            if (hoverTimer) clearTimeout(hoverTimer);
+            currentHoverKey = null;
+            stopPreview();
+            if (cardEl) {
+                const pulse = cardEl.querySelector('.audio-pulse');
+                if (pulse) pulse.classList.add('hidden');
+            }
+        }
+
+        function stopPreview() {
+            activeAudio.pause();
+            activeAudio.currentTime = 0;
+            hidePreviewToast();
+            document.querySelectorAll('.audio-pulse').forEach(el => el.classList.add('hidden'));
+        }
+
+        function showPreviewToast(artist, album, track, appleUrl, spotifyUrl) {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            document.getElementById('toastTrack').innerText = track;
+            document.getElementById('toastArtist').innerText = `${artist} • ${album}`;
+            const amLink = document.getElementById('toastAppleLink');
+            if (amLink && appleUrl) amLink.href = appleUrl;
+
+            toast.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }
+
+        function hidePreviewToast() {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            toast.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+        }
 
         const VIBES = {
             all: { name: "Any Vibe", keywords: [] },
@@ -640,30 +956,24 @@ RECOMMEND_HTML_TEMPLATE = """
         function computeRankedCandidates(seed) {
             const era = ERAS[selectedEra];
 
-            // Filter base pool
             let pool = ALL_ALBUMS.filter(a => {
-                // Mode
                 if (selectedMode === 'discover' && (a.album_track_plays || 0) > 0) return false;
                 if (selectedMode === 'favorites' && (a.album_track_plays || 0) === 0) return false;
 
-                // Specific Genre
                 if (selectedGenre && (!a.album_genres || !a.album_genres.toLowerCase().includes(selectedGenre))) {
                     return false;
                 }
 
-                // Era
                 const yr = parseInt(a.release_year) || 0;
                 if (yr > 0 && (yr < era.min || yr > era.max)) return false;
 
                 return true;
             });
 
-            // Score albums
             const scored = pool.map((a, idx) => {
                 let score = 1.0;
                 const genres = (a.album_genres || "").toLowerCase();
 
-                // Vibe Matching
                 if (selectedVibe !== 'all') {
                     const kws = VIBES[selectedVibe].keywords;
                     let matches = 0;
@@ -673,16 +983,12 @@ RECOMMEND_HTML_TEMPLATE = """
                     score *= (matches > 0 ? (1.5 + matches * 0.4) : 0.3);
                 }
 
-                // Mode weighting
                 if (selectedMode === 'favorites') {
-                    // Logarithmic scale so top favorites rank high
                     score *= (1 + Math.log10(1 + (a.album_plays || 1)));
                 } else {
-                    // In discover mode, slightly favor covers with art and verified years
                     if (a.album_image_url) score *= 1.15;
                 }
 
-                // Serendipity Jitter for Spin Again
                 const hash = ((idx * 1337 + seed * 99991) % 100) / 100;
                 score *= (0.8 + hash * 0.4);
 
@@ -723,9 +1029,14 @@ RECOMMEND_HTML_TEMPLATE = """
 
                 const genres = a.album_genres ? a.album_genres.split(", ").slice(0, 3).join(" • ") : "Curated Release";
                 const playsText = a.album_plays > 0 ? `${a.album_plays} plays logged` : "Never played";
+                const safeArtist = (a.album_artist_name || "").replace(/'/g, "\\'");
+                const safeAlbum = (a.album_name || "").replace(/'/g, "\\'");
+                const appleSearchUrl = `https://music.apple.com/us/search?term=${encodeURIComponent(a.album_artist_name + ' ' + a.album_name)}`;
 
                 spotlightHtml += `
-                    <div class="spotlight-card border border-gray-800/80 rounded-2xl p-4 flex flex-col justify-between shadow-xl transition duration-300">
+                    <div class="spotlight-card border border-gray-800/80 rounded-2xl p-4 flex flex-col justify-between shadow-xl transition duration-300 relative"
+                         onmouseenter="onCardHover('${safeArtist}', '${safeAlbum}', '${a.album_url}', this)"
+                         onmouseleave="onCardLeave(this)">
                         <div>
                             <div class="flex items-center justify-between mb-3 text-[11px]">
                                 <span class="bg-[#1DB954]/20 text-[#1DB954] font-bold px-2.5 py-1 rounded-full border border-[#1DB954]/30">${badgeLabel}</span>
@@ -734,6 +1045,10 @@ RECOMMEND_HTML_TEMPLATE = """
 
                             <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-900 mb-3.5 shadow-md">
                                 <img src="${img}" alt="${a.album_name}" class="w-full h-full object-cover">
+                                
+                                <div class="audio-pulse hidden absolute bottom-2 left-2 bg-black/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-[#1DB954] border border-[#1DB954]/50 shadow-md flex items-center gap-1 z-20">
+                                    <span>🎵</span> <span class="animate-pulse">Previewing 30s Snippet</span>
+                                </div>
                             </div>
 
                             <h3 class="font-extrabold text-base text-white truncate" title="${a.album_name}">${a.album_name}</h3>
@@ -741,12 +1056,18 @@ RECOMMEND_HTML_TEMPLATE = """
                             <p class="text-[11px] text-gray-500 truncate mt-1">${genres}</p>
                         </div>
 
-                        <div class="mt-4 pt-3 border-t border-gray-800/60 flex items-center justify-between">
+                        <div class="mt-4 pt-3 border-t border-gray-800/60 flex items-center justify-between gap-2">
                             <span class="text-[11px] text-gray-400 font-medium">${playsText}</span>
-                            <a href="${a.album_url}" target="_blank" rel="noopener noreferrer"
-                               class="bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
-                                <span>▶</span> Play on Spotify
-                            </a>
+                            <div class="flex items-center gap-1.5">
+                                <a href="${appleSearchUrl}" target="_blank" rel="noopener noreferrer"
+                                   class="bg-[#FA233B]/15 hover:bg-[#FA233B] hover:text-white text-[#FA233B] border border-[#FA233B]/30 text-xs font-bold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow">
+                                    🍎 Apple Music
+                                </a>
+                                <a href="${a.album_url}" target="_blank" rel="noopener noreferrer"
+                                   class="bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow">
+                                    ▶ Spotify
+                                </a>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -759,25 +1080,36 @@ RECOMMEND_HTML_TEMPLATE = """
             for (let a of remaining) {
                 const img = a.album_image_url || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80";
                 const plays = a.album_plays > 0 ? `🔥 ${a.album_plays} plays` : '✨ Unplayed';
+                const safeArtist = (a.album_artist_name || "").replace(/'/g, "\\'");
+                const safeAlbum = (a.album_name || "").replace(/'/g, "\\'");
+                const appleSearchUrl = `https://music.apple.com/us/search?term=${encodeURIComponent(a.album_artist_name + ' ' + a.album_name)}`;
 
                 gridHtml += `
-                    <a href="${a.album_url}" target="_blank" rel="noopener noreferrer"
-                       class="card-bg group block rounded-xl p-3 border border-gray-800/80 hover:border-gray-700 transition duration-200 shadow-sm flex flex-col justify-between">
+                    <div class="card-bg group block rounded-xl p-3 border border-gray-800/80 hover:border-gray-700 transition duration-200 shadow-sm flex flex-col justify-between relative cursor-pointer"
+                         onmouseenter="onCardHover('${safeArtist}', '${safeAlbum}', '${a.album_url}', this)"
+                         onmouseleave="onCardLeave(this)"
+                         onclick="window.open('${a.album_url}', '_blank')">
                         <div>
                             <div class="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-900 mb-2.5">
                                 <img src="${img}" alt="${a.album_name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                 <div class="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-[10px] text-gray-200 px-2 py-0.5 rounded-full font-bold">
                                     ${plays}
                                 </div>
+                                <div class="audio-pulse hidden absolute bottom-1.5 left-1.5 bg-black/85 backdrop-blur-md px-1.5 py-0.5 rounded-full text-[9px] font-bold text-[#1DB954] border border-[#1DB954]/50 shadow-md flex items-center gap-1 z-20">
+                                    <span>🎵</span> <span class="animate-pulse">Preview</span>
+                                </div>
                             </div>
                             <h4 class="font-bold text-xs text-white truncate group-hover:text-[#1DB954] transition" title="${a.album_name}">${a.album_name}</h4>
                             <p class="text-[11px] text-gray-400 truncate mt-0.5">${a.album_artist_name}</p>
                         </div>
-                        <div class="mt-2 text-[10px] text-gray-500 flex justify-between">
+                        <div class="mt-2 pt-1.5 border-t border-gray-800/60 text-[10px] text-gray-500 flex justify-between items-center">
                             <span>${a.release_year}</span>
-                            <span class="text-[#1DB954]">▶ Play</span>
+                            <a href="${appleSearchUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
+                               class="text-[9px] font-semibold text-[#FA233B] bg-[#FA233B]/10 hover:bg-[#FA233B] hover:text-white border border-[#FA233B]/30 px-1.5 py-0.5 rounded transition">
+                                🍎 Apple
+                            </a>
                         </div>
-                    </a>
+                    </div>
                 `;
             }
             grid.innerHTML = gridHtml;
@@ -793,249 +1125,59 @@ RECOMMEND_HTML_TEMPLATE = """
 
 
 # ==============================================================================
-# BRAND ICONS: 3 Distinct Turntable + Spotify Concepts
+# ROUTE HANDLERS
 # ==============================================================================
-ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <defs>
-    <style>
-      @keyframes spin33 {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-      .spin-record {
-        transform-origin: 48px 52px;
-        animation: spin33 1.8s linear infinite;
-      }
-    </style>
-  </defs>
-  <!-- Spinning Vinyl Platter (33 RPM = 1.80s per revolution) -->
-  <g class="spin-record">
-    <!-- Vinyl Platter Base / Dark Rim -->
-    <circle cx="48" cy="52" r="46" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
-    <!-- Spotify Green Core Platter -->
-    <circle cx="48" cy="52" r="40" fill="#1DB954"/>
-    <!-- Spotify Soundwaves in Bold Black -->
-    <path d="M30 40c9-2.5 19-1.5 27 3" stroke="#0C0F12" stroke-width="5" stroke-linecap="round"/>
-    <path d="M33 49c8-1.8 16-1 22 2.5" stroke="#0C0F12" stroke-width="4.2" stroke-linecap="round"/>
-    <path d="M36 58c6-1.2 12-0.5 17 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
-    <!-- Center Spindle -->
-    <circle cx="48" cy="52" r="5" fill="#0C0F12"/>
-  </g>
-  <!-- Stationary Tonearm & Pivot (Does NOT rotate) -->
-  <circle cx="86" cy="14" r="9" fill="#181D22" stroke="#9CA3AF" stroke-width="3"/>
-  <circle cx="86" cy="14" r="4" fill="#1DB954"/>
-  <!-- Metallic Tonearm Rod in Bright White -->
-  <path d="M83 19 L66 62 L52 68" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Cartridge / Headshell Needle -->
-  <rect x="43" y="63" width="11" height="8" rx="2" fill="#0C0F12" stroke="#1DB954" stroke-width="1.5" transform="rotate(-22 48 67)"/>
-</svg>"""
 
-ICON_B_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Circular Turntable Deck -->
-  <circle cx="50" cy="50" r="45" fill="#12161A" stroke="#28323C" stroke-width="3"/>
-  <!-- Vinyl Grooves -->
-  <circle cx="43" cy="51" r="33" fill="#0C0F12" stroke="#1F2937" stroke-width="1.5"/>
-  <circle cx="43" cy="51" r="25" fill="#1DB954"/>
-  <!-- Spotify Soundwave Arcs -->
-  <path d="M33 44c5.5-1.5 12-1 16 1.8" stroke="#0C0F12" stroke-width="3.2" stroke-linecap="round"/>
-  <path d="M35 50c4.5-1 9-0.5 13 1.5" stroke="#0C0F12" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M37 55c3-0.5 6.5-0.2 9 1.2" stroke="#0C0F12" stroke-width="2" stroke-linecap="round"/>
-  <!-- Spindle -->
-  <circle cx="43" cy="51" r="2.5" fill="#0C0F12"/>
-  <!-- Minimalist Tonearm -->
-  <circle cx="78" cy="23" r="6" fill="#374151" stroke="#9CA3AF" stroke-width="2"/>
-  <path d="M76 27 L64 61 L54 65" stroke="#F3F4F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="48" y="61" width="7" height="5" rx="1" fill="#1DB954" transform="rotate(-20 51.5 63.5)"/>
-</svg>"""
+@app.route("/api/preview")
+def api_preview():
+    """
+    On-demand iTunes audio preview & Apple Music direct URL lookup.
+    Cached in-memory to provide instantaneous repeated responses.
+    """
+    artist = request.args.get("artist", "").strip()
+    album = request.args.get("album", "").strip()
+    if not artist and not album:
+        return jsonify({"status": "error", "message": "Missing artist or album"})
 
-ICON_C_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Minimalist Rounded Badge -->
-  <rect x="6" y="6" width="88" height="88" rx="22" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
-  <!-- Spotify Vinyl Record -->
-  <circle cx="42" cy="52" r="28" fill="#181D22"/>
-  <circle cx="42" cy="52" r="20" fill="#1DB954"/>
-  <path d="M34 47c4-1 8.5-0.7 11.5 1.2" stroke="#0C0F12" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M36 51c3-0.8 6.5-0.4 9 1" stroke="#0C0F12" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="42" cy="52" r="2.5" fill="#0C0F12"/>
-  <!-- Stylus Arm Wrapping the Corner -->
-  <circle cx="80" cy="22" r="6" fill="#1DB954"/>
-  <path d="M78 26 C 78 52, 65 64, 52 64" stroke="#E5E7EB" stroke-width="3.5" stroke-linecap="round"/>
-  <rect x="45" y="60" width="8" height="6" rx="1.5" fill="#1DB954" transform="rotate(-10 49 63)"/>
-</svg>"""
+    key = f"{artist.lower()}::{album.lower()}"
+    if key in _preview_cache:
+        return jsonify(_preview_cache[key])
 
-ICONS_PREVIEW_HTML = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpinSleeve - Icon Showcase</title>
-    <link rel="icon" type="image/svg+xml" id="faviconLink" href="/favicon.svg">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
-        .card-bg { background-color: #181d22; }
-    </style>
-</head>
-<body class="min-h-screen p-4 md:p-10">
-    <div class="max-w-5xl mx-auto">
-        <header class="mb-8 pb-4 border-b border-gray-800 flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-extrabold text-white">SpinSleeve Icon Concepts</h1>
-                <p class="text-xs text-gray-400 mt-1">Comparing 3 Turntable + Spotify logo designs across large and favicon scales</p>
-            </div>
-            <a href="/" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition">
-                ← Back to App
-            </a>
-        </header>
-
-        <!-- Live Favicon Notice -->
-        <div class="bg-[#1DB954]/10 border border-[#1DB954]/30 rounded-xl p-3.5 mb-8 text-xs text-gray-300 flex items-center justify-between">
-            <span>💡 <strong>Interactive Test:</strong> Click the "Apply to Tab" button under any concept to test it live on your active browser tab icon!</span>
-            <span id="activeNotice" class="text-[#1DB954] font-bold">Active: Default Spotify</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <!-- Concept A -->
-            <div class="card-bg p-6 rounded-2xl border border-gray-800 flex flex-col justify-between shadow-xl">
-                <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#1DB954] bg-[#1DB954]/15 px-2.5 py-1 rounded-full">Concept A</span>
-                    <h3 class="text-lg font-bold text-white mt-3">The Hi-Fi Plinth</h3>
-                    <p class="text-xs text-gray-400 mt-1 mb-5">Classic turntable chassis with a Spotify logo platter and detailed tonearm.</p>
-
-                    <!-- Large Display -->
-                    <div class="bg-[#11151a] rounded-xl p-6 flex items-center justify-center mb-4">
-                        <div class="w-28 h-28" id="svgHolderA"></div>
-                    </div>
-
-                    <!-- Header Mockup Scale -->
-                    <div class="bg-[#11151a] rounded-lg p-3 mb-3 flex items-center gap-3 border border-gray-800">
-                        <div class="w-9 h-9" id="smallSvgA"></div>
-                        <div>
-                            <span class="text-lg font-black text-white">SpinSleeve</span>
-                            <span class="text-[10px] text-gray-400 block -mt-1">Header Display</span>
-                        </div>
-                    </div>
-
-                    <!-- Favicon Scale -->
-                    <div class="bg-[#11151a] rounded-lg p-3 flex items-center justify-between text-xs text-gray-400 border border-gray-800">
-                        <span>Chrome Tab Scale:</span>
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6" id="favA"></div>
-                            <span class="text-[11px] text-gray-500">24px</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="applyFavicon('A')" class="mt-5 w-full bg-gray-800 hover:bg-[#1DB954] hover:text-black text-gray-200 text-xs font-bold py-2.5 rounded-xl transition border border-gray-700">
-                    Apply to Tab Icon
-                </button>
-            </div>
-
-            <!-- Concept B -->
-            <div class="card-bg p-6 rounded-2xl border border-gray-800 flex flex-col justify-between shadow-xl">
-                <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#1DB954] bg-[#1DB954]/15 px-2.5 py-1 rounded-full">Concept B</span>
-                    <h3 class="text-lg font-bold text-white mt-3">The Minimalist Deck</h3>
-                    <p class="text-xs text-gray-400 mt-1 mb-5">Circular audiophile platter with dark outer vinyl grooves and high contrast.</p>
-
-                    <!-- Large Display -->
-                    <div class="bg-[#11151a] rounded-xl p-6 flex items-center justify-center mb-4">
-                        <div class="w-28 h-28" id="svgHolderB"></div>
-                    </div>
-
-                    <!-- Header Mockup Scale -->
-                    <div class="bg-[#11151a] rounded-lg p-3 mb-3 flex items-center gap-3 border border-gray-800">
-                        <div class="w-9 h-9" id="smallSvgB"></div>
-                        <div>
-                            <span class="text-lg font-black text-white">SpinSleeve</span>
-                            <span class="text-[10px] text-gray-400 block -mt-1">Header Display</span>
-                        </div>
-                    </div>
-
-                    <!-- Favicon Scale -->
-                    <div class="bg-[#11151a] rounded-lg p-3 flex items-center justify-between text-xs text-gray-400 border border-gray-800">
-                        <span>Chrome Tab Scale:</span>
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6" id="favB"></div>
-                            <span class="text-[11px] text-gray-500">24px</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="applyFavicon('B')" class="mt-5 w-full bg-gray-800 hover:bg-[#1DB954] hover:text-black text-gray-200 text-xs font-bold py-2.5 rounded-xl transition border border-gray-700">
-                    Apply to Tab Icon
-                </button>
-            </div>
-
-            <!-- Concept C -->
-            <div class="card-bg p-6 rounded-2xl border border-gray-800 flex flex-col justify-between shadow-xl">
-                <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#1DB954] bg-[#1DB954]/15 px-2.5 py-1 rounded-full">Concept C</span>
-                    <h3 class="text-lg font-bold text-white mt-3">The Wave Badge</h3>
-                    <p class="text-xs text-gray-400 mt-1 mb-5">Rounded app badge where the tonearm curves smoothly into the Spotify label.</p>
-
-                    <!-- Large Display -->
-                    <div class="bg-[#11151a] rounded-xl p-6 flex items-center justify-center mb-4">
-                        <div class="w-28 h-28" id="svgHolderC"></div>
-                    </div>
-
-                    <!-- Header Mockup Scale -->
-                    <div class="bg-[#11151a] rounded-lg p-3 mb-3 flex items-center gap-3 border border-gray-800">
-                        <div class="w-9 h-9" id="smallSvgC"></div>
-                        <div>
-                            <span class="text-lg font-black text-white">SpinSleeve</span>
-                            <span class="text-[10px] text-gray-400 block -mt-1">Header Display</span>
-                        </div>
-                    </div>
-
-                    <!-- Favicon Scale -->
-                    <div class="bg-[#11151a] rounded-lg p-3 flex items-center justify-between text-xs text-gray-400 border border-gray-800">
-                        <span>Chrome Tab Scale:</span>
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6" id="favC"></div>
-                            <span class="text-[11px] text-gray-500">24px</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="applyFavicon('C')" class="mt-5 w-full bg-gray-800 hover:bg-[#1DB954] hover:text-black text-gray-200 text-xs font-bold py-2.5 rounded-xl transition border border-gray-700">
-                    Apply to Tab Icon
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const SVGS = {
-            A: `{{ svg_a | safe }}`,
-            B: `{{ svg_b | safe }}`,
-            C: `{{ svg_c | safe }}`
-        };
-
-        document.getElementById('svgHolderA').innerHTML = SVGS.A;
-        document.getElementById('smallSvgA').innerHTML = SVGS.A;
-        document.getElementById('favA').innerHTML = SVGS.A;
-
-        document.getElementById('svgHolderB').innerHTML = SVGS.B;
-        document.getElementById('smallSvgB').innerHTML = SVGS.B;
-        document.getElementById('favB').innerHTML = SVGS.B;
-
-        document.getElementById('svgHolderC').innerHTML = SVGS.C;
-        document.getElementById('smallSvgC').innerHTML = SVGS.C;
-        document.getElementById('favC').innerHTML = SVGS.C;
-
-        function applyFavicon(concept) {
-            const encoded = encodeURIComponent(SVGS[concept]);
-            const link = document.getElementById('faviconLink');
-            link.href = `data:image/svg+xml,${encoded}`;
-            document.getElementById('activeNotice').innerText = `Active Tab Icon: Concept ${concept}! (Look at your browser tab)`;
+    term = f"{artist} {album}"
+    try:
+        res = requests.get(
+            "https://itunes.apple.com/search",
+            params={"term": term, "entity": "song", "limit": 1},
+            timeout=3.5
+        )
+        data = res.json()
+        if data.get("resultCount", 0) > 0:
+            result = data["results"][0]
+            am_url = result.get("collectionViewUrl") or result.get("trackViewUrl")
+            payload = {
+                "status": "success",
+                "preview_url": result.get("previewUrl"),
+                "apple_music_url": am_url,
+                "track_name": result.get("trackName", "Preview Snippet")
+            }
+        else:
+            payload = {
+                "status": "not_found",
+                "preview_url": None,
+                "apple_music_url": f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}",
+                "track_name": None
+            }
+    except Exception as e:
+        payload = {
+            "status": "error",
+            "message": str(e),
+            "preview_url": None,
+            "apple_music_url": f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}",
+            "track_name": None
         }
-    </script>
-</body>
-</html>
-"""
+
+    _preview_cache[key] = payload
+    return jsonify(payload)
 
 
 @app.route("/icons")
