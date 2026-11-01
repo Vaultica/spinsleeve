@@ -100,9 +100,9 @@ EXPLORER_HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpinSleeve - Spotify Album Dashboard</title>
-    <!-- Spotify Green Tab Icon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="alternate icon" href="https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico">
+    <!-- SpinSleeve Hi-Fi Plinth Tab Icon (Inlined SVG Data URI) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect x='5' y='5' width='90' height='90' rx='16' fill='%23181D22' stroke='%2328323C' stroke-width='3'/%3E%3Ccircle cx='44' cy='50' r='33' fill='%230C0F12' stroke='%2321272E' stroke-width='2'/%3E%3Ccircle cx='44' cy='50' r='27' fill='%231DB954'/%3E%3Cpath d='M33 42c6-1.5 13-1 18 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M35 48c5-1 10-0.5 14 2' stroke='%230C0F12' stroke-width='2.8' stroke-linecap='round'/%3E%3Cpath d='M37 54c3.5-0.5 7.5-0.2 10.5 1.5' stroke='%230C0F12' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='50' r='3' fill='%23181D22'/%3E%3Ccircle cx='79' cy='25' r='7' fill='%2328323C' stroke='%239CA3AF' stroke-width='2'/%3E%3Ccircle cx='79' cy='25' r='3' fill='%231DB954'/%3E%3Cpath d='M77 29 L63 60 L53 64' stroke='%23E5E7EB' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='47' y='60' width='8' height='6' rx='1.5' fill='%231DB954' transform='rotate(-20 51 63)'/%3E%3Ccircle cx='16' cy='80' r='3.5' fill='%231DB954'/%3E%3Crect x='23' y='78.5' width='6' height='3' rx='1' fill='%234B5563'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -433,9 +433,9 @@ RECOMMEND_HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crate Digger - Spotify Dash</title>
-    <!-- Spotify Green Tab Icon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="alternate icon" href="https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico">
+    <!-- SpinSleeve Hi-Fi Plinth Tab Icon (Inlined SVG Data URI) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect x='5' y='5' width='90' height='90' rx='16' fill='%23181D22' stroke='%2328323C' stroke-width='3'/%3E%3Ccircle cx='44' cy='50' r='33' fill='%230C0F12' stroke='%2321272E' stroke-width='2'/%3E%3Ccircle cx='44' cy='50' r='27' fill='%231DB954'/%3E%3Cpath d='M33 42c6-1.5 13-1 18 2' stroke='%230C0F12' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M35 48c5-1 10-0.5 14 2' stroke='%230C0F12' stroke-width='2.8' stroke-linecap='round'/%3E%3Cpath d='M37 54c3.5-0.5 7.5-0.2 10.5 1.5' stroke='%230C0F12' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='50' r='3' fill='%23181D22'/%3E%3Ccircle cx='79' cy='25' r='7' fill='%2328323C' stroke='%239CA3AF' stroke-width='2'/%3E%3Ccircle cx='79' cy='25' r='3' fill='%231DB954'/%3E%3Cpath d='M77 29 L63 60 L53 64' stroke='%23E5E7EB' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='47' y='60' width='8' height='6' rx='1.5' fill='%231DB954' transform='rotate(-20 51 63)'/%3E%3Ccircle cx='16' cy='80' r='3.5' fill='%231DB954'/%3E%3Crect x='23' y='78.5' width='6' height='3' rx='1' fill='%234B5563'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
