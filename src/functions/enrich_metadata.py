@@ -225,6 +225,15 @@ def fetch_discogs_data(artist, album):
     return data
 
 
+def table_exists(client, table_id):
+    """Checks if a BigQuery table exists."""
+    try:
+        client.get_table(table_id)
+        return True
+    except Exception:
+        return False
+
+
 def get_stratified_sample(sample_per_era=5):
     """
     Selects a balanced, randomized sample across release eras and genres
@@ -274,18 +283,76 @@ def get_stratified_sample(sample_per_era=5):
     return df
 
 
-def run_enrichment(sample_size_per_era=5, write_to_bq=True):
+def get_albums_to_enrich(batch_limit=100, mode="incremental"):
     """
-    Executes the metadata enrichment pipeline on the stratified sample.
+    Queries BigQuery for albums requiring enrichment.
+    In incremental mode, excludes album_ids that already exist in target table,
+    prioritizing your most-played and recently-added albums first.
+    """
+    client = bigquery.Client(project=PROJECT_ID)
+    full_table_id = f"{PROJECT_ID}.{TARGET_TABLE}"
+
+    if mode == "sample":
+        return get_stratified_sample(sample_per_era=batch_limit)
+
+    has_table = table_exists(client, full_table_id)
+
+    if not has_table or mode == "all":
+        exclude_clause = "WHERE album_name IS NOT NULL"
+    else:
+        exclude_clause = f"""
+        WHERE album_name IS NOT NULL
+          AND REGEXP_EXTRACT(album_url, r"album/([a-zA-Z0-9]+)") NOT IN (
+            SELECT album_id FROM `{full_table_id}` WHERE album_id IS NOT NULL
+          )
+        """
+
+    query = f"""
+    SELECT
+      REGEXP_EXTRACT(album_url, r"album/([a-zA-Z0-9]+)") AS album_id,
+      album_artist_name AS artist_name,
+      album_name,
+      album_release_date AS release_date,
+      CASE
+        WHEN SUBSTR(album_release_date, 1, 4) < "1990" THEN "Vintage (<1990)"
+        WHEN SUBSTR(album_release_date, 1, 4) < "2010" THEN "90s & 2000s"
+        WHEN SUBSTR(album_release_date, 1, 4) < "2020" THEN "2010s"
+        ELSE "2020s"
+      END AS era_group,
+      album_genres AS genres,
+      album_plays
+    FROM `{PROJECT_ID}.{DATASET_NAME}.all_albums_features`
+    {exclude_clause}
+    ORDER BY album_plays DESC, added_at DESC
+    LIMIT {batch_limit}
+    """
+    logger.info("Querying BigQuery for next %d albums to enrich (Mode: %s)...", batch_limit, mode)
+    df = client.query(query).to_dataframe()
+    return df
+
+
+def run_enrichment(batch_size=100, mode="incremental", write_to_bq=True):
+    """
+    Executes the metadata enrichment pipeline in batches.
     """
     logger.info("=== Starting SpinSleeve Metadata Enrichment Pipeline ===")
-    sample_df = get_stratified_sample(sample_per_era=sample_size_per_era)
-    total_records = len(sample_df)
-    logger.info("Sample selected: %d albums across eras and genres.", total_records)
+    logger.info("Configuration: Batch Size = %d, Mode = %s", batch_size, mode)
 
+    client = bigquery.Client(project=PROJECT_ID)
+    full_table_id = f"{PROJECT_ID}.{TARGET_TABLE}"
+    table_already_exists = table_exists(client, full_table_id)
+
+    target_df = get_albums_to_enrich(batch_limit=batch_size, mode=mode)
+    total_records = len(target_df)
+
+    if total_records == 0:
+        logger.info("All albums in your library are already enriched! No work to do.")
+        return pd.DataFrame()
+
+    logger.info("Starting enrichment loop for %d albums...", total_records)
     enriched_records = []
 
-    for idx, row in sample_df.iterrows():
+    for idx, row in target_df.iterrows():
         album_id = row["album_id"]
         artist = row["artist_name"]
         album = row["album_name"]
@@ -332,19 +399,25 @@ def run_enrichment(sample_size_per_era=5, write_to_bq=True):
     df_enriched = pd.DataFrame(enriched_records)
 
     if write_to_bq:
-        logger.info("Writing %d enriched records to BigQuery table: %s...", len(df_enriched), TARGET_TABLE)
+        if_exists_mode = "append" if table_already_exists and mode == "incremental" else "replace"
+        logger.info("Writing %d enriched records to BigQuery (%s mode)...", len(df_enriched), if_exists_mode)
         pandas_gbq.to_gbq(
             df_enriched,
             TARGET_TABLE,
             project_id=PROJECT_ID,
-            if_exists="replace"
+            if_exists=if_exists_mode
         )
-        logger.info("Successfully loaded enriched sample into BigQuery table %s!", TARGET_TABLE)
+        logger.info("Successfully saved enriched records to BigQuery table %s!", TARGET_TABLE)
 
     logger.info("=== Metadata Enrichment Pipeline Complete ===")
     return df_enriched
 
 
 if __name__ == "__main__":
-    sample_per_era = int(sys.argv[1]) if len(sys.argv) > 1 else 5
-    run_enrichment(sample_size_per_era=sample_per_era, write_to_bq=True)
+    import argparse
+    parser = argparse.ArgumentParser(description="SpinSleeve Metadata Enrichment")
+    parser.add_argument("--batch", "-b", type=int, default=int(os.getenv("BATCH_SIZE", 100)), help="Batch size of albums to process")
+    parser.add_argument("--mode", "-m", choices=["incremental", "sample", "all"], default=os.getenv("ENRICH_MODE", "incremental"), help="Execution mode")
+    args = parser.parse_args()
+
+    run_enrichment(batch_size=args.batch, mode=args.mode, write_to_bq=True)

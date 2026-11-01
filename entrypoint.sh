@@ -2,8 +2,15 @@
 set -e
 
 JOB_TYPE="${1:-tracks}"
+PARAM_TWO="${2:-100}"
 
-echo "=== Starting Spotify Data Pipeline [Job: $JOB_TYPE] ==="
-python src/functions/main.py "$JOB_TYPE"
+echo "=== Starting SpinSleeve Pipeline Runner [Job: $JOB_TYPE] ==="
 
-echo "=== Spotify Data Pipeline Completed Successfully ==="
+if [ "$JOB_TYPE" = "enrich" ]; then
+    echo "Running Album Metadata Enrichment (Batch size: $PARAM_TWO)..."
+    python src/functions/enrich_metadata.py --batch "$PARAM_TWO"
+else
+    python src/functions/main.py "$JOB_TYPE"
+fi
+
+echo "=== SpinSleeve Pipeline Runner Completed Successfully ==="
