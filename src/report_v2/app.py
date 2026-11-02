@@ -409,11 +409,14 @@ PENDING_HTML_TEMPLATE = """
         </p>
 
         <div class="flex flex-col gap-3">
-            <a href="/beta/" class="py-3 px-5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs transition border border-gray-700">
+            <a href="/beta/auth" class="py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow">
                 🔄 Check Approval Status
             </a>
+            <a href="https://accounts.spotify.com/en/logout" class="py-2.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs transition border border-gray-700">
+                Switch to a Different Spotify Account
+            </a>
             <a href="/beta/logout" class="text-xs text-gray-500 hover:text-gray-400 py-1 transition">
-                Log Out
+                Return to Login Page
             </a>
         </div>
     </div>
