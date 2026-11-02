@@ -29,7 +29,7 @@ app = Flask(__name__)
 # Project & Dataset settings
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
 DATASET_V2 = "spotify_v2"
-ADMIN_USER_ID = "vaultica"
+ADMIN_USER_IDS = ["serbou", "sergebou", "vaultica"]
 
 
 # ==============================================================================
@@ -52,7 +52,8 @@ def get_secret(secret_name, default=""):
 SPOTIPY_CLIENT_ID = get_secret("SPOTIPY_CLIENT_ID")
 SPOTIPY_CLIENT_SECRET = get_secret("SPOTIPY_CLIENT_SECRET")
 app.secret_key = get_secret("FLASK_SECRET_KEY", "spinsleeve-beta-secure-session-key-2026")
-app.config["SESSION_COOKIE_NAME"] = "spinsleeve_session"
+app.config["SESSION_COOKIE_NAME"] = "__session"
+app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
@@ -108,7 +109,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
             return redirect("/beta/login")
-        if session.get("role") != "admin" and session.get("user_id") != ADMIN_USER_ID:
+        if session.get("role") != "admin" and session.get("user_id") not in ADMIN_USER_IDS:
             return redirect("/beta/")
         return f(*args, **kwargs)
     return decorated_function
@@ -537,9 +538,9 @@ def callback():
         user = ds_client.get(key)
 
         # First-time registration
+        is_admin = (spotify_id in ADMIN_USER_IDS)
         if not user:
             user = datastore.Entity(key=key)
-            is_admin = (spotify_id == ADMIN_USER_ID)
             user.update({
                 "spotify_id": spotify_id,
                 "display_name": display_name,
@@ -550,7 +551,7 @@ def callback():
                 "refresh_token": refresh_token,
                 "created_at": datetime.datetime.now(datetime.timezone.utc),
                 "last_login_at": datetime.datetime.now(datetime.timezone.utc),
-                "sync_status": "pending"
+                "sync_status": "idle" if is_admin else "pending"
             })
             ds_client.put(user)
         else:
@@ -558,6 +559,9 @@ def callback():
             user["display_name"] = display_name
             user["email"] = email
             user["avatar_url"] = avatar_url
+            if is_admin:
+                user["role"] = "admin"
+                user["is_approved"] = True
             if refresh_token:
                 user["refresh_token"] = refresh_token
             user["last_login_at"] = datetime.datetime.now(datetime.timezone.utc)

@@ -45,6 +45,8 @@ def approve_user(args):
     key = client.key("User", args.spotify_id)
     user = client.get(key)
 
+    role = getattr(args, "role", "user") or "user"
+
     if not user:
         # Create a pre-approved placeholder
         user = datastore.Entity(key=key)
@@ -52,18 +54,20 @@ def approve_user(args):
             "spotify_id": args.spotify_id,
             "display_name": args.name or args.spotify_id,
             "is_approved": True,
-            "role": "user",
+            "role": role,
             "created_at": datetime.datetime.now(datetime.timezone.utc),
             "sync_status": "idle"
         })
         client.put(user)
-        print(f"Pre-approved new user '{args.spotify_id}' ({args.name or ''}) successfully!")
+        print(f"Pre-approved new user '{args.spotify_id}' ({args.name or ''}) with role '{role}' successfully!")
     else:
         user["is_approved"] = True
         if args.name:
             user["display_name"] = args.name
+        if role:
+            user["role"] = role
         client.put(user)
-        print(f"User '{args.spotify_id}' is now APPROVED for SpinSleeve Beta access!")
+        print(f"User '{args.spotify_id}' is now APPROVED as '{user.get('role', 'user')}' for SpinSleeve Beta access!")
 
 
 def revoke_user(args):
@@ -89,6 +93,7 @@ def main():
     approve_parser = subparsers.add_parser("approve", help="Approve or whitelist a user")
     approve_parser.add_argument("spotify_id", help="Spotify User ID or username")
     approve_parser.add_argument("--name", help="Optional display name", default=None)
+    approve_parser.add_argument("--role", choices=["admin", "user"], default="user", help="User role (admin or user)")
 
     # Revoke
     revoke_parser = subparsers.add_parser("revoke", help="Revoke access for a user")
