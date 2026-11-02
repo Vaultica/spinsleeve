@@ -272,10 +272,6 @@ EXPLORER_HTML_TEMPLATE = """
                 <span>📻</span> Crate Digger
                 <span class="bg-[#1DB954]/20 text-[#1DB954] text-[9px] font-bold px-1.5 py-0.5 rounded-full">RECOMMENDER</span>
             </a>
-            <a href="/prototype" class="px-4 py-2 rounded-lg text-xs font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition flex items-center gap-2">
-                <span>🔄</span> Sleeve Flip Prototype
-                <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full">20 ALBUMS</span>
-            </a>
         </nav>
 
         <!-- KPI Metrics Ribbon (Updates Dynamically) -->
@@ -443,8 +439,11 @@ EXPLORER_HTML_TEMPLATE = """
             }, 350);
         }
 
+        let isModalOpen = false;
+
         function onCardLeave(cardEl) {
             if (hoverTimer) clearTimeout(hoverTimer);
+            if (isModalOpen) return;
             currentHoverKey = null;
             stopPreview();
             if (cardEl) {
@@ -689,79 +688,136 @@ EXPLORER_HTML_TEMPLATE = """
         // ==========================================
         let currentModalAlbum = null;
         let isModalAudioLoaded = false;
-        const modalAudio = new Audio();
 
         function openGatefoldModal(albumId) {
             const a = ALL_ALBUMS.find(x => x.album_id === albumId);
             if (!a) return;
+            isModalOpen = true;
             currentModalAlbum = a;
 
-            document.getElementById('mCover').src = a.album_image_url;
-            document.getElementById('mTitle').textContent = a.album_name;
-            document.getElementById('mArtist').textContent = a.album_artist_name;
-            document.getElementById('mMeta').textContent = `${a.release_year} • ${a.album_genres || 'Album'}`;
-            document.getElementById('mStyles').textContent = a.styles || a.album_genres || '';
-            document.getElementById('mStory').textContent = a.album_description || "Liner notes and critical reception not yet enriched for this title. Stream directly below.";
+            // Desktop elements
+            const coverEl = document.getElementById('mCover');
+            if (coverEl) coverEl.src = a.album_image_url;
+            const titleEl = document.getElementById('mTitle');
+            if (titleEl) titleEl.textContent = a.album_name;
+            const artistEl = document.getElementById('mArtist');
+            if (artistEl) artistEl.textContent = a.album_artist_name;
+            const metaEl = document.getElementById('mMeta');
+            if (metaEl) metaEl.textContent = `${a.release_year} • ${a.album_genres || 'Album'}`;
 
-            const scoresDiv = document.getElementById('mScores');
-            scoresDiv.innerHTML = '';
+            // Mobile elements
+            const coverMobile = document.getElementById('mCoverMobile');
+            if (coverMobile) coverMobile.src = a.album_image_url;
+            const titleMobile = document.getElementById('mTitleMobile');
+            if (titleMobile) titleMobile.textContent = a.album_name;
+            const artistMobile = document.getElementById('mArtistMobile');
+            if (artistMobile) artistMobile.textContent = a.album_artist_name;
+            const metaMobile = document.getElementById('mMetaMobile');
+            if (metaMobile) metaMobile.textContent = `${a.release_year} • ${a.album_genres || 'Album'}`;
+
+            const stylesEl = document.getElementById('mStyles');
+            if (stylesEl) stylesEl.textContent = a.styles || a.album_genres || '';
+            const storyEl = document.getElementById('mStory');
+            if (storyEl) storyEl.textContent = a.album_description || "Liner notes and critical reception not yet enriched for this title. Stream directly below.";
+
+            let scoresHtml = '';
             if (a.pitchfork_score) {
-                scoresDiv.innerHTML += `<span class="bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-black px-2.5 py-1 rounded-lg">Pitchfork: ${a.pitchfork_score}</span>`;
+                scoresHtml += `<span class="bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-black px-2.5 py-1 rounded-lg">Pitchfork: ${a.pitchfork_score}</span>`;
             }
             if (a.metacritic_score) {
-                scoresDiv.innerHTML += `<span class="bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-black px-2.5 py-1 rounded-lg">Metacritic: ${a.metacritic_score}</span>`;
+                scoresHtml += `<span class="bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-black px-2.5 py-1 rounded-lg">Metacritic: ${a.metacritic_score}</span>`;
             }
             if (a.allmusic_score) {
-                scoresDiv.innerHTML += `<span class="bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs font-black px-2.5 py-1 rounded-lg">AllMusic: ${a.allmusic_score}</span>`;
+                scoresHtml += `<span class="bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs font-black px-2.5 py-1 rounded-lg">AllMusic: ${a.allmusic_score}</span>`;
             }
             if (a.discogs_rating) {
-                scoresDiv.innerHTML += `<span class="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs font-bold px-2.5 py-1 rounded-lg">Discogs: ${a.discogs_rating}★ (${a.discogs_votes || 0} ratings)</span>`;
+                scoresHtml += `<span class="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs font-bold px-2.5 py-1 rounded-lg">Discogs: ${a.discogs_rating}★ (${a.discogs_votes || 0} ratings)</span>`;
             }
 
-            document.getElementById('mSpotify').href = a.album_url;
-            document.getElementById('mApple').href = `/open/apple?artist=${encodeURIComponent(a.album_artist_name)}&album=${encodeURIComponent(a.album_name)}`;
+            const scoresDesktop = document.getElementById('mScores');
+            if (scoresDesktop) scoresDesktop.innerHTML = scoresHtml;
+            const scoresMobile = document.getElementById('mScoresMobile');
+            if (scoresMobile) scoresMobile.innerHTML = scoresHtml;
+
+            // Links
+            const appleOpenUrl = `/open/apple?artist=${encodeURIComponent(a.album_artist_name)}&album=${encodeURIComponent(a.album_name)}`;
+            const sDesk = document.getElementById('mSpotify');
+            if (sDesk) sDesk.href = a.album_url;
+            const aDesk = document.getElementById('mApple');
+            if (aDesk) aDesk.href = appleOpenUrl;
+
+            const sMob = document.getElementById('mSpotifyMobile');
+            if (sMob) sMob.href = a.album_url;
+            const aMob = document.getElementById('mAppleMobile');
+            if (aMob) aMob.href = appleOpenUrl;
 
             const wikiLink = document.getElementById('mWiki');
-            if (a.wikipedia_url) {
-                wikiLink.href = a.wikipedia_url;
-                wikiLink.style.display = 'inline';
-            } else {
-                wikiLink.style.display = 'none';
+            if (wikiLink) {
+                if (a.wikipedia_url) {
+                    wikiLink.href = a.wikipedia_url;
+                    wikiLink.style.display = 'inline';
+                } else {
+                    wikiLink.style.display = 'none';
+                }
             }
 
             const discogsLink = document.getElementById('mDiscogs');
-            if (a.discogs_url) {
-                discogsLink.href = a.discogs_url;
-                discogsLink.style.display = 'inline';
-            } else {
-                discogsLink.style.display = 'none';
+            if (discogsLink) {
+                if (a.discogs_url) {
+                    discogsLink.href = a.discogs_url;
+                    discogsLink.style.display = 'inline';
+                } else {
+                    discogsLink.style.display = 'none';
+                }
             }
 
             const pList = document.getElementById('mPersonnelList');
-            pList.innerHTML = '';
-            const pCount = document.getElementById('mPersonnelCount');
-            if (a.personnel && a.personnel.length > 0) {
-                pCount.textContent = `${a.personnel.length} contributors`;
-                a.personnel.forEach(p => {
-                    pList.innerHTML += `
-                        <div class="bg-black/30 border border-gray-800/80 rounded-lg p-2 text-[11px] text-gray-300 flex items-center gap-1.5">
-                            <span class="text-amber-400 text-xs">•</span>
-                            <span class="truncate">${p}</span>
-                        </div>
-                    `;
-                });
-            } else {
-                pCount.textContent = '0 contributors';
-                pList.innerHTML = '<p class="text-xs text-gray-500 col-span-2">No detailed personnel credits recorded yet.</p>';
+            if (pList) {
+                pList.innerHTML = '';
+                const pCount = document.getElementById('mPersonnelCount');
+                if (a.personnel && a.personnel.length > 0) {
+                    if (pCount) pCount.textContent = `${a.personnel.length} contributors`;
+                    a.personnel.forEach(p => {
+                        pList.innerHTML += `
+                            <div class="bg-black/30 border border-gray-800/80 rounded-lg p-2 text-[11px] text-gray-300 flex items-center gap-1.5">
+                                <span class="text-amber-400 text-xs">•</span>
+                                <span class="truncate">${p}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    if (pCount) pCount.textContent = '0 contributors';
+                    pList.innerHTML = '<p class="text-xs text-gray-500 col-span-2">No detailed personnel credits recorded yet.</p>';
+                }
             }
 
-            setupGatefoldAudio(a);
+            // AUDIO CONTINUITY: Keep playing if already active on hover
+            const albumKey = `${a.album_artist_name.toLowerCase()}::${a.album_name.toLowerCase()}`;
+            const playBtn = document.getElementById('mPlayBtn');
+            const statusEl = document.getElementById('mAudioStatus');
+            const trackNameEl = document.getElementById('mTrackName');
+            const pulseDot = document.getElementById('mPulseDot');
+
+            if (!activeAudio.paused && currentHoverKey === albumKey) {
+                isModalAudioLoaded = true;
+                if (playBtn) playBtn.textContent = '⏸';
+                if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+                if (statusEl) statusEl.textContent = 'Playing snippet...';
+                const cached = previewUrlCache.get(albumKey);
+                if (cached && cached.track_name && trackNameEl) {
+                    trackNameEl.textContent = cached.track_name;
+                }
+                hidePreviewToast();
+            } else {
+                setupGatefoldAudio(a);
+            }
+
             document.getElementById('gatefoldModal').classList.remove('hidden');
         }
 
         function setupGatefoldAudio(album) {
             isModalAudioLoaded = false;
-            modalAudio.pause();
+            activeAudio.pause();
             
             const playBtn = document.getElementById('mPlayBtn');
             const statusEl = document.getElementById('mAudioStatus');
@@ -769,33 +825,33 @@ EXPLORER_HTML_TEMPLATE = """
             const pulseDot = document.getElementById('mPulseDot');
             const progress = document.getElementById('mAudioProgress');
 
-            playBtn.textContent = '⏳';
-            statusEl.textContent = 'Fetching preview...';
-            trackNameEl.textContent = 'Loading audio snippet...';
-            pulseDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
-            progress.style.width = '0%';
+            if (playBtn) playBtn.textContent = '⏳';
+            if (statusEl) statusEl.textContent = 'Fetching preview...';
+            if (trackNameEl) trackNameEl.textContent = 'Loading audio snippet...';
+            if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            if (progress) progress.style.width = '0%';
 
             fetch(`/api/preview?artist=${encodeURIComponent(album.album_artist_name)}&album=${encodeURIComponent(album.album_name)}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.status === 'success' && data.preview_url) {
-                        modalAudio.src = data.preview_url;
+                        activeAudio.src = data.preview_url;
                         isModalAudioLoaded = true;
-                        playBtn.textContent = '▶';
-                        statusEl.textContent = '30s Sample Ready';
-                        trackNameEl.textContent = data.track_name || 'Preview Snippet';
-                        pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                        if (playBtn) playBtn.textContent = '▶';
+                        if (statusEl) statusEl.textContent = '30s Sample Ready';
+                        if (trackNameEl) trackNameEl.textContent = data.track_name || 'Preview Snippet';
+                        if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
                     } else {
-                        playBtn.textContent = '✕';
-                        statusEl.textContent = 'No preview available';
-                        trackNameEl.textContent = 'Stream on Spotify or Apple Music';
-                        pulseDot.className = 'w-2 h-2 rounded-full bg-gray-600';
+                        if (playBtn) playBtn.textContent = '✕';
+                        if (statusEl) statusEl.textContent = 'No preview available';
+                        if (trackNameEl) trackNameEl.textContent = 'Stream on Spotify or Apple Music';
+                        if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-gray-600';
                     }
                 })
                 .catch(() => {
-                    playBtn.textContent = '✕';
-                    statusEl.textContent = 'Error loading preview';
-                    pulseDot.className = 'w-2 h-2 rounded-full bg-red-500';
+                    if (playBtn) playBtn.textContent = '✕';
+                    if (statusEl) statusEl.textContent = 'Error loading preview';
+                    if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-red-500';
                 });
         }
 
@@ -805,43 +861,53 @@ EXPLORER_HTML_TEMPLATE = """
             const pulseDot = document.getElementById('mPulseDot');
             const statusEl = document.getElementById('mAudioStatus');
 
-            if (modalAudio.paused) {
-                modalAudio.play();
-                playBtn.textContent = '⏸';
-                pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-                statusEl.textContent = 'Playing snippet...';
+            if (activeAudio.paused) {
+                activeAudio.play();
+                if (playBtn) playBtn.textContent = '⏸';
+                if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+                if (statusEl) statusEl.textContent = 'Playing snippet...';
             } else {
-                modalAudio.pause();
-                playBtn.textContent = '▶';
-                pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-                statusEl.textContent = 'Paused';
+                activeAudio.pause();
+                if (playBtn) playBtn.textContent = '▶';
+                if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                if (statusEl) statusEl.textContent = 'Paused';
             }
         }
 
-        modalAudio.ontimeupdate = () => {
-            if (modalAudio.duration) {
-                const pct = (modalAudio.currentTime / modalAudio.duration) * 100;
-                document.getElementById('mAudioProgress').style.width = `${pct}%`;
+        activeAudio.ontimeupdate = () => {
+            if (activeAudio.duration) {
+                const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
+                const pBar = document.getElementById('mAudioProgress');
+                if (pBar) pBar.style.width = `${pct}%`;
             }
         };
 
-        modalAudio.onended = () => {
-            document.getElementById('mPlayBtn').textContent = '▶';
-            document.getElementById('mPulseDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
-            document.getElementById('mAudioStatus').textContent = 'Finished';
-            document.getElementById('mAudioProgress').style.width = '0%';
+        activeAudio.onended = () => {
+            const playBtn = document.getElementById('mPlayBtn');
+            const pulseDot = document.getElementById('mPulseDot');
+            const statusEl = document.getElementById('mAudioStatus');
+            const pBar = document.getElementById('mAudioProgress');
+            if (playBtn) playBtn.textContent = '▶';
+            if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            if (statusEl) statusEl.textContent = 'Finished';
+            if (pBar) pBar.style.width = '0%';
+            hidePreviewToast();
         };
 
         function seekGatefoldAudio(e) {
-            if (!isModalAudioLoaded || !modalAudio.duration) return;
+            if (!isModalAudioLoaded || !activeAudio.duration) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const pos = (e.clientX - rect.left) / rect.width;
-            modalAudio.currentTime = pos * modalAudio.duration;
+            activeAudio.currentTime = pos * activeAudio.duration;
         }
 
         function closeGatefoldModal() {
-            modalAudio.pause();
-            document.getElementById('gatefoldModal').classList.add('hidden');
+            isModalOpen = false;
+            activeAudio.pause();
+            const modal = document.getElementById('gatefoldModal');
+            if (modal) modal.classList.add('hidden');
+            hidePreviewToast();
+            document.querySelectorAll('.audio-pulse').forEach(el => el.classList.add('hidden'));
         }
 
         document.addEventListener('keydown', (e) => {
@@ -854,29 +920,54 @@ EXPLORER_HTML_TEMPLATE = """
     </script>
 
     <!-- 12-INCH GATEFOLD SLEEVE MODAL -->
-    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="relative w-full max-w-4xl max-h-[90vh] bg-[#12161f] border border-amber-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+        <div class="relative w-full max-w-4xl max-h-[94vh] bg-[#12161f] border border-amber-500/40 rounded-2xl sm:rounded-3xl shadow-2xl overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
             
             <!-- Close Button -->
-            <button onclick="closeGatefoldModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/60 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700 text-sm">
+            <button onclick="closeGatefoldModal()" class="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/70 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700 text-sm shadow">
                 ✕
             </button>
 
-            <!-- Left Panel: 12" Sleeve Front, Ratings & Streaming -->
-            <div class="w-full md:w-5/12 bg-black/40 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800 shrink-0">
+            <!-- MOBILE-ONLY HEADER (Compact & Scroll-Free: ~110px) -->
+            <div class="block md:hidden bg-black/50 p-4 border-b border-gray-800 shrink-0 pr-12">
+                <div class="flex items-center gap-3">
+                    <div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-700/80 shadow">
+                        <img id="mCoverMobile" src="" alt="Album Cover" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 id="mTitleMobile" class="text-sm font-black text-white leading-tight truncate"></h2>
+                        <p id="mArtistMobile" class="text-xs text-gray-300 truncate mt-0.5"></p>
+                        <p id="mMetaMobile" class="text-[10px] text-amber-300/80 font-mono mt-0.5 truncate"></p>
+                    </div>
+                </div>
+                <!-- Score Badges Mobile -->
+                <div id="mScoresMobile" class="flex flex-wrap gap-1 mt-2.5"></div>
+                <!-- Mobile Streaming Links -->
+                <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-800/80">
+                    <a id="mSpotifyMobile" href="#" target="_blank" class="flex-1 bg-[#1DB954] text-black text-[11px] font-black py-1.5 rounded-lg text-center shadow">
+                        Spotify
+                    </a>
+                    <a id="mAppleMobile" href="#" target="_blank" class="flex-1 bg-[#FA233B] text-white text-[11px] font-black py-1.5 rounded-lg text-center shadow">
+                        Apple Music
+                    </a>
+                </div>
+            </div>
+
+            <!-- DESKTOP-ONLY LEFT PANEL (12" Full Left Sleeve) -->
+            <div class="hidden md:flex w-5/12 bg-black/40 p-6 flex-col justify-between border-r border-gray-800 shrink-0">
                 <div>
-                    <div class="relative aspect-square max-w-[280px] mx-auto rounded-2xl overflow-hidden shadow-2xl mb-4 border border-gray-700/60">
+                    <div class="relative aspect-square max-w-[260px] mx-auto rounded-2xl overflow-hidden shadow-2xl mb-4 border border-gray-700/60">
                         <img id="mCover" src="" alt="Album Cover" class="w-full h-full object-cover">
                     </div>
                     <h2 id="mTitle" class="text-base font-black text-white leading-snug"></h2>
                     <p id="mArtist" class="text-xs text-gray-300 font-medium"></p>
                     <p id="mMeta" class="text-[11px] text-amber-300/80 font-mono mt-0.5"></p>
 
-                    <!-- Critical Score Badges (Prominently displayed in Gatefold) -->
+                    <!-- Critical Score Badges Desktop -->
                     <div id="mScores" class="flex flex-wrap gap-1.5 mt-3"></div>
                 </div>
 
-                <!-- Streaming Links -->
+                <!-- Desktop Streaming Links -->
                 <div class="mt-4 pt-3 border-t border-gray-800/80 space-y-2">
                     <div class="flex items-center gap-2">
                         <a id="mSpotify" href="#" target="_blank" class="flex-1 bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-black py-2 rounded-xl text-center transition shadow">
@@ -893,9 +984,9 @@ EXPLORER_HTML_TEMPLATE = """
                 </div>
             </div>
 
-            <!-- Right Panel: Pinned Audio Player at Top + Scrollable Liner Notes -->
-            <div class="w-full md:w-7/12 p-6 flex flex-col max-h-[85vh]">
-                <!-- Header (Pinned) -->
+            <!-- RIGHT PANEL (The Gatefold Liner Notes & Pinned Audio Player) -->
+            <div class="w-full md:w-7/12 p-4 sm:p-6 flex flex-col md:max-h-[94vh]">
+                <!-- Header -->
                 <div class="flex items-center justify-between pb-2 border-b border-gray-800 shrink-0">
                     <span class="text-xs font-mono font-bold tracking-widest text-amber-400 uppercase">
                         📜 COMPLETE LINER NOTES &amp; BACKGROUND
@@ -925,8 +1016,8 @@ EXPLORER_HTML_TEMPLATE = """
                     </div>
                 </div>
 
-                <!-- Scrollable Liner Notes & Story Area (Only this scrolls!) -->
-                <div class="flex-1 overflow-y-auto custom-scroll pr-2 space-y-4">
+                <!-- Scrollable Liner Notes & Story Area -->
+                <div class="flex-1 overflow-y-auto custom-scroll pr-1 sm:pr-2 space-y-4">
                     <!-- Story Section -->
                     <div>
                         <h4 class="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-1.5">Album Narrative &amp; Critical Reception</h4>
@@ -939,7 +1030,7 @@ EXPLORER_HTML_TEMPLATE = """
                             <span>Production &amp; Musician Credits</span>
                             <span id="mPersonnelCount" class="text-[10px] text-amber-400 font-normal"></span>
                         </h4>
-                        <div id="mPersonnelList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pb-2"></div>
+                        <div id="mPersonnelList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pb-6"></div>
                     </div>
                 </div>
             </div>
@@ -1013,10 +1104,6 @@ RECOMMEND_HTML_TEMPLATE = """
             </a>
             <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
                 <span>📻</span> Crate Digger
-            </a>
-            <a href="/prototype" class="px-4 py-2 rounded-lg text-xs font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition flex items-center gap-2">
-                <span>🔄</span> Sleeve Flip Prototype
-                <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full">20 ALBUMS</span>
             </a>
         </nav>
 
@@ -1186,8 +1273,11 @@ RECOMMEND_HTML_TEMPLATE = """
             }, 350);
         }
 
+        let isModalOpen = false;
+
         function onCardLeave(cardEl) {
             if (hoverTimer) clearTimeout(hoverTimer);
+            if (isModalOpen) return;
             currentHoverKey = null;
             stopPreview();
             if (cardEl) {
@@ -1490,79 +1580,136 @@ RECOMMEND_HTML_TEMPLATE = """
         // ==========================================
         let currentModalAlbum = null;
         let isModalAudioLoaded = false;
-        const modalAudio = new Audio();
 
         function openGatefoldModal(albumId) {
             const a = ALL_ALBUMS.find(x => x.album_id === albumId);
             if (!a) return;
+            isModalOpen = true;
             currentModalAlbum = a;
 
-            document.getElementById('mCover').src = a.album_image_url;
-            document.getElementById('mTitle').textContent = a.album_name;
-            document.getElementById('mArtist').textContent = a.album_artist_name;
-            document.getElementById('mMeta').textContent = `${a.release_year} • ${a.album_genres || 'Album'}`;
-            document.getElementById('mStyles').textContent = a.styles || a.album_genres || '';
-            document.getElementById('mStory').textContent = a.album_description || "Liner notes and critical reception not yet enriched for this title. Stream directly below.";
+            // Desktop elements
+            const coverEl = document.getElementById('mCover');
+            if (coverEl) coverEl.src = a.album_image_url;
+            const titleEl = document.getElementById('mTitle');
+            if (titleEl) titleEl.textContent = a.album_name;
+            const artistEl = document.getElementById('mArtist');
+            if (artistEl) artistEl.textContent = a.album_artist_name;
+            const metaEl = document.getElementById('mMeta');
+            if (metaEl) metaEl.textContent = `${a.release_year} • ${a.album_genres || 'Album'}`;
 
-            const scoresDiv = document.getElementById('mScores');
-            scoresDiv.innerHTML = '';
+            // Mobile elements
+            const coverMobile = document.getElementById('mCoverMobile');
+            if (coverMobile) coverMobile.src = a.album_image_url;
+            const titleMobile = document.getElementById('mTitleMobile');
+            if (titleMobile) titleMobile.textContent = a.album_name;
+            const artistMobile = document.getElementById('mArtistMobile');
+            if (artistMobile) artistMobile.textContent = a.album_artist_name;
+            const metaMobile = document.getElementById('mMetaMobile');
+            if (metaMobile) metaMobile.textContent = `${a.release_year} • ${a.album_genres || 'Album'}`;
+
+            const stylesEl = document.getElementById('mStyles');
+            if (stylesEl) stylesEl.textContent = a.styles || a.album_genres || '';
+            const storyEl = document.getElementById('mStory');
+            if (storyEl) storyEl.textContent = a.album_description || "Liner notes and critical reception not yet enriched for this title. Stream directly below.";
+
+            let scoresHtml = '';
             if (a.pitchfork_score) {
-                scoresDiv.innerHTML += `<span class="bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-black px-2.5 py-1 rounded-lg">Pitchfork: ${a.pitchfork_score}</span>`;
+                scoresHtml += `<span class="bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-black px-2.5 py-1 rounded-lg">Pitchfork: ${a.pitchfork_score}</span>`;
             }
             if (a.metacritic_score) {
-                scoresDiv.innerHTML += `<span class="bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-black px-2.5 py-1 rounded-lg">Metacritic: ${a.metacritic_score}</span>`;
+                scoresHtml += `<span class="bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-black px-2.5 py-1 rounded-lg">Metacritic: ${a.metacritic_score}</span>`;
             }
             if (a.allmusic_score) {
-                scoresDiv.innerHTML += `<span class="bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs font-black px-2.5 py-1 rounded-lg">AllMusic: ${a.allmusic_score}</span>`;
+                scoresHtml += `<span class="bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs font-black px-2.5 py-1 rounded-lg">AllMusic: ${a.allmusic_score}</span>`;
             }
             if (a.discogs_rating) {
-                scoresDiv.innerHTML += `<span class="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs font-bold px-2.5 py-1 rounded-lg">Discogs: ${a.discogs_rating}★ (${a.discogs_votes || 0} ratings)</span>`;
+                scoresHtml += `<span class="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs font-bold px-2.5 py-1 rounded-lg">Discogs: ${a.discogs_rating}★ (${a.discogs_votes || 0} ratings)</span>`;
             }
 
-            document.getElementById('mSpotify').href = a.album_url;
-            document.getElementById('mApple').href = `/open/apple?artist=${encodeURIComponent(a.album_artist_name)}&album=${encodeURIComponent(a.album_name)}`;
+            const scoresDesktop = document.getElementById('mScores');
+            if (scoresDesktop) scoresDesktop.innerHTML = scoresHtml;
+            const scoresMobile = document.getElementById('mScoresMobile');
+            if (scoresMobile) scoresMobile.innerHTML = scoresHtml;
+
+            // Links
+            const appleOpenUrl = `/open/apple?artist=${encodeURIComponent(a.album_artist_name)}&album=${encodeURIComponent(a.album_name)}`;
+            const sDesk = document.getElementById('mSpotify');
+            if (sDesk) sDesk.href = a.album_url;
+            const aDesk = document.getElementById('mApple');
+            if (aDesk) aDesk.href = appleOpenUrl;
+
+            const sMob = document.getElementById('mSpotifyMobile');
+            if (sMob) sMob.href = a.album_url;
+            const aMob = document.getElementById('mAppleMobile');
+            if (aMob) aMob.href = appleOpenUrl;
 
             const wikiLink = document.getElementById('mWiki');
-            if (a.wikipedia_url) {
-                wikiLink.href = a.wikipedia_url;
-                wikiLink.style.display = 'inline';
-            } else {
-                wikiLink.style.display = 'none';
+            if (wikiLink) {
+                if (a.wikipedia_url) {
+                    wikiLink.href = a.wikipedia_url;
+                    wikiLink.style.display = 'inline';
+                } else {
+                    wikiLink.style.display = 'none';
+                }
             }
 
             const discogsLink = document.getElementById('mDiscogs');
-            if (a.discogs_url) {
-                discogsLink.href = a.discogs_url;
-                discogsLink.style.display = 'inline';
-            } else {
-                discogsLink.style.display = 'none';
+            if (discogsLink) {
+                if (a.discogs_url) {
+                    discogsLink.href = a.discogs_url;
+                    discogsLink.style.display = 'inline';
+                } else {
+                    discogsLink.style.display = 'none';
+                }
             }
 
             const pList = document.getElementById('mPersonnelList');
-            pList.innerHTML = '';
-            const pCount = document.getElementById('mPersonnelCount');
-            if (a.personnel && a.personnel.length > 0) {
-                pCount.textContent = `${a.personnel.length} contributors`;
-                a.personnel.forEach(p => {
-                    pList.innerHTML += `
-                        <div class="bg-black/30 border border-gray-800/80 rounded-lg p-2 text-[11px] text-gray-300 flex items-center gap-1.5">
-                            <span class="text-amber-400 text-xs">•</span>
-                            <span class="truncate">${p}</span>
-                        </div>
-                    `;
-                });
-            } else {
-                pCount.textContent = '0 contributors';
-                pList.innerHTML = '<p class="text-xs text-gray-500 col-span-2">No detailed personnel credits recorded yet.</p>';
+            if (pList) {
+                pList.innerHTML = '';
+                const pCount = document.getElementById('mPersonnelCount');
+                if (a.personnel && a.personnel.length > 0) {
+                    if (pCount) pCount.textContent = `${a.personnel.length} contributors`;
+                    a.personnel.forEach(p => {
+                        pList.innerHTML += `
+                            <div class="bg-black/30 border border-gray-800/80 rounded-lg p-2 text-[11px] text-gray-300 flex items-center gap-1.5">
+                                <span class="text-amber-400 text-xs">•</span>
+                                <span class="truncate">${p}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    if (pCount) pCount.textContent = '0 contributors';
+                    pList.innerHTML = '<p class="text-xs text-gray-500 col-span-2">No detailed personnel credits recorded yet.</p>';
+                }
             }
 
-            setupGatefoldAudio(a);
+            // AUDIO CONTINUITY: Keep playing if already active on hover
+            const albumKey = `${a.album_artist_name.toLowerCase()}::${a.album_name.toLowerCase()}`;
+            const playBtn = document.getElementById('mPlayBtn');
+            const statusEl = document.getElementById('mAudioStatus');
+            const trackNameEl = document.getElementById('mTrackName');
+            const pulseDot = document.getElementById('mPulseDot');
+
+            if (!activeAudio.paused && currentHoverKey === albumKey) {
+                isModalAudioLoaded = true;
+                if (playBtn) playBtn.textContent = '⏸';
+                if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+                if (statusEl) statusEl.textContent = 'Playing snippet...';
+                const cached = previewUrlCache.get(albumKey);
+                if (cached && cached.track_name && trackNameEl) {
+                    trackNameEl.textContent = cached.track_name;
+                }
+                hidePreviewToast();
+            } else {
+                setupGatefoldAudio(a);
+            }
+
             document.getElementById('gatefoldModal').classList.remove('hidden');
         }
 
         function setupGatefoldAudio(album) {
             isModalAudioLoaded = false;
-            modalAudio.pause();
+            activeAudio.pause();
             
             const playBtn = document.getElementById('mPlayBtn');
             const statusEl = document.getElementById('mAudioStatus');
@@ -1570,33 +1717,33 @@ RECOMMEND_HTML_TEMPLATE = """
             const pulseDot = document.getElementById('mPulseDot');
             const progress = document.getElementById('mAudioProgress');
 
-            playBtn.textContent = '⏳';
-            statusEl.textContent = 'Fetching preview...';
-            trackNameEl.textContent = 'Loading audio snippet...';
-            pulseDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
-            progress.style.width = '0%';
+            if (playBtn) playBtn.textContent = '⏳';
+            if (statusEl) statusEl.textContent = 'Fetching preview...';
+            if (trackNameEl) trackNameEl.textContent = 'Loading audio snippet...';
+            if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            if (progress) progress.style.width = '0%';
 
             fetch(`/api/preview?artist=${encodeURIComponent(album.album_artist_name)}&album=${encodeURIComponent(album.album_name)}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.status === 'success' && data.preview_url) {
-                        modalAudio.src = data.preview_url;
+                        activeAudio.src = data.preview_url;
                         isModalAudioLoaded = true;
-                        playBtn.textContent = '▶';
-                        statusEl.textContent = '30s Sample Ready';
-                        trackNameEl.textContent = data.track_name || 'Preview Snippet';
-                        pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                        if (playBtn) playBtn.textContent = '▶';
+                        if (statusEl) statusEl.textContent = '30s Sample Ready';
+                        if (trackNameEl) trackNameEl.textContent = data.track_name || 'Preview Snippet';
+                        if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
                     } else {
-                        playBtn.textContent = '✕';
-                        statusEl.textContent = 'No preview available';
-                        trackNameEl.textContent = 'Stream on Spotify or Apple Music';
-                        pulseDot.className = 'w-2 h-2 rounded-full bg-gray-600';
+                        if (playBtn) playBtn.textContent = '✕';
+                        if (statusEl) statusEl.textContent = 'No preview available';
+                        if (trackNameEl) trackNameEl.textContent = 'Stream on Spotify or Apple Music';
+                        if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-gray-600';
                     }
                 })
                 .catch(() => {
-                    playBtn.textContent = '✕';
-                    statusEl.textContent = 'Error loading preview';
-                    pulseDot.className = 'w-2 h-2 rounded-full bg-red-500';
+                    if (playBtn) playBtn.textContent = '✕';
+                    if (statusEl) statusEl.textContent = 'Error loading preview';
+                    if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-red-500';
                 });
         }
 
@@ -1606,43 +1753,53 @@ RECOMMEND_HTML_TEMPLATE = """
             const pulseDot = document.getElementById('mPulseDot');
             const statusEl = document.getElementById('mAudioStatus');
 
-            if (modalAudio.paused) {
-                modalAudio.play();
-                playBtn.textContent = '⏸';
-                pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-                statusEl.textContent = 'Playing snippet...';
+            if (activeAudio.paused) {
+                activeAudio.play();
+                if (playBtn) playBtn.textContent = '⏸';
+                if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+                if (statusEl) statusEl.textContent = 'Playing snippet...';
             } else {
-                modalAudio.pause();
-                playBtn.textContent = '▶';
-                pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-                statusEl.textContent = 'Paused';
+                activeAudio.pause();
+                if (playBtn) playBtn.textContent = '▶';
+                if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                if (statusEl) statusEl.textContent = 'Paused';
             }
         }
 
-        modalAudio.ontimeupdate = () => {
-            if (modalAudio.duration) {
-                const pct = (modalAudio.currentTime / modalAudio.duration) * 100;
-                document.getElementById('mAudioProgress').style.width = `${pct}%`;
+        activeAudio.ontimeupdate = () => {
+            if (activeAudio.duration) {
+                const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
+                const pBar = document.getElementById('mAudioProgress');
+                if (pBar) pBar.style.width = `${pct}%`;
             }
         };
 
-        modalAudio.onended = () => {
-            document.getElementById('mPlayBtn').textContent = '▶';
-            document.getElementById('mPulseDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
-            document.getElementById('mAudioStatus').textContent = 'Finished';
-            document.getElementById('mAudioProgress').style.width = '0%';
+        activeAudio.onended = () => {
+            const playBtn = document.getElementById('mPlayBtn');
+            const pulseDot = document.getElementById('mPulseDot');
+            const statusEl = document.getElementById('mAudioStatus');
+            const pBar = document.getElementById('mAudioProgress');
+            if (playBtn) playBtn.textContent = '▶';
+            if (pulseDot) pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            if (statusEl) statusEl.textContent = 'Finished';
+            if (pBar) pBar.style.width = '0%';
+            hidePreviewToast();
         };
 
         function seekGatefoldAudio(e) {
-            if (!isModalAudioLoaded || !modalAudio.duration) return;
+            if (!isModalAudioLoaded || !activeAudio.duration) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const pos = (e.clientX - rect.left) / rect.width;
-            modalAudio.currentTime = pos * modalAudio.duration;
+            activeAudio.currentTime = pos * activeAudio.duration;
         }
 
         function closeGatefoldModal() {
-            modalAudio.pause();
-            document.getElementById('gatefoldModal').classList.add('hidden');
+            isModalOpen = false;
+            activeAudio.pause();
+            const modal = document.getElementById('gatefoldModal');
+            if (modal) modal.classList.add('hidden');
+            hidePreviewToast();
+            document.querySelectorAll('.audio-pulse').forEach(el => el.classList.add('hidden'));
         }
 
         document.addEventListener('keydown', (e) => {
@@ -1655,29 +1812,54 @@ RECOMMEND_HTML_TEMPLATE = """
     </script>
 
     <!-- 12-INCH GATEFOLD SLEEVE MODAL -->
-    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="relative w-full max-w-4xl max-h-[90vh] bg-[#12161f] border border-amber-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+        <div class="relative w-full max-w-4xl max-h-[94vh] bg-[#12161f] border border-amber-500/40 rounded-2xl sm:rounded-3xl shadow-2xl overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
             
             <!-- Close Button -->
-            <button onclick="closeGatefoldModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/60 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700 text-sm">
+            <button onclick="closeGatefoldModal()" class="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/70 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700 text-sm shadow">
                 ✕
             </button>
 
-            <!-- Left Panel: 12" Sleeve Front, Ratings & Streaming -->
-            <div class="w-full md:w-5/12 bg-black/40 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800 shrink-0">
+            <!-- MOBILE-ONLY HEADER (Compact & Scroll-Free: ~110px) -->
+            <div class="block md:hidden bg-black/50 p-4 border-b border-gray-800 shrink-0 pr-12">
+                <div class="flex items-center gap-3">
+                    <div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-700/80 shadow">
+                        <img id="mCoverMobile" src="" alt="Album Cover" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 id="mTitleMobile" class="text-sm font-black text-white leading-tight truncate"></h2>
+                        <p id="mArtistMobile" class="text-xs text-gray-300 truncate mt-0.5"></p>
+                        <p id="mMetaMobile" class="text-[10px] text-amber-300/80 font-mono mt-0.5 truncate"></p>
+                    </div>
+                </div>
+                <!-- Score Badges Mobile -->
+                <div id="mScoresMobile" class="flex flex-wrap gap-1 mt-2.5"></div>
+                <!-- Mobile Streaming Links -->
+                <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-800/80">
+                    <a id="mSpotifyMobile" href="#" target="_blank" class="flex-1 bg-[#1DB954] text-black text-[11px] font-black py-1.5 rounded-lg text-center shadow">
+                        Spotify
+                    </a>
+                    <a id="mAppleMobile" href="#" target="_blank" class="flex-1 bg-[#FA233B] text-white text-[11px] font-black py-1.5 rounded-lg text-center shadow">
+                        Apple Music
+                    </a>
+                </div>
+            </div>
+
+            <!-- DESKTOP-ONLY LEFT PANEL (12" Full Left Sleeve) -->
+            <div class="hidden md:flex w-5/12 bg-black/40 p-6 flex-col justify-between border-r border-gray-800 shrink-0">
                 <div>
-                    <div class="relative aspect-square max-w-[280px] mx-auto rounded-2xl overflow-hidden shadow-2xl mb-4 border border-gray-700/60">
+                    <div class="relative aspect-square max-w-[260px] mx-auto rounded-2xl overflow-hidden shadow-2xl mb-4 border border-gray-700/60">
                         <img id="mCover" src="" alt="Album Cover" class="w-full h-full object-cover">
                     </div>
                     <h2 id="mTitle" class="text-base font-black text-white leading-snug"></h2>
                     <p id="mArtist" class="text-xs text-gray-300 font-medium"></p>
                     <p id="mMeta" class="text-[11px] text-amber-300/80 font-mono mt-0.5"></p>
 
-                    <!-- Critical Score Badges (Prominently displayed in Gatefold) -->
+                    <!-- Critical Score Badges Desktop -->
                     <div id="mScores" class="flex flex-wrap gap-1.5 mt-3"></div>
                 </div>
 
-                <!-- Streaming Links -->
+                <!-- Desktop Streaming Links -->
                 <div class="mt-4 pt-3 border-t border-gray-800/80 space-y-2">
                     <div class="flex items-center gap-2">
                         <a id="mSpotify" href="#" target="_blank" class="flex-1 bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-black py-2 rounded-xl text-center transition shadow">
@@ -1694,9 +1876,9 @@ RECOMMEND_HTML_TEMPLATE = """
                 </div>
             </div>
 
-            <!-- Right Panel: Pinned Audio Player at Top + Scrollable Liner Notes -->
-            <div class="w-full md:w-7/12 p-6 flex flex-col max-h-[85vh]">
-                <!-- Header (Pinned) -->
+            <!-- RIGHT PANEL (The Gatefold Liner Notes & Pinned Audio Player) -->
+            <div class="w-full md:w-7/12 p-4 sm:p-6 flex flex-col md:max-h-[94vh]">
+                <!-- Header -->
                 <div class="flex items-center justify-between pb-2 border-b border-gray-800 shrink-0">
                     <span class="text-xs font-mono font-bold tracking-widest text-amber-400 uppercase">
                         📜 COMPLETE LINER NOTES &amp; BACKGROUND
@@ -1726,8 +1908,8 @@ RECOMMEND_HTML_TEMPLATE = """
                     </div>
                 </div>
 
-                <!-- Scrollable Liner Notes & Story Area (Only this scrolls!) -->
-                <div class="flex-1 overflow-y-auto custom-scroll pr-2 space-y-4">
+                <!-- Scrollable Liner Notes & Story Area -->
+                <div class="flex-1 overflow-y-auto custom-scroll pr-1 sm:pr-2 space-y-4">
                     <!-- Story Section -->
                     <div>
                         <h4 class="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-1.5">Album Narrative &amp; Critical Reception</h4>
@@ -1740,7 +1922,7 @@ RECOMMEND_HTML_TEMPLATE = """
                             <span>Production &amp; Musician Credits</span>
                             <span id="mPersonnelCount" class="text-[10px] text-amber-400 font-normal"></span>
                         </h4>
-                        <div id="mPersonnelList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pb-2"></div>
+                        <div id="mPersonnelList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pb-6"></div>
                     </div>
                 </div>
             </div>
@@ -1923,466 +2105,6 @@ def recommend():
         kpis=data["kpis"],
         brand_icon=ICON_A_SVG
     )
-
-
-PROTOTYPE_HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpinSleeve - 12" Gatefold & Liner Notes Prototype</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0c0f12; color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .card-bg { background-color: #14181f; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
-        .sheen-layer {
-            background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%);
-            pointer-events: none;
-        }
-    </style>
-</head>
-<body class="min-h-screen p-4 md:p-8">
-    <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-6 border-b border-gray-800 gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 to-black border border-amber-500/30">
-                    <span class="text-xl">📖</span>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                        SpinSleeve
-                        <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">PROTOTYPE</span>
-                    </h1>
-                    <p class="text-xs text-gray-400">12" Gatefold Experience: Clean Sleeves, Built-in Audio &amp; Deep Liner Notes</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2 text-xs">
-                <a href="/" class="px-3.5 py-1.5 rounded-lg border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition">
-                    ← Back to Library Explorer
-                </a>
-                <a href="/recommend" class="px-3.5 py-1.5 rounded-lg border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition">
-                    📻 Crate Digger
-                </a>
-            </div>
-        </header>
-
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
-            <a href="/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📚</span> Library Explorer
-            </a>
-            <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📻</span> Crate Digger
-            </a>
-            <a href="/prototype" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-2">
-                <span>📖</span> 12" Gatefold Prototype
-                <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full">20 ENRICHED</span>
-            </a>
-        </nav>
-
-        <!-- Prototype Instructions Box -->
-        <div class="bg-gradient-to-r from-amber-950/20 to-gray-900 border border-amber-500/30 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">✨</span>
-                <div>
-                    <h3 class="text-sm font-bold text-amber-200">Refined Clean Aesthetic: All Ratings Moved to Gatefold</h3>
-                    <p class="text-xs text-gray-400">
-                        Album sleeves are now 100% clean with year positioned below. Click any card or the top-right <strong class="text-amber-300">📖 icon</strong> to open the 12" Gatefold with 30s audio sample, ratings, and full liner notes.
-                    </p>
-                </div>
-            </div>
-            <span class="text-[11px] font-mono font-bold text-amber-400/80 bg-black/40 px-3 py-1.5 rounded-lg border border-amber-500/20 shrink-0">
-                Data: BigQuery + Wikipedia + Discogs
-            </span>
-        </div>
-
-        <!-- 20 ALBUMS GRID (Clean Sleeves) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-            {% for a in albums %}
-            <div class="group relative card-bg border border-gray-800/80 hover:border-amber-500/40 rounded-2xl p-3 transition duration-300 hover:shadow-2xl hover:shadow-amber-500/5 flex flex-col">
-                <!-- Clean Album Sleeve Art -->
-                <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-black mb-3 cursor-pointer" onclick="openGatefoldModal('{{ a.album_id }}')">
-                    <img src="{{ a.album_image_url }}" alt="{{ a.album_name }}" class="w-full h-full object-cover transition duration-500 group-hover:scale-105">
-                    <div class="sheen-layer absolute inset-0"></div>
-
-                    <!-- Sleek Gatefold Icon Button (Top-Right Frosted Circle) -->
-                    <button onclick="event.stopPropagation(); openGatefoldModal('{{ a.album_id }}')" 
-                            title="Open 12&quot; Gatefold Liner Notes"
-                            class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/60 hover:bg-amber-500 hover:text-black text-amber-300 border border-amber-500/30 backdrop-blur-md flex items-center justify-center transition shadow-lg opacity-85 group-hover:opacity-100 group-hover:scale-110">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Clean Typography Under the Sleeve -->
-                <div class="flex-1 min-w-0">
-                    <h3 class="text-sm font-bold text-white truncate cursor-pointer hover:text-amber-300 transition" onclick="openGatefoldModal('{{ a.album_id }}')">
-                        {{ a.album_name }}
-                    </h3>
-                    <p class="text-xs text-gray-400 truncate mt-0.5">{{ a.artist_name }}</p>
-                    <p class="text-[11px] font-mono text-gray-500 mt-1 flex items-center gap-1.5">
-                        <span class="text-gray-300 font-semibold">{{ a.release_year }}</span>
-                        <span class="text-gray-700">•</span>
-                        <span class="truncate">{{ a.era_group }}</span>
-                    </p>
-                </div>
-
-                <!-- Quick Footer Actions -->
-                <div class="mt-3 pt-2.5 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-400">
-                    <div class="flex items-center gap-2.5">
-                        <a href="{{ a.spotify_url }}" target="_blank" title="Open Spotify" class="text-gray-400 hover:text-[#1DB954] text-xs transition flex items-center gap-1">
-                            <span>🎧</span> <span class="text-[10px]">Spotify</span>
-                        </a>
-                        <span class="text-gray-700">•</span>
-                        <a href="/open/apple?artist={{ a.artist_name|urlencode }}&album={{ a.album_name|urlencode }}" target="_blank" title="Open Apple Music" class="text-gray-400 hover:text-[#FA233B] text-xs transition flex items-center gap-1">
-                            <span>🍎</span> <span class="text-[10px]">Apple</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- 12-INCH GATEFOLD SLEEVE MODAL -->
-    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="relative w-full max-w-4xl max-h-[90vh] bg-[#12161f] border border-amber-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-            
-            <!-- Close Button -->
-            <button onclick="closeGatefoldModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/60 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700 text-sm">
-                ✕
-            </button>
-
-            <!-- Left Panel: 12" Sleeve Front, Ratings & Streaming -->
-            <div class="w-full md:w-5/12 bg-black/40 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800 shrink-0">
-                <div>
-                    <div class="relative aspect-square max-w-[280px] mx-auto rounded-2xl overflow-hidden shadow-2xl mb-4 border border-gray-700/60">
-                        <img id="mCover" src="" alt="Album Cover" class="w-full h-full object-cover">
-                    </div>
-                    <h2 id="mTitle" class="text-base font-black text-white leading-snug"></h2>
-                    <p id="mArtist" class="text-xs text-gray-300 font-medium"></p>
-                    <p id="mMeta" class="text-[11px] text-amber-300/80 font-mono mt-0.5"></p>
-
-                    <!-- Critical Score Badges (Prominently displayed in Gatefold) -->
-                    <div id="mScores" class="flex flex-wrap gap-1.5 mt-3"></div>
-                </div>
-
-                <!-- Streaming Links -->
-                <div class="mt-4 pt-3 border-t border-gray-800/80 space-y-2">
-                    <div class="flex items-center gap-2">
-                        <a id="mSpotify" href="#" target="_blank" class="flex-1 bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-black py-2 rounded-xl text-center transition shadow">
-                            Open Spotify
-                        </a>
-                        <a id="mApple" href="#" target="_blank" class="flex-1 bg-[#FA233B] hover:bg-[#fb4a5d] text-white text-xs font-black py-2 rounded-xl text-center transition shadow">
-                            Apple Music
-                        </a>
-                    </div>
-                    <div class="flex items-center justify-between text-[11px] text-gray-400 pt-1">
-                        <a id="mWiki" href="#" target="_blank" class="hover:text-white underline">Wikipedia Article ↗</a>
-                        <a id="mDiscogs" href="#" target="_blank" class="hover:text-white underline">Discogs Release ↗</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Panel: Pinned Audio Player at Top + Scrollable Liner Notes -->
-            <div class="w-full md:w-7/12 p-6 flex flex-col max-h-[85vh]">
-                <!-- Header (Pinned) -->
-                <div class="flex items-center justify-between pb-2 border-b border-gray-800 shrink-0">
-                    <span class="text-xs font-mono font-bold tracking-widest text-amber-400 uppercase">
-                        📜 COMPLETE LINER NOTES &amp; BACKGROUND
-                    </span>
-                    <span id="mStyles" class="text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded-full border border-gray-700"></span>
-                </div>
-
-                <!-- 30s Audio Sample Player (Pinned at the Top, Never Scrolled Away) -->
-                <div class="my-3 p-3 bg-black/50 border border-gray-800/80 rounded-2xl flex flex-col gap-1.5 shrink-0 shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-mono tracking-wider uppercase text-gray-400 font-bold flex items-center gap-1.5">
-                            <span id="mPulseDot" class="w-2 h-2 rounded-full bg-gray-500"></span>
-                            30s Audio Sample
-                        </span>
-                        <span id="mAudioStatus" class="text-[10px] font-mono text-gray-400">Loading...</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <button id="mPlayBtn" onclick="toggleGatefoldAudio()" class="w-8 h-8 rounded-full bg-amber-500 hover:bg-amber-400 text-black flex items-center justify-center font-bold text-xs transition shadow-lg shrink-0">
-                            ▶
-                        </button>
-                        <div class="flex-1 min-w-0">
-                            <p id="mTrackName" class="text-xs font-semibold text-white truncate">Preparing sample...</p>
-                            <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mt-1 cursor-pointer" onclick="seekGatefoldAudio(event)">
-                                <div id="mAudioProgress" class="bg-amber-400 h-full w-0 transition-all duration-100"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Scrollable Liner Notes & Story Area (Only this scrolls!) -->
-                <div class="flex-1 overflow-y-auto custom-scroll pr-2 space-y-4">
-                    <!-- Story Section -->
-                    <div>
-                        <h4 class="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-1.5">Album Narrative &amp; Critical Reception</h4>
-                        <p id="mStory" class="text-xs text-gray-300 leading-relaxed bg-black/25 p-3.5 rounded-xl border border-gray-800/60"></p>
-                    </div>
-
-                    <!-- Personnel Roster Section -->
-                    <div>
-                        <h4 class="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-2 flex items-center justify-between">
-                            <span>Production &amp; Musician Credits</span>
-                            <span id="mPersonnelCount" class="text-[10px] text-amber-400 font-normal"></span>
-                        </h4>
-                        <div id="mPersonnelList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pb-2"></div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- Data Store & Audio Engine -->
-    <script>
-        const prototypeAlbums = {{ albums | tojson }};
-        const globalAudio = new Audio();
-        let currentAudioAlbumId = null;
-        let isAudioLoaded = false;
-
-        function openGatefoldModal(albumId) {
-            const a = prototypeAlbums.find(x => x.album_id === albumId);
-            if (!a) return;
-
-            document.getElementById('mCover').src = a.album_image_url;
-            document.getElementById('mTitle').textContent = a.album_name;
-            document.getElementById('mArtist').textContent = a.artist_name;
-            document.getElementById('mMeta').textContent = `${a.release_year} • ${a.era_group}`;
-            document.getElementById('mStyles').textContent = a.styles || a.era_group;
-            document.getElementById('mStory').textContent = a.album_description || "No editorial background notes recorded for this release.";
-
-            // Scores
-            const scoresDiv = document.getElementById('mScores');
-            scoresDiv.innerHTML = '';
-            if (a.pitchfork_score) {
-                scoresDiv.innerHTML += `<span class="bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-black px-2.5 py-1 rounded-lg">Pitchfork: ${a.pitchfork_score}</span>`;
-            }
-            if (a.metacritic_score) {
-                scoresDiv.innerHTML += `<span class="bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-black px-2.5 py-1 rounded-lg">Metacritic: ${a.metacritic_score}</span>`;
-            }
-            if (a.allmusic_score) {
-                scoresDiv.innerHTML += `<span class="bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs font-black px-2.5 py-1 rounded-lg">AllMusic: ${a.allmusic_score}</span>`;
-            }
-            if (a.discogs_rating) {
-                scoresDiv.innerHTML += `<span class="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs font-bold px-2.5 py-1 rounded-lg">Discogs: ${a.discogs_rating}★ (${a.discogs_votes || 0} ratings)</span>`;
-            }
-
-            // Links
-            document.getElementById('mSpotify').href = a.spotify_url;
-            document.getElementById('mApple').href = `/open/apple?artist=${encodeURIComponent(a.artist_name)}&album=${encodeURIComponent(a.album_name)}`;
-            
-            const wikiLink = document.getElementById('mWiki');
-            if (a.wikipedia_url) {
-                wikiLink.href = a.wikipedia_url;
-                wikiLink.style.display = 'inline';
-            } else {
-                wikiLink.style.display = 'none';
-            }
-
-            const discogsLink = document.getElementById('mDiscogs');
-            if (a.discogs_url) {
-                discogsLink.href = a.discogs_url;
-                discogsLink.style.display = 'inline';
-            } else {
-                discogsLink.style.display = 'none';
-            }
-
-            // Personnel
-            const pList = document.getElementById('mPersonnelList');
-            pList.innerHTML = '';
-            const pCount = document.getElementById('mPersonnelCount');
-            if (a.personnel && a.personnel.length > 0) {
-                pCount.textContent = `${a.personnel.length} contributors`;
-                a.personnel.forEach(p => {
-                    pList.innerHTML += `
-                        <div class="bg-black/30 border border-gray-800/80 rounded-lg p-2 text-[11px] text-gray-300 flex items-center gap-1.5">
-                            <span class="text-amber-400 text-xs">•</span>
-                            <span class="truncate">${p}</span>
-                        </div>
-                    `;
-                });
-            } else {
-                pCount.textContent = '0 contributors';
-                pList.innerHTML = '<p class="text-xs text-gray-500 col-span-2">No detailed personnel credits available for this release.</p>';
-            }
-
-            // Load Audio Snippet
-            setupGatefoldAudio(a);
-
-            document.getElementById('gatefoldModal').classList.remove('hidden');
-        }
-
-        function setupGatefoldAudio(album) {
-            currentAudioAlbumId = album.album_id;
-            isAudioLoaded = false;
-            globalAudio.pause();
-            
-            const playBtn = document.getElementById('mPlayBtn');
-            const statusEl = document.getElementById('mAudioStatus');
-            const trackNameEl = document.getElementById('mTrackName');
-            const pulseDot = document.getElementById('mPulseDot');
-            const progress = document.getElementById('mAudioProgress');
-
-            playBtn.textContent = '⏳';
-            statusEl.textContent = 'Fetching preview...';
-            trackNameEl.textContent = 'Loading audio snippet...';
-            pulseDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
-            progress.style.width = '0%';
-
-            fetch(`/api/preview?artist=${encodeURIComponent(album.artist_name)}&album=${encodeURIComponent(album.album_name)}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success' && data.preview_url) {
-                        globalAudio.src = data.preview_url;
-                        isAudioLoaded = true;
-                        playBtn.textContent = '▶';
-                        statusEl.textContent = '30s Sample Ready';
-                        trackNameEl.textContent = data.track_name || 'Preview Snippet';
-                        pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-                    } else {
-                        playBtn.textContent = '✕';
-                        statusEl.textContent = 'No preview available';
-                        trackNameEl.textContent = 'Stream on Spotify or Apple Music';
-                        pulseDot.className = 'w-2 h-2 rounded-full bg-gray-600';
-                    }
-                })
-                .catch(() => {
-                    playBtn.textContent = '✕';
-                    statusEl.textContent = 'Error loading preview';
-                    pulseDot.className = 'w-2 h-2 rounded-full bg-red-500';
-                });
-        }
-
-        function toggleGatefoldAudio() {
-            if (!isAudioLoaded) return;
-            const playBtn = document.getElementById('mPlayBtn');
-            const pulseDot = document.getElementById('mPulseDot');
-            const statusEl = document.getElementById('mAudioStatus');
-
-            if (globalAudio.paused) {
-                globalAudio.play();
-                playBtn.textContent = '⏸';
-                pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-                statusEl.textContent = 'Playing snippet...';
-            } else {
-                globalAudio.pause();
-                playBtn.textContent = '▶';
-                pulseDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-                statusEl.textContent = 'Paused';
-            }
-        }
-
-        globalAudio.ontimeupdate = () => {
-            if (globalAudio.duration) {
-                const pct = (globalAudio.currentTime / globalAudio.duration) * 100;
-                document.getElementById('mAudioProgress').style.width = `${pct}%`;
-            }
-        };
-
-        globalAudio.onended = () => {
-            document.getElementById('mPlayBtn').textContent = '▶';
-            document.getElementById('mPulseDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
-            document.getElementById('mAudioStatus').textContent = 'Finished';
-            document.getElementById('mAudioProgress').style.width = '0%';
-        };
-
-        function seekGatefoldAudio(e) {
-            if (!isAudioLoaded || !globalAudio.duration) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            globalAudio.currentTime = pos * globalAudio.duration;
-        }
-
-        function closeGatefoldModal() {
-            globalAudio.pause();
-            document.getElementById('gatefoldModal').classList.add('hidden');
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeGatefoldModal();
-        });
-
-        document.getElementById('gatefoldModal').addEventListener('click', (e) => {
-            if (e.target.id === 'gatefoldModal') closeGatefoldModal();
-        });
-    </script>
-</body>
-</html>
-"""
-
-
-def fetch_prototype_data():
-    client = bigquery.Client(project=PROJECT_ID)
-    query = f"""
-    SELECT 
-      e.album_id,
-      e.artist_name,
-      e.album_name,
-      e.release_year,
-      e.era_group,
-      e.styles,
-      e.pitchfork_score,
-      e.metacritic_score,
-      e.allmusic_score,
-      e.discogs_rating,
-      e.discogs_votes,
-      e.album_description,
-      e.personnel,
-      e.wikipedia_url,
-      e.discogs_url,
-      f.album_image_url,
-      f.album_url as spotify_url,
-      COALESCE(f.album_plays, 0) as album_plays
-    FROM `{PROJECT_ID}.{DATASET_NAME}.album_enriched_metadata` e
-    LEFT JOIN `{PROJECT_ID}.{DATASET_NAME}.all_albums_features` f
-      ON e.album_id = REGEXP_EXTRACT(f.album_url, r"album/([a-zA-Z0-9]+)")
-    ORDER BY e.release_year DESC
-    LIMIT 20
-    """
-    df = client.query(query).to_dataframe()
-    albums = []
-    for _, row in df.iterrows():
-        p_str = row["personnel"] or ""
-        p_list = [p.strip() for p in p_str.split("•") if p.strip()] if p_str else []
-        albums.append({
-            "album_id": row["album_id"],
-            "artist_name": row["artist_name"],
-            "album_name": row["album_name"],
-            "release_year": row["release_year"],
-            "era_group": row["era_group"],
-            "styles": row["styles"],
-            "pitchfork_score": row["pitchfork_score"],
-            "metacritic_score": row["metacritic_score"],
-            "allmusic_score": row["allmusic_score"],
-            "discogs_rating": row["discogs_rating"],
-            "discogs_votes": row["discogs_votes"],
-            "album_description": row["album_description"],
-            "personnel": p_list,
-            "wikipedia_url": row["wikipedia_url"],
-            "discogs_url": row["discogs_url"],
-            "album_image_url": row["album_image_url"] or "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80",
-            "spotify_url": row["spotify_url"] or f"https://open.spotify.com/album/{row['album_id']}",
-            "album_plays": row["album_plays"]
-        })
-    return albums
-
-
-@app.route("/prototype")
-def prototype():
-    albums = fetch_prototype_data()
-    return render_template_string(PROTOTYPE_HTML_TEMPLATE, albums=albums)
 
 
 @app.route("/api/albums")
