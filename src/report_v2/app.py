@@ -74,7 +74,8 @@ def get_oauth_client(request_obj):
         client_id=SPOTIPY_CLIENT_ID,
         client_secret=SPOTIPY_CLIENT_SECRET,
         redirect_uri=redirect_uri,
-        scope=scope
+        scope=scope,
+        show_dialog=True
     )
 
 
@@ -531,7 +532,7 @@ def login():
 @app.route("/beta/auth")
 def auth():
     sp_oauth = get_oauth_client(request)
-    auth_url = sp_oauth.get_authorize_url(show_dialog=True)
+    auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
 
