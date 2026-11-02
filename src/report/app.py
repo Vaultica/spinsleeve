@@ -2310,6 +2310,8 @@ ANALYTICS_HTML_TEMPLATE = """
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2322,6 +2324,9 @@ ANALYTICS_HTML_TEMPLATE = """
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        .flatpickr-calendar { background: #14181f !important; border: 1px solid #374151 !important; border-radius: 1rem !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5) !important; }
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1DB954 !important; border-color: #1DB954 !important; color: #000 !important; font-weight: bold !important; }
+        .flatpickr-day.inRange { background: rgba(29, 185, 84, 0.2) !important; border-color: transparent !important; color: #fff !important; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -2359,7 +2364,7 @@ ANALYTICS_HTML_TEMPLATE = """
 
         <!-- Filter Control Bar -->
         <div class="card-bg p-4 rounded-2xl border border-gray-800 mb-6 shadow-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-            <!-- Date Range Pills -->
+            <!-- Date Range Quick Presets -->
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1">Period:</span>
                 <button onclick="setRange('1d')" id="btn-1d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">Last 24h</button>
@@ -2370,16 +2375,12 @@ ANALYTICS_HTML_TEMPLATE = """
                 <button onclick="setRange('all')" id="btn-all" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">All Time</button>
             </div>
 
-            <!-- Custom Date Pickers & Genre Filter -->
+            <!-- Calendar Range Picker & Genre Dropdown -->
             <div class="flex flex-wrap items-center gap-3">
-                <!-- Custom Date Range -->
-                <div class="flex items-center gap-1.5 text-xs text-gray-400">
-                    <input type="date" id="startDate" class="bg-[#0c0f12] border border-gray-700/80 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
-                    <span>to</span>
-                    <input type="date" id="endDate" class="bg-[#0c0f12] border border-gray-700/80 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
-                    <button onclick="applyCustomDates()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">
-                        Apply
-                    </button>
+                <!-- Interactive Calendar Range Picker -->
+                <div class="relative flex items-center">
+                    <input type="text" id="calendarPicker" placeholder="📅 Pick custom dates..." 
+                           class="bg-[#0c0f12] border border-gray-700/80 hover:border-emerald-500/60 focus:border-[#1DB954] rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none transition cursor-pointer w-48 shadow-inner font-medium">
                 </div>
 
                 <!-- Genre Selector -->
@@ -2609,35 +2610,21 @@ ANALYTICS_HTML_TEMPLATE = """
 
         const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+        let fpInstance = null;
+
         function setRange(range) {
             currentRange = range;
             customStart = null;
             customEnd = null;
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
+            if (fpInstance) fpInstance.clear();
 
             ['1d', '7d', '30d', '60d', '90d', 'all'].forEach(r => {
                 const btn = document.getElementById(`btn-${r}`);
-                if (r === range) {
-                    btn.className = 'active-pill px-3 py-1.5 rounded-lg text-xs transition';
-                } else {
-                    btn.className = 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
+                if (btn) {
+                    btn.className = (r === range) 
+                        ? 'active-pill px-3 py-1.5 rounded-lg text-xs transition'
+                        : 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
                 }
-            });
-
-            loadAnalytics();
-        }
-
-        function applyCustomDates() {
-            const s = document.getElementById('startDate').value;
-            const e = document.getElementById('endDate').value;
-            if (!s || !e) return;
-            customStart = s;
-            customEnd = e;
-            currentRange = 'custom';
-
-            ['1d', '7d', '30d', '60d', '90d', 'all'].forEach(r => {
-                document.getElementById(`btn-${r}`).className = 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
             });
 
             loadAnalytics();
@@ -2957,6 +2944,28 @@ ANALYTICS_HTML_TEMPLATE = """
         }
 
         document.addEventListener("DOMContentLoaded", () => {
+            fpInstance = flatpickr("#calendarPicker", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "M j, Y",
+                maxDate: "today",
+                onClose: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2) {
+                        customStart = instance.formatDate(selectedDates[0], "Y-m-d");
+                        customEnd = instance.formatDate(selectedDates[1], "Y-m-d");
+                        currentRange = 'custom';
+
+                        ['1d', '7d', '30d', '60d', '90d', 'all'].forEach(r => {
+                            const btn = document.getElementById(`btn-${r}`);
+                            if (btn) btn.className = 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
+                        });
+
+                        loadAnalytics();
+                    }
+                }
+            });
+
             loadAnalytics();
         });
     </script>
