@@ -531,7 +531,7 @@ def login():
 @app.route("/beta/auth")
 def auth():
     sp_oauth = get_oauth_client(request)
-    auth_url = sp_oauth.get_authorize_url()
+    auth_url = sp_oauth.get_authorize_url(show_dialog=True)
     return redirect(auth_url)
 
 
@@ -555,6 +555,8 @@ def callback():
         email = user_info.get("email") or ""
         images = user_info.get("images") or []
         avatar_url = images[0].get("url") if images else ""
+
+        logger.info("Spotify OAuth authenticated user: id=%s, name=%s, email=%s", spotify_id, display_name, email)
 
         ds_client = get_datastore_client()
         key = ds_client.key("User", spotify_id)
