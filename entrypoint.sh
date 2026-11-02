@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-JOB_TYPE="${1:-tracks}"
+JOB_TYPE="${1:-sync}"
 PARAM_TWO="${2:-100}"
 
 echo "=== Starting SpinSleeve Pipeline Runner [Job: $JOB_TYPE] ==="

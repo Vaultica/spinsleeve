@@ -158,8 +158,8 @@ def load_tracks_bq(tracks):
     return "dataset loaded to BQ"
 
 
-def load_albums_bq(albums):
-    """Loads saved albums to BigQuery new_albums table."""
+def load_albums_bq(albums, artist_genres_map=None):
+    """Loads saved albums into BigQuery new_albums and upserts into all_albums with cover art and genres."""
     items = albums.get("items", [])
     if not items:
         logger.info("No albums found in response to load into BigQuery.")
@@ -167,6 +167,20 @@ def load_albums_bq(albums):
 
     dic_flattened = [flatten_json(d) for d in items]
     df = pd.DataFrame(dic_flattened)
+
+    # Extract best available cover image (prefer 640px or 300px)
+    if "album_images_0_url" in df.columns:
+        df["album_image_url"] = df["album_images_0_url"]
+    elif "album_images_1_url" in df.columns:
+        df["album_image_url"] = df["album_images_1_url"]
+    else:
+        df["album_image_url"] = None
+
+    # Map genres if available
+    if artist_genres_map and "album_artists_0_id" in df.columns:
+        df["album_genres"] = df["album_artists_0_id"].map(artist_genres_map).fillna("")
+    else:
+        df["album_genres"] = ""
 
     expected_cols = [
         "album_uri",
@@ -177,7 +191,9 @@ def load_albums_bq(albums):
         "album_label",
         "album_release_date",
         "album_tracks_total",
-        "album_id"
+        "album_id",
+        "album_image_url",
+        "album_genres"
     ]
     for col in expected_cols:
         if col not in df.columns:
@@ -185,14 +201,44 @@ def load_albums_bq(albums):
 
     df_recent_albums = df[expected_cols]
 
+    # 1. Append to legacy new_albums table (subset of columns)
+    legacy_cols = [
+        "album_uri", "added_at", "album_artists_0_name", "album_name",
+        "album_type", "album_label", "album_release_date", "album_tracks_total", "album_id"
+    ]
     destination_table = f"{DATASET_NAME}.new_albums"
-    pandas_gbq.to_gbq(
-        df_recent_albums,
-        destination_table,
-        project_id=PROJECT_ID,
-        if_exists="append"
-    )
-    logger.info("Loaded %d albums into %s.", len(df_recent_albums), destination_table)
+    try:
+        pandas_gbq.to_gbq(
+            df_recent_albums[legacy_cols],
+            destination_table,
+            project_id=PROJECT_ID,
+            if_exists="append"
+        )
+        logger.info("Loaded %d albums into %s.", len(df_recent_albums), destination_table)
+    except Exception as e:
+        logger.warning("Error appending to %s: %s", destination_table, e)
+
+    # 2. Append new albums directly into all_albums (dashboard source of truth)
+    try:
+        client = bigquery.Client(project=PROJECT_ID)
+        all_albums_table = f"{PROJECT_ID}.{DATASET_NAME}.all_albums"
+        existing_q = f"SELECT DISTINCT album_id FROM `{all_albums_table}` WHERE album_id IS NOT NULL"
+        existing_ids = set(client.query(existing_q).to_dataframe()["album_id"])
+
+        new_in_all = df_recent_albums[~df_recent_albums["album_id"].isin(existing_ids)]
+        if not new_in_all.empty:
+            pandas_gbq.to_gbq(
+                new_in_all,
+                f"{DATASET_NAME}.all_albums",
+                project_id=PROJECT_ID,
+                if_exists="append"
+            )
+            logger.info("Successfully appended %d brand new albums into %s.all_albums!", len(new_in_all), DATASET_NAME)
+        else:
+            logger.info("All %d recent albums already exist in %s.all_albums.", len(df_recent_albums), DATASET_NAME)
+    except Exception as e:
+        logger.warning("Error appending to all_albums: %s", e)
+
     return "dataset loaded to BQ"
 
 
@@ -375,9 +421,19 @@ def get_recent_albums(request):
         destination_blob = f"spotify/{folders}/recent_albums_{timestr}.json"
         upload_blob(BUCKET_NAME, recent_albums_json, destination_blob)
 
-        load_albums_bq(recent_albums)
+        # Collect artist IDs to enrich recent albums with genres
+        items = recent_albums.get("items", [])
+        artist_ids = []
+        for item in items:
+            album_obj = item.get("album", {})
+            artists = album_obj.get("artists", [])
+            if artists and "id" in artists[0]:
+                artist_ids.append(artists[0]["id"])
+        artist_genres_map = fetch_artist_genres(sp, artist_ids)
 
-        item_count = len(recent_albums.get("items", []))
+        load_albums_bq(recent_albums, artist_genres_map=artist_genres_map)
+
+        item_count = len(items)
         return (
             json.dumps({
                 "status": "success",
@@ -450,8 +506,13 @@ def get_all_saved_albums(request):
 
 
 if __name__ == "__main__":
-    job = sys.argv[1] if len(sys.argv) > 1 else "tracks"
-    if job == "albums":
+    job = sys.argv[1] if len(sys.argv) > 1 else "sync"
+    if job == "sync":
+        logger.info("--- 1. Ingesting Recently Played Tracks ---")
+        print(get_recently_played(None))
+        logger.info("--- 2. Ingesting Recently Saved Albums ---")
+        print(get_recent_albums(None))
+    elif job == "albums":
         print(get_recent_albums(None))
     elif job == "all_albums":
         print(get_all_saved_albums(None))
