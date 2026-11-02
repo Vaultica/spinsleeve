@@ -198,6 +198,30 @@ def sync_user_initial_data(user_id, access_token):
         logger.error("Error during initial sync for %s: %s", user_id, e)
 
 
+def safe_int(val, default=0):
+    try:
+        if pd.notna(val) and val is not None:
+            return int(float(val))
+    except Exception:
+        pass
+    return default
+
+
+def safe_float(val, default=0.0):
+    try:
+        if pd.notna(val) and val is not None:
+            return float(val)
+    except Exception:
+        pass
+    return default
+
+
+def safe_str(val, default=""):
+    if pd.notna(val) and val is not None:
+        return str(val).strip()
+    return default
+
+
 def fetch_user_album_data(user_id, force_refresh=False):
     global _user_album_cache, _user_album_cache_time
     now = time.time()
@@ -243,40 +267,39 @@ def fetch_user_album_data(user_id, force_refresh=False):
             except Exception:
                 personnel_list = [p.strip() for p in raw_personnel.split(",") if p.strip()]
 
-        has_gatefold = bool(
-            (row.get("album_description") and str(row.get("album_description")).strip()) or
-            (row.get("pitchfork_score") and str(row.get("pitchfork_score")).strip()) or
-            (row.get("metacritic_score") and str(row.get("metacritic_score")).strip()) or
-            (row.get("allmusic_score") and str(row.get("allmusic_score")).strip()) or
-            (row.get("discogs_rating") and str(row.get("discogs_rating")).strip()) or
-            personnel_list
-        )
+        desc_str = safe_str(row.get("album_description"))
+        pf_str = safe_str(row.get("pitchfork_score"))
+        meta_str = safe_str(row.get("metacritic_score"))
+        am_str = safe_str(row.get("allmusic_score"))
+        disc_str = safe_str(row.get("discogs_rating"))
+
+        has_gatefold = bool(desc_str or pf_str or meta_str or am_str or disc_str or personnel_list)
 
         item = {
-            "album_id": row.get("album_id") or "",
-            "album_name": row.get("album_name") or "Unknown Album",
-            "album_artist_name": row.get("album_artist_name") or "Unknown Artist",
-            "album_release_date": str(row.get("album_release_date") or ""),
-            "release_year": str(row.get("release_year") or ""),
-            "album_type": row.get("album_type") or "album",
-            "album_label": row.get("album_label") or "",
-            "album_tracks_total": int(row.get("album_tracks_total") or 0),
-            "album_track_plays": int(row.get("album_track_plays") or 0),
-            "album_plays": float(row.get("album_plays") or 0.0),
-            "album_image_url": row.get("album_image_url") or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
-            "album_url": row.get("album_url") or f"https://open.spotify.com/album/{row.get('album_id')}",
-            "album_genres": row.get("album_genres") or "",
-            "added_at": str(row.get("added_at") or ""),
+            "album_id": safe_str(row.get("album_id")),
+            "album_name": safe_str(row.get("album_name"), "Unknown Album"),
+            "album_artist_name": safe_str(row.get("album_artist_name"), "Unknown Artist"),
+            "album_release_date": safe_str(row.get("album_release_date")),
+            "release_year": safe_str(row.get("release_year")),
+            "album_type": safe_str(row.get("album_type"), "album"),
+            "album_label": safe_str(row.get("album_label")),
+            "album_tracks_total": safe_int(row.get("album_tracks_total")),
+            "album_track_plays": safe_int(row.get("album_track_plays")),
+            "album_plays": safe_float(row.get("album_plays")),
+            "album_image_url": safe_str(row.get("album_image_url")) or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
+            "album_url": safe_str(row.get("album_url")) or f"https://open.spotify.com/album/{safe_str(row.get('album_id'))}",
+            "album_genres": safe_str(row.get("album_genres")),
+            "added_at": safe_str(row.get("added_at")),
             "has_gatefold": has_gatefold,
-            "album_description": row.get("album_description") or "",
-            "pitchfork_score": row.get("pitchfork_score") or "",
-            "metacritic_score": row.get("metacritic_score") or "",
-            "allmusic_score": row.get("allmusic_score") or "",
-            "discogs_rating": str(row.get("discogs_rating") or ""),
-            "discogs_votes": int(row.get("discogs_votes") or 0),
-            "wikipedia_url": row.get("wikipedia_url") or "",
-            "discogs_url": row.get("discogs_url") or "",
-            "styles": row.get("enriched_styles") or row.get("album_genres") or "",
+            "album_description": desc_str,
+            "pitchfork_score": pf_str,
+            "metacritic_score": meta_str,
+            "allmusic_score": am_str,
+            "discogs_rating": disc_str,
+            "discogs_votes": safe_int(row.get("discogs_votes")),
+            "wikipedia_url": safe_str(row.get("wikipedia_url")),
+            "discogs_url": safe_str(row.get("discogs_url")),
+            "styles": safe_str(row.get("enriched_styles")) or safe_str(row.get("album_genres")),
             "personnel": personnel_list
         }
         processed.append(item)
