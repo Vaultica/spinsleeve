@@ -8,6 +8,20 @@
     ],
     "rewrites": [
       {
+        "source": "/beta",
+        "run": {
+          "serviceId": "spotify-dashboard-beta",
+          "region": "europe-west2"
+        }
+      },
+      {
+        "source": "/beta/**",
+        "run": {
+          "serviceId": "spotify-dashboard-beta",
+          "region": "europe-west2"
+        }
+      },
+      {
         "source": "**",
         "run": {
           "serviceId": "spotify-dashboard-service",
