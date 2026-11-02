@@ -376,6 +376,12 @@ LOGIN_HTML_TEMPLATE = """
             <span>Log in with Spotify</span>
         </a>
 
+        <div class="mt-3 text-center">
+            <a href="https://accounts.spotify.com/en/logout" target="_blank" class="text-[11px] text-gray-500 hover:text-emerald-400 transition underline">
+                Switch or log out of Spotify Web account
+            </a>
+        </div>
+
         <div class="mt-8 pt-6 border-t border-gray-800 text-[11px] text-gray-500">
             Private Beta: Access is currently invite-only. If you haven't been invited yet, your login will submit an approval request to Serge.
         </div>
