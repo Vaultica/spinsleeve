@@ -270,31 +270,11 @@ EXPLORER_HTML_TEMPLATE = """
             </a>
             <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
                 <span>📻</span> Crate Digger
-                <span class="bg-[#1DB954]/20 text-[#1DB954] text-[9px] font-bold px-1.5 py-0.5 rounded-full">RECOMMENDER</span>
+            </a>
+            <a href="/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📊</span> Analytics
             </a>
         </nav>
-
-        <!-- KPI Metrics Ribbon (Updates Dynamically) -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Filtered Albums</p>
-                <p id="kpiTotalAlbums" class="text-2xl font-black mt-1 text-white">{{ kpis.total_albums }}</p>
-            </div>
-            <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Library Explored</p>
-                <p id="kpiPctExplored" class="text-2xl font-black mt-1 text-[#1DB954]">{{ kpis.pct_explored }}%</p>
-                <p id="kpiPlayedSubtext" class="text-[11px] text-gray-500 mt-0.5">{{ kpis.played_albums }} played / {{ kpis.unplayed_albums }} unplayed</p>
-            </div>
-            <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Total Album Plays</p>
-                <p id="kpiTotalPlays" class="text-2xl font-black mt-1 text-white">{{ kpis.total_plays }}</p>
-            </div>
-            <div class="card-bg p-4 rounded-xl border border-gray-800 shadow-sm">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Top Album in Selection</p>
-                <p id="kpiTopAlbum" class="text-base font-bold mt-1 text-white truncate" title="{{ kpis.top_album }}">{{ kpis.top_album }}</p>
-                <p id="kpiTopAlbumPlays" class="text-[11px] text-[#1DB954] mt-0.5">{{ kpis.top_album_plays }} album plays</p>
-            </div>
-        </div>
 
         <!-- Filter Controls Toolbar -->
         <div class="card-bg p-4 rounded-xl border border-gray-800 mb-6 shadow-sm">
@@ -626,8 +606,10 @@ EXPLORER_HTML_TEMPLATE = """
         }
 
         function updateKpis(albums) {
+            const kpiTotal = document.getElementById("kpiTotalAlbums");
+            if (!kpiTotal) return;
             const count = albums.length;
-            document.getElementById("kpiTotalAlbums").innerText = count.toLocaleString();
+            kpiTotal.innerText = count.toLocaleString();
 
             if (count === 0) {
                 document.getElementById("kpiPctExplored").innerText = "0%";
@@ -1104,6 +1086,9 @@ RECOMMEND_HTML_TEMPLATE = """
             </a>
             <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
                 <span>📻</span> Crate Digger
+            </a>
+            <a href="/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📊</span> Analytics
             </a>
         </nav>
 
@@ -2105,6 +2090,905 @@ def recommend():
         kpis=data["kpis"],
         brand_icon=ICON_A_SVG
     )
+
+
+# ==============================================================================
+# TAB 3: ANALYTICS & INSIGHTS ENGINE
+# ==============================================================================
+_analytics_cache = {}
+_analytics_cache_time = {}
+
+
+def fetch_analytics_data(range_param="30d", genre_param="all", start_date=None, end_date=None):
+    cache_key = f"{range_param}::{genre_param}::{start_date}::{end_date}"
+    now = time.time()
+    if cache_key in _analytics_cache and (now - _analytics_cache_time.get(cache_key, 0)) < 300:
+        return _analytics_cache[cache_key]
+
+    client = bigquery.Client(project=PROJECT_ID)
+
+    conditions = []
+    if start_date and end_date:
+        conditions.append(f"DATE(TIMESTAMP(p.played_at)) BETWEEN '{start_date}' AND '{end_date}'")
+    elif range_param == "1d":
+        conditions.append("TIMESTAMP(p.played_at) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)")
+    elif range_param == "7d":
+        conditions.append("TIMESTAMP(p.played_at) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)")
+    elif range_param == "30d":
+        conditions.append("TIMESTAMP(p.played_at) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)")
+    elif range_param == "60d":
+        conditions.append("TIMESTAMP(p.played_at) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 60 DAY)")
+    elif range_param == "90d":
+        conditions.append("TIMESTAMP(p.played_at) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)")
+    else:
+        conditions.append("p.played_at IS NOT NULL")
+
+    if genre_param and genre_param != "all":
+        conditions.append(f"LOWER(COALESCE(f.album_genres, '')) LIKE '%{genre_param.lower()}%'")
+
+    where_str = "WHERE " + " AND ".join(conditions)
+
+    query = f"""
+    WITH first_plays AS (
+      SELECT track_album_name as album_name, MIN(TIMESTAMP(played_at)) as first_played_at
+      FROM `{PROJECT_ID}.{DATASET_NAME}.playback_history_new`
+      GROUP BY album_name
+    ),
+    filtered_plays AS (
+      SELECT 
+        p.track_album_name as album,
+        p.track_album_artists_0_name as artist,
+        p.track_name as track,
+        TIMESTAMP(p.played_at) as ts,
+        DATE(TIMESTAMP(p.played_at)) as play_date,
+        EXTRACT(DAYOFWEEK FROM TIMESTAMP(p.played_at)) as dow,
+        EXTRACT(HOUR FROM TIMESTAMP(p.played_at)) as hour,
+        f.album_image_url,
+        f.album_release_date,
+        f.album_genres,
+        fp.first_played_at
+      FROM `{PROJECT_ID}.{DATASET_NAME}.playback_history_new` p
+      LEFT JOIN `{PROJECT_ID}.{DATASET_NAME}.all_albums_features` f
+        ON LOWER(TRIM(p.track_album_name)) = LOWER(TRIM(f.album_name))
+      LEFT JOIN first_plays fp
+        ON p.track_album_name = fp.album_name
+      {where_str}
+    )
+    SELECT * FROM filtered_plays
+    """
+    df = client.query(query).to_dataframe()
+
+    if df.empty:
+        empty_payload = {
+            "kpis": {"total_tracks": 0, "total_albums": 0, "total_artists": 0, "listening_time": "0h 0m", "top_album": None},
+            "time_series": [],
+            "discovery_vs_repeat": {"fresh_albums": 0, "repeat_albums": 0, "fresh_plays": 0, "repeat_plays": 0, "fresh_pct": 0, "repeat_pct": 0},
+            "top_albums": [],
+            "top_artists": [],
+            "top_tracks": [],
+            "eras": [],
+            "genres": [],
+            "heatmap": [[0]*24 for _ in range(7)]
+        }
+        _analytics_cache[cache_key] = empty_payload
+        _analytics_cache_time[cache_key] = now
+        return empty_payload
+
+    total_tracks = len(df)
+    total_albums = int(df["album"].nunique())
+    total_artists = int(df["artist"].nunique())
+    total_seconds = total_tracks * 210
+    hours = total_seconds // 3600
+    mins = (total_seconds % 3600) // 60
+    listening_time = f"{hours}h {mins}m"
+
+    # Top Album & Albums ranking (grouped cleanly by album and artist)
+    album_counts = df.groupby(["album", "artist"]).agg(
+        plays=("ts", "count"),
+        album_image_url=("album_image_url", "first")
+    ).reset_index().sort_values("plays", ascending=False)
+    if not album_counts.empty:
+        top_row = album_counts.iloc[0]
+        top_album = {
+            "name": top_row["album"],
+            "artist": top_row["artist"],
+            "image": top_row["album_image_url"] or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
+            "plays": int(top_row["plays"])
+        }
+    else:
+        top_album = None
+
+    # Time series
+    daily = df.groupby("play_date").size().reset_index(name="plays").sort_values("play_date")
+    time_series = [{"date": str(r["play_date"]), "plays": int(r["plays"])} for _, r in daily.iterrows()]
+
+    # Discovery vs Repeat
+    min_window = df["ts"].min()
+    album_window = df.groupby(["album", "first_played_at"]).size().reset_index(name="plays")
+    fresh_mask = album_window["first_played_at"] >= min_window
+    fresh_albums = int(fresh_mask.sum())
+    repeat_albums = int((~fresh_mask).sum())
+    fresh_plays = int(album_window[fresh_mask]["plays"].sum())
+    repeat_plays = int(album_window[~fresh_mask]["plays"].sum())
+    total_plays_window = fresh_plays + repeat_plays
+    fresh_pct = round((fresh_plays / total_plays_window) * 100, 1) if total_plays_window > 0 else 0
+    repeat_pct = round((repeat_plays / total_plays_window) * 100, 1) if total_plays_window > 0 else 0
+
+    # Top 10 Albums
+    top_albums = []
+    for _, r in album_counts.head(10).iterrows():
+        top_albums.append({
+            "name": r["album"],
+            "artist": r["artist"],
+            "image": r["album_image_url"] or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
+            "plays": int(r["plays"])
+        })
+
+    # Top 10 Artists
+    artist_counts = df.groupby("artist").size().reset_index(name="plays").sort_values("plays", ascending=False)
+    top_artists = [{"name": r["artist"], "plays": int(r["plays"])} for _, r in artist_counts.head(10).iterrows()]
+
+    # Top 10 Tracks
+    track_counts = df.groupby(["track", "artist", "album"]).size().reset_index(name="plays").sort_values("plays", ascending=False)
+    top_tracks = [{"title": r["track"], "artist": r["artist"], "album": r["album"], "plays": int(r["plays"])} for _, r in track_counts.head(10).iterrows()]
+
+    # Eras
+    def get_era(rel_date):
+        if not rel_date or len(str(rel_date)) < 4:
+            return "Unknown"
+        y = str(rel_date)[:4]
+        if not y.isdigit(): return "Unknown"
+        yi = int(y)
+        if yi < 1970: return "<1970"
+        elif yi < 1980: return "70s"
+        elif yi < 1990: return "80s"
+        elif yi < 2000: return "90s"
+        elif yi < 2010: return "2000s"
+        elif yi < 2020: return "2010s"
+        else: return "2020s"
+
+    df["era"] = df["album_release_date"].apply(get_era)
+    era_order = ["<1970", "70s", "80s", "90s", "2000s", "2010s", "2020s"]
+    era_counts = df.groupby("era").size().to_dict()
+    eras = [{"era": e, "plays": int(era_counts.get(e, 0))} for e in era_order if era_counts.get(e, 0) > 0]
+
+    # Genres (Top 8)
+    genre_counter = Counter()
+    for g_str in df["album_genres"].dropna():
+        if g_str:
+            for g in str(g_str).split(","):
+                clean_g = g.strip().lower()
+                if clean_g:
+                    genre_counter[clean_g] += 1
+    genres = [{"genre": g.title(), "plays": count} for g, count in genre_counter.most_common(8)]
+
+    # Heatmap (7 days x 24 hours: Mon=0..Sun=6)
+    heatmap = [[0]*24 for _ in range(7)]
+    for _, r in df.iterrows():
+        d_idx = (int(r["dow"]) + 5) % 7
+        h_idx = int(r["hour"])
+        if 0 <= d_idx < 7 and 0 <= h_idx < 24:
+            heatmap[d_idx][h_idx] += 1
+
+    payload = {
+        "kpis": {
+            "total_tracks": total_tracks,
+            "total_albums": total_albums,
+            "total_artists": total_artists,
+            "listening_time": listening_time,
+            "top_album": top_album
+        },
+        "time_series": time_series,
+        "discovery_vs_repeat": {
+            "fresh_albums": fresh_albums,
+            "repeat_albums": repeat_albums,
+            "fresh_plays": fresh_plays,
+            "repeat_plays": repeat_plays,
+            "fresh_pct": fresh_pct,
+            "repeat_pct": repeat_pct
+        },
+        "top_albums": top_albums,
+        "top_artists": top_artists,
+        "top_tracks": top_tracks,
+        "eras": eras,
+        "genres": genres,
+        "heatmap": heatmap
+    }
+
+    _analytics_cache[cache_key] = payload
+    _analytics_cache_time[cache_key] = now
+    return payload
+
+
+ANALYTICS_HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinSleeve - Listening Analytics & Insights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
+        .card-bg { background-color: #14181f; }
+        .active-pill { background-color: #1DB954; color: #000; font-weight: 700; }
+        .inactive-pill { background-color: #1b2127; color: #9ca3af; border: 1px solid #28323c; }
+        .inactive-pill:hover { background-color: #28323c; color: #fff; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 flex-shrink-0">
+                        {{ brand_icon | safe }}
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Deep listening telemetry, taste velocity &amp; acoustic habits</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="https://open.spotify.com" target="_blank" class="text-xs font-semibold text-black bg-[#1DB954] hover:bg-[#1ed760] px-3.5 py-2 rounded-lg transition shadow-sm">
+                    Open Spotify
+                </a>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
+            <a href="/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📚</span> Library Explorer
+            </a>
+            <a href="/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📻</span> Crate Digger
+            </a>
+            <a href="/analytics" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
+                <span>📊</span> Analytics
+            </a>
+        </nav>
+
+        <!-- Filter Control Bar -->
+        <div class="card-bg p-4 rounded-2xl border border-gray-800 mb-6 shadow-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            <!-- Date Range Pills -->
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1">Period:</span>
+                <button onclick="setRange('1d')" id="btn-1d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">Last 24h</button>
+                <button onclick="setRange('7d')" id="btn-7d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">7 Days</button>
+                <button onclick="setRange('30d')" id="btn-30d" class="active-pill px-3 py-1.5 rounded-lg text-xs transition">30 Days</button>
+                <button onclick="setRange('60d')" id="btn-60d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">60 Days</button>
+                <button onclick="setRange('90d')" id="btn-90d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">90 Days</button>
+                <button onclick="setRange('all')" id="btn-all" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">All Time</button>
+            </div>
+
+            <!-- Custom Date Pickers & Genre Filter -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Custom Date Range -->
+                <div class="flex items-center gap-1.5 text-xs text-gray-400">
+                    <input type="date" id="startDate" class="bg-[#0c0f12] border border-gray-700/80 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
+                    <span>to</span>
+                    <input type="date" id="endDate" class="bg-[#0c0f12] border border-gray-700/80 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
+                    <button onclick="applyCustomDates()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">
+                        Apply
+                    </button>
+                </div>
+
+                <!-- Genre Selector -->
+                <div class="relative">
+                    <select id="genreSelect" onchange="onFilterChange()" class="bg-[#0c0f12] border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954] appearance-none pr-7">
+                        <option value="all">All Genres</option>
+                        {% for g in top_genres %}
+                        <option value="{{ g }}">{{ g.title() }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 text-xs">▼</div>
+                </div>
+
+                <!-- Spinner -->
+                <div id="loadingSpinner" class="hidden">
+                    <div class="w-4 h-4 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 KPI SUMMARY TILES -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <!-- Albums Played -->
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Albums Explored</p>
+                <div class="mt-2">
+                    <p id="kpiAlbums" class="text-3xl font-black text-white">--</p>
+                    <p id="kpiAlbumsSub" class="text-[11px] text-gray-400 mt-1">-- fresh / -- repeat</p>
+                </div>
+            </div>
+
+            <!-- Tracks Played -->
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Stream Events</p>
+                <div class="mt-2">
+                    <p id="kpiTracks" class="text-3xl font-black text-white">--</p>
+                    <p id="kpiTracksSub" class="text-[11px] text-gray-400 mt-1">Individual track plays</p>
+                </div>
+            </div>
+
+            <!-- Listening Time -->
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Listening Time</p>
+                <div class="mt-2">
+                    <p id="kpiTime" class="text-3xl font-black text-[#1DB954]">--</p>
+                    <p id="kpiTimeSub" class="text-[11px] text-gray-400 mt-1">Est. at ~3.5 min/track</p>
+                </div>
+            </div>
+
+            <!-- Top Album -->
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex items-center gap-3">
+                <div class="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-gray-900 border border-gray-800 shadow">
+                    <img id="kpiTopImage" src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80" alt="Top Album" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Top Album</p>
+                    <h4 id="kpiTopTitle" class="text-sm font-bold text-white truncate mt-0.5">--</h4>
+                    <p id="kpiTopArtist" class="text-xs text-gray-400 truncate">--</p>
+                    <p id="kpiTopPlays" class="text-[11px] text-[#1DB954] font-bold mt-0.5">-- plays</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 1: PLAYS OVER TIME & DISCOVERY VELOCITY -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Plays Over Time (Area Chart) -->
+            <div class="lg:col-span-2 card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Daily Listening Activity</h3>
+                        <p class="text-xs text-gray-400">Track play volume across the selected window</p>
+                    </div>
+                    <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                        Activity Stream
+                    </span>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="timeSeriesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Discovery vs. Repeat Velocity (Donut Chart) -->
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Taste Velocity</h3>
+                        <p class="text-xs text-gray-400">Fresh Discoveries vs. Catalog Repeats</p>
+                    </div>
+                </div>
+                <div class="relative h-56 w-full flex items-center justify-center">
+                    <canvas id="discoveryChart"></canvas>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-800 text-center text-xs">
+                    <div>
+                        <span class="text-emerald-400 font-bold block" id="freshPct">--%</span>
+                        <span class="text-gray-400 text-[11px]" id="freshCount">-- Fresh</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400 font-bold block" id="repeatPct">--%</span>
+                        <span class="text-gray-400 text-[11px]" id="repeatCount">-- Repeat</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 2: TOP 10 ALBUMS, ARTISTS, AND TRACKS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Top 10 Albums with Sleeve Art -->
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col">
+                <div class="flex items-center justify-between mb-3.5">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>💿</span> Top 10 Albums
+                    </h3>
+                </div>
+                <div id="topAlbumsList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <!-- Top 10 Artists (Horizontal Bar Chart) -->
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col">
+                <div class="flex items-center justify-between mb-3.5">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🎤</span> Top 10 Artists
+                    </h3>
+                </div>
+                <div class="relative flex-1 min-h-[380px] w-full">
+                    <canvas id="artistChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top 10 Tracks -->
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col">
+                <div class="flex items-center justify-between mb-3.5">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🎵</span> Top 10 Tracks
+                    </h3>
+                </div>
+                <div id="topTracksList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 3: RELEASE ERA & GENRE ECOSYSTEM -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Release Era Time Machine (Decade Bar Chart) -->
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>⏳</span> Release Era "Time Machine"
+                        </h3>
+                        <p class="text-xs text-gray-400">Listening volume by original album release decade</p>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="eraChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Genre Ecosystem (Donut Chart) -->
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>🎷</span> Genre Ecosystem
+                        </h3>
+                        <p class="text-xs text-gray-400">Distribution of top music styles</p>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="genreChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 4: THE LISTENING CLOCK (Heatmap) -->
+        <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-800/80 mb-4 gap-2">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🕒</span> The "Listening Clock" Heatmap
+                    </h3>
+                    <p class="text-xs text-gray-400">Acoustic rhythm: Play intensity across hour of the day (00:00–23:00) and day of the week</p>
+                </div>
+                <div class="flex items-center gap-1.5 text-[10px] text-gray-400">
+                    <span>Less</span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#161c22]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#0e4429]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#006d32]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#26a641]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#39d353]"></span>
+                    <span>More</span>
+                </div>
+            </div>
+            
+            <!-- Heatmap Table Grid -->
+            <div class="overflow-x-auto pb-2">
+                <div class="min-w-[680px]">
+                    <!-- Hour numbers header -->
+                    <div class="flex items-center pl-12 pr-2 mb-1.5 text-[10px] font-mono text-gray-500">
+                        {% for h in range(24) %}
+                        <div class="flex-1 text-center">{{ "%02d" % h }}</div>
+                        {% endfor %}
+                    </div>
+                    <!-- 7 Day Rows -->
+                    <div id="heatmapGrid" class="space-y-1.5">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Dashboard Engine -->
+    <script>
+        let currentRange = '30d';
+        let customStart = null;
+        let customEnd = null;
+
+        let timeSeriesChartInstance = null;
+        let discoveryChartInstance = null;
+        let artistChartInstance = null;
+        let eraChartInstance = null;
+        let genreChartInstance = null;
+
+        const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+        function setRange(range) {
+            currentRange = range;
+            customStart = null;
+            customEnd = null;
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+
+            ['1d', '7d', '30d', '60d', '90d', 'all'].forEach(r => {
+                const btn = document.getElementById(`btn-${r}`);
+                if (r === range) {
+                    btn.className = 'active-pill px-3 py-1.5 rounded-lg text-xs transition';
+                } else {
+                    btn.className = 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
+                }
+            });
+
+            loadAnalytics();
+        }
+
+        function applyCustomDates() {
+            const s = document.getElementById('startDate').value;
+            const e = document.getElementById('endDate').value;
+            if (!s || !e) return;
+            customStart = s;
+            customEnd = e;
+            currentRange = 'custom';
+
+            ['1d', '7d', '30d', '60d', '90d', 'all'].forEach(r => {
+                document.getElementById(`btn-${r}`).className = 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
+            });
+
+            loadAnalytics();
+        }
+
+        function onFilterChange() {
+            loadAnalytics();
+        }
+
+        async function loadAnalytics() {
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) spinner.classList.remove('hidden');
+
+            const genre = document.getElementById('genreSelect').value;
+            let url = `/api/analytics?range=${encodeURIComponent(currentRange)}&genre=${encodeURIComponent(genre)}`;
+            if (customStart && customEnd) {
+                url += `&start=${encodeURIComponent(customStart)}&end=${encodeURIComponent(customEnd)}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                renderDashboard(data);
+            } catch (err) {
+                console.error("Failed to load analytics:", err);
+            } finally {
+                if (spinner) spinner.classList.add('hidden');
+            }
+        }
+
+        function renderDashboard(data) {
+            // 1. KPIs
+            document.getElementById('kpiAlbums').textContent = (data.kpis.total_albums || 0).toLocaleString();
+            document.getElementById('kpiAlbumsSub').textContent = `${data.discovery_vs_repeat.fresh_albums} fresh / ${data.discovery_vs_repeat.repeat_albums} repeat`;
+            document.getElementById('kpiTracks').textContent = (data.kpis.total_tracks || 0).toLocaleString();
+            document.getElementById('kpiTime').textContent = data.kpis.listening_time || '0h 0m';
+
+            if (data.kpis.top_album) {
+                document.getElementById('kpiTopImage').src = data.kpis.top_album.image;
+                document.getElementById('kpiTopTitle').textContent = data.kpis.top_album.name;
+                document.getElementById('kpiTopArtist').textContent = data.kpis.top_album.artist;
+                document.getElementById('kpiTopPlays').textContent = `${data.kpis.top_album.plays} plays`;
+            } else {
+                document.getElementById('kpiTopTitle').textContent = 'None';
+                document.getElementById('kpiTopArtist').textContent = '--';
+                document.getElementById('kpiTopPlays').textContent = '0 plays';
+            }
+
+            // 2. Plays Over Time (Area Chart)
+            renderTimeSeries(data.time_series);
+
+            // 3. Discovery vs Repeat Donut
+            renderDiscovery(data.discovery_vs_repeat);
+
+            // 4. Top 10 Albums List
+            renderTopAlbums(data.top_albums);
+
+            // 5. Top 10 Artists (Bar Chart)
+            renderTopArtists(data.top_artists);
+
+            // 6. Top 10 Tracks List
+            renderTopTracks(data.top_tracks);
+
+            // 7. Era Time Machine (Bar Chart)
+            renderEras(data.eras);
+
+            // 8. Genre Donut
+            renderGenres(data.genres);
+
+            // 9. Listening Clock Heatmap
+            renderHeatmap(data.heatmap);
+        }
+
+        function renderTimeSeries(series) {
+            const ctx = document.getElementById('timeSeriesChart').getContext('2d');
+            if (timeSeriesChartInstance) timeSeriesChartInstance.destroy();
+
+            const labels = series.map(s => s.date.slice(5));
+            const values = series.map(s => s.plays);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 240);
+            gradient.addColorStop(0, 'rgba(29, 185, 84, 0.4)');
+            gradient.addColorStop(1, 'rgba(29, 185, 84, 0.0)');
+
+            timeSeriesChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Plays',
+                        data: values,
+                        borderColor: '#1DB954',
+                        backgroundColor: gradient,
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#1DB954',
+                        pointRadius: values.length > 30 ? 0 : 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderDiscovery(disc) {
+            const ctx = document.getElementById('discoveryChart').getContext('2d');
+            if (discoveryChartInstance) discoveryChartInstance.destroy();
+
+            document.getElementById('freshPct').textContent = `${disc.fresh_pct}%`;
+            document.getElementById('freshCount').textContent = `${disc.fresh_albums} Fresh Albums`;
+            document.getElementById('repeatPct').textContent = `${disc.repeat_pct}%`;
+            document.getElementById('repeatCount').textContent = `${disc.repeat_albums} Repeat Albums`;
+
+            discoveryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Fresh Discoveries', 'Catalog Repeats'],
+                    datasets: [{
+                        data: [disc.fresh_plays, disc.repeat_plays],
+                        backgroundColor: ['#10b981', '#f59e0b'],
+                        borderColor: '#14181f',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 }, boxWidth: 12 } }
+                    }
+                }
+            });
+        }
+
+        function renderTopAlbums(albums) {
+            const container = document.getElementById('topAlbumsList');
+            if (!albums || albums.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 py-6 text-center">No albums played in this period.</p>';
+                return;
+            }
+            const maxPlays = albums[0].plays || 1;
+            container.innerHTML = albums.map((a, i) => `
+                <div class="flex items-center gap-3 p-2 rounded-xl bg-black/25 border border-gray-800/60 hover:border-gray-700 transition">
+                    <span class="text-xs font-bold text-gray-500 w-4 text-center">${i + 1}</span>
+                    <div class="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-900 border border-gray-800 shadow">
+                        <img src="${a.image}" alt="${a.name}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h5 class="text-xs font-bold text-white truncate">${a.name}</h5>
+                        <p class="text-[11px] text-gray-400 truncate">${a.artist}</p>
+                        <div class="w-full bg-gray-800/80 h-1 rounded-full overflow-hidden mt-1.5">
+                            <div class="bg-[#1DB954] h-full rounded-full" style="width: ${(a.plays / maxPlays) * 100}%"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs font-black text-[#1DB954] px-2 py-0.5 rounded-lg bg-[#1DB954]/10 border border-[#1DB954]/20 shrink-0">
+                        ${a.plays}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function renderTopArtists(artists) {
+            const ctx = document.getElementById('artistChart').getContext('2d');
+            if (artistChartInstance) artistChartInstance.destroy();
+
+            artistChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: artists.map(a => a.name),
+                    datasets: [{
+                        label: 'Plays',
+                        data: artists.map(a => a.plays),
+                        backgroundColor: 'rgba(29, 185, 84, 0.85)',
+                        borderColor: '#1DB954',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } }, beginAtZero: true },
+                        y: { grid: { display: false }, ticks: { color: '#e5e7eb', font: { size: 11, weight: 'bold' } } }
+                    }
+                }
+            });
+        }
+
+        function renderTopTracks(tracks) {
+            const container = document.getElementById('topTracksList');
+            if (!tracks || tracks.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 py-6 text-center">No tracks played in this period.</p>';
+                return;
+            }
+            container.innerHTML = tracks.map((t, i) => `
+                <div class="flex items-center gap-2.5 p-2 rounded-xl bg-black/25 border border-gray-800/60 hover:border-gray-700 transition">
+                    <span class="text-xs font-bold text-gray-500 w-4 text-center">${i + 1}</span>
+                    <div class="flex-1 min-w-0">
+                        <h5 class="text-xs font-bold text-white truncate">${t.title}</h5>
+                        <p class="text-[11px] text-gray-400 truncate">${t.artist} • <span class="text-gray-500">${t.album}</span></p>
+                    </div>
+                    <span class="text-[11px] font-bold text-gray-300 px-2 py-0.5 rounded-md bg-gray-800 border border-gray-700 shrink-0">
+                        ${t.plays} plays
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function renderEras(eras) {
+            const ctx = document.getElementById('eraChart').getContext('2d');
+            if (eraChartInstance) eraChartInstance.destroy();
+
+            eraChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: eras.map(e => e.era),
+                    datasets: [{
+                        label: 'Plays',
+                        data: eras.map(e => e.plays),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#e5e7eb', font: { size: 11, weight: 'bold' } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderGenres(genres) {
+            const ctx = document.getElementById('genreChart').getContext('2d');
+            if (genreChartInstance) genreChartInstance.destroy();
+
+            const palette = ['#1DB954', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#eab308', '#14b8a6'];
+
+            genreChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: genres.map(g => g.genre),
+                    datasets: [{
+                        data: genres.map(g => g.plays),
+                        backgroundColor: palette.slice(0, genres.length),
+                        borderColor: '#14181f',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#9ca3af', font: { size: 10 }, boxWidth: 10 } }
+                    }
+                }
+            });
+        }
+
+        function renderHeatmap(matrix) {
+            const container = document.getElementById('heatmapGrid');
+            if (!matrix) return;
+
+            let maxVal = 1;
+            for (let r of matrix) {
+                for (let v of r) {
+                    if (v > maxVal) maxVal = v;
+                }
+            }
+
+            container.innerHTML = matrix.map((row, dIdx) => {
+                const dayName = dayNames[dIdx];
+                const cells = row.map((count, hIdx) => {
+                    let bg = '#161c22';
+                    if (count > 0) {
+                        const ratio = count / maxVal;
+                        if (ratio < 0.25) bg = '#0e4429';
+                        else if (ratio < 0.5) bg = '#006d32';
+                        else if (ratio < 0.75) bg = '#26a641';
+                        else bg = '#39d353';
+                    }
+                    const hourStr = `${hIdx.toString().padStart(2, '0')}:00`;
+                    return `
+                        <div class="flex-1 h-5 rounded-sm transition-all hover:scale-125 cursor-pointer"
+                             style="background-color: ${bg};"
+                             title="${dayName} ${hourStr} - ${count} plays">
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-10 text-[10px] font-mono text-gray-400 font-bold text-right pr-2">${dayName}</span>
+                        <div class="flex-1 flex items-center gap-1">
+                            ${cells}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadAnalytics();
+        });
+    </script>
+</body>
+</html>
+"""
+
+
+@app.route("/analytics")
+def analytics():
+    data = fetch_album_data()
+    return render_template_string(
+        ANALYTICS_HTML_TEMPLATE,
+        top_genres=data["top_genres"],
+        brand_icon=ICON_A_SVG
+    )
+
+
+@app.route("/api/analytics")
+def api_analytics():
+    range_param = request.args.get("range", "30d")
+    genre_param = request.args.get("genre", "all")
+    start_date = request.args.get("start")
+    end_date = request.args.get("end")
+
+    payload = fetch_analytics_data(
+        range_param=range_param,
+        genre_param=genre_param,
+        start_date=start_date,
+        end_date=end_date
+    )
+    return jsonify(payload)
 
 
 @app.route("/api/albums")
