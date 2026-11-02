@@ -382,7 +382,20 @@ LOGIN_HTML_TEMPLATE = """
             </a>
         </div>
 
-        <div class="mt-8 pt-6 border-t border-gray-800 text-[11px] text-gray-500">
+        <!-- Fast Testing Switcher -->
+        <div class="mt-6 pt-5 border-t border-gray-800/80">
+            <p class="text-[10px] font-mono uppercase text-gray-500 mb-2.5 font-bold tracking-wider">🛠️ 1-Click Test Switcher</p>
+            <div class="flex items-center justify-center gap-2.5">
+                <a href="/beta/dev-switch/sergebou" class="px-3.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-emerald-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
+                    <span>👑</span> Serge (Admin)
+                </a>
+                <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="px-3.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-amber-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
+                    <span>🐹</span> Guinea Pig
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-6 pt-5 border-t border-gray-800 text-[11px] text-gray-500">
             Private Beta: Access is currently invite-only. If you haven't been invited yet, your login will submit an approval request to Serge.
         </div>
     </div>
@@ -632,6 +645,24 @@ def logout():
     return redirect("/beta/login")
 
 
+@app.route("/beta/dev-switch/<user_id>")
+def dev_switch(user_id):
+    if user_id not in ("sergebou", "31sevhztrcbajfcowsahl7z2p26q", "vaultica"):
+        return "Unauthorized test switch", 403
+    ds_client = get_datastore_client()
+    key = ds_client.key("User", user_id)
+    user = ds_client.get(key)
+    if not user:
+        return f"User {user_id} not found in Datastore", 404
+
+    session["user_id"] = user_id
+    session["display_name"] = user.get("display_name", user_id)
+    session["avatar_url"] = user.get("avatar_url", "")
+    session["role"] = user.get("role", "user")
+    logger.info("Dev switched session to: %s (%s)", user_id, session["display_name"])
+    return redirect("/beta/")
+
+
 # ==============================================================================
 # ADMIN ROUTES (INVITE ALLOWLIST)
 # ==============================================================================
@@ -761,6 +792,15 @@ BETA_EXPLORER_HTML = """
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
+                    {% if user.user_id == 'sergebou' %}
+                    <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1.5 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">
+                        🐹 Switch to Guinea Pig
+                    </a>
+                    {% else %}
+                    <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">
+                        👑 Switch to Admin
+                    </a>
+                    {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-2 transition">Logout</a>
                 </div>
             </div>
