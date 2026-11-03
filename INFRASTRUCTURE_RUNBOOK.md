@@ -301,11 +301,35 @@ gcloud run jobs deploy spotify-enrichment-job \
 gcloud run jobs execute spotify-enrichment-job --region=europe-west2 --args="enrich,100"
 ```
 
+### Job 3: `spotify-v2-pipeline-job` (V2 Automated Multi-Tenant Pipeline)
+Loops through all approved friends in Datastore, refreshes their individual tokens, and syncs tracks and saved albums into `spotify_v2`:
+```bash
+# Build multi-tenant pipeline container
+gcloud builds submit /path/to/spotify-dash/src/pipeline_v2 \
+    --tag=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-v2-pipeline:latest
+
+# Deploy Job
+gcloud run jobs deploy spotify-v2-pipeline-job \
+    --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-v2-pipeline:latest \
+    --region=europe-west2 \
+    --service-account=spotify-data@secret-compass-181513.iam.gserviceaccount.com \
+    --set-env-vars=GCP_PROJECT=secret-compass-181513,GCS_BUCKET=secret-compass-181513 \
+    --set-secrets=SPOTIPY_CLIENT_ID=SPOTIPY_CLIENT_ID:latest,SPOTIPY_CLIENT_SECRET=SPOTIPY_CLIENT_SECRET:latest \
+    --max-retries=1 \
+    --task-timeout=15m \
+    --memory=512Mi \
+    --cpu=1
+
+# Execute on-demand run
+gcloud run jobs execute spotify-v2-pipeline-job --region=europe-west2
+```
+
 ---
 
 ## 8. Cloud Scheduler (Automation)
 
-Triggers the ingestion job every 2 hours:
+### Scheduler 1: `spotify-daily-sync` (V1 Production Sync)
+Triggers the legacy single-user pipeline every 2 hours:
 ```bash
 gcloud scheduler jobs create http spotify-daily-sync \
     --location=europe-west2 \
@@ -315,6 +339,19 @@ gcloud scheduler jobs create http spotify-daily-sync \
     --http-method=POST \
     --oauth-service-account-email="spotify-data@secret-compass-181513.iam.gserviceaccount.com" \
     --description="Automated 2-hour sync for Spotify listening history and saved albums"
+```
+
+### Scheduler 2: `spotify-v2-sync-scheduler` (V2 Multi-Tenant Sync)
+Triggers the multi-tenant pipeline every 2 hours for all approved users:
+```bash
+gcloud scheduler jobs create http spotify-v2-sync-scheduler \
+    --location=europe-west2 \
+    --schedule="0 */2 * * *" \
+    --time-zone="UTC" \
+    --uri="https://europe-west2-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/secret-compass-181513/jobs/spotify-v2-pipeline-job:run" \
+    --http-method=POST \
+    --oauth-service-account-email="spotify-data@secret-compass-181513.iam.gserviceaccount.com" \
+    --description="Automated 2-hour multi-tenant sync for all approved SpinSleeve friends"
 ```
 
 ---
