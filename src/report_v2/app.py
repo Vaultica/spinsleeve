@@ -141,7 +141,9 @@ def safe_float(val, default=0.0):
 
 def safe_str(val, default=""):
     if pd.notna(val) and val is not None:
-        return str(val).strip()
+        s = str(val).strip()
+        if s and s.lower() != "nan":
+            return s
     return default
 
 
@@ -152,7 +154,7 @@ _user_album_cache = {}
 _user_album_cache_time = {}
 _user_analytics_cache = {}
 _user_analytics_cache_time = {}
-CACHE_TTL = 600
+CACHE_TTL = 60
 
 
 def sync_user_initial_data(user_id, access_token):
@@ -398,13 +400,23 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         DATE(p.played_at) as play_date,
         EXTRACT(DAYOFWEEK FROM p.played_at) as dow,
         EXTRACT(HOUR FROM p.played_at) as hour,
-        a.image_url as album_image_url,
-        a.release_date as album_release_date,
-        a.genres as album_genres,
+        COALESCE(a.image_url, g.image_url) as album_image_url,
+        COALESCE(a.release_date, g.release_date) as album_release_date,
+        COALESCE(a.genres, g.genres) as album_genres,
         fp.first_played_at
       FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
       LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` a
-        ON p.user_id = a.user_id AND LOWER(TRIM(p.album_name)) = LOWER(TRIM(a.album_name))
+        ON p.user_id = a.user_id AND (p.album_id = a.album_id OR LOWER(TRIM(p.album_name)) = LOWER(TRIM(a.album_name)))
+      LEFT JOIN (
+        SELECT 
+          LOWER(TRIM(album_name)) as norm_name, 
+          MAX(image_url) as image_url, 
+          MAX(release_date) as release_date, 
+          MAX(genres) as genres
+        FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+        GROUP BY norm_name
+      ) g
+        ON LOWER(TRIM(p.album_name)) = g.norm_name
       LEFT JOIN first_plays fp
         ON p.album_name = fp.album_name
       {where_str}
@@ -445,10 +457,13 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
 
     if not album_counts.empty:
         top_row = album_counts.iloc[0]
+        top_img = safe_str(top_row.get("album_image_url"))
+        if not top_img:
+            top_img = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80"
         top_album = {
-            "name": top_row["album"],
-            "artist": top_row["artist"],
-            "image": top_row["album_image_url"] or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
+            "name": safe_str(top_row.get("album"), "Unknown Album"),
+            "artist": safe_str(top_row.get("artist"), "Unknown Artist"),
+            "image": top_img,
             "plays": int(top_row["plays"])
         }
     else:
@@ -470,18 +485,28 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
 
     top_albums = []
     for _, r in album_counts.head(10).iterrows():
+        img = safe_str(r.get("album_image_url"))
+        if not img:
+            img = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80"
         top_albums.append({
-            "name": r["album"],
-            "artist": r["artist"],
-            "image": r["album_image_url"] or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
+            "name": safe_str(r.get("album"), "Unknown Album"),
+            "artist": safe_str(r.get("artist"), "Unknown Artist"),
+            "image": img,
             "plays": int(r["plays"])
         })
 
     artist_counts = df.groupby("artist").size().reset_index(name="plays").sort_values("plays", ascending=False)
-    top_artists = [{"name": r["artist"], "plays": int(r["plays"])} for _, r in artist_counts.head(10).iterrows()]
+    top_artists = [{"name": safe_str(r.get("artist"), "Unknown Artist"), "plays": int(r["plays"])} for _, r in artist_counts.head(10).iterrows()]
 
     track_counts = df.groupby(["track", "artist", "album"]).size().reset_index(name="plays").sort_values("plays", ascending=False)
-    top_tracks = [{"title": r["track"], "artist": r["artist"], "album": r["album"], "plays": int(r["plays"])} for _, r in track_counts.head(10).iterrows()]
+    top_tracks = []
+    for _, r in track_counts.head(10).iterrows():
+        top_tracks.append({
+            "title": safe_str(r.get("track"), "Unknown Track"),
+            "artist": safe_str(r.get("artist"), "Unknown Artist"),
+            "album": safe_str(r.get("album"), "Unknown Album"),
+            "plays": int(r["plays"])
+        })
 
     def get_era(rel_date):
         if not rel_date or len(str(rel_date)) < 4:
@@ -543,6 +568,17 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         "heatmap": heatmap
     }
 
+    def sanitize_payload(obj):
+        import math
+        if isinstance(obj, dict):
+            return {k: sanitize_payload(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [sanitize_payload(v) for v in obj]
+        elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return 0.0
+        return obj
+
+    payload = sanitize_payload(payload)
     _user_analytics_cache[cache_key] = payload
     _user_analytics_cache_time[cache_key] = now
     return payload
@@ -1215,6 +1251,15 @@ def dev_switch(user_id):
     session["display_name"] = user.get("display_name", user_id)
     session["avatar_url"] = user.get("avatar_url", "")
     session["role"] = user.get("role", "user")
+
+    # Invalidate in-memory caches for this user
+    _user_album_cache.pop(user_id, None)
+    _user_album_cache_time.pop(user_id, None)
+    keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
+    for k in keys_to_del:
+        _user_analytics_cache.pop(k, None)
+        _user_analytics_cache_time.pop(k, None)
+
     logger.info("Dev switched session to: %s (%s)", user_id, session["display_name"])
     return redirect("/beta/")
 
