@@ -438,7 +438,6 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     mins = (total_seconds % 3600) // 60
     listening_time = f"{hours}h {mins}m"
 
-    # Top Album & Albums ranking
     album_counts = df.groupby(["album", "artist"]).agg(
         plays=("ts", "count"),
         album_image_url=("album_image_url", "first")
@@ -455,11 +454,9 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     else:
         top_album = None
 
-    # Time series
     daily = df.groupby("play_date").size().reset_index(name="plays").sort_values("play_date")
     time_series = [{"date": str(r["play_date"]), "plays": int(r["plays"])} for _, r in daily.iterrows()]
 
-    # Discovery vs Repeat
     min_window = df["ts"].min()
     album_window = df.groupby(["album", "first_played_at"]).size().reset_index(name="plays")
     fresh_mask = album_window["first_played_at"] >= min_window
@@ -471,7 +468,6 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     fresh_pct = round((fresh_plays / total_window_plays) * 100, 1) if total_window_plays > 0 else 0
     repeat_pct = round((repeat_plays / total_window_plays) * 100, 1) if total_window_plays > 0 else 0
 
-    # Top 10 Albums
     top_albums = []
     for _, r in album_counts.head(10).iterrows():
         top_albums.append({
@@ -481,15 +477,12 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
             "plays": int(r["plays"])
         })
 
-    # Top 10 Artists
     artist_counts = df.groupby("artist").size().reset_index(name="plays").sort_values("plays", ascending=False)
     top_artists = [{"name": r["artist"], "plays": int(r["plays"])} for _, r in artist_counts.head(10).iterrows()]
 
-    # Top 10 Tracks
     track_counts = df.groupby(["track", "artist", "album"]).size().reset_index(name="plays").sort_values("plays", ascending=False)
     top_tracks = [{"title": r["track"], "artist": r["artist"], "album": r["album"], "plays": int(r["plays"])} for _, r in track_counts.head(10).iterrows()]
 
-    # Eras
     def get_era(rel_date):
         if not rel_date or len(str(rel_date)) < 4:
             return "Unknown"
@@ -509,7 +502,6 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     era_counts = df.groupby("era").size().to_dict()
     eras = [{"era": e, "plays": int(era_counts.get(e, 0))} for e in era_order if era_counts.get(e, 0) > 0]
 
-    # Genres (Top 8)
     genre_counter = Counter()
     for g_str in df["album_genres"].dropna():
         if g_str:
@@ -519,7 +511,6 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
                     genre_counter[clean_g] += 1
     genres = [{"genre": g.title(), "plays": count} for g, count in genre_counter.most_common(8)]
 
-    # Heatmap (7 days x 24 hours: Mon=0..Sun=6)
     heatmap = [[0]*24 for _ in range(7)]
     for _, r in df.iterrows():
         d_idx = (int(r["dow"]) + 5) % 7
@@ -555,6 +546,259 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     _user_analytics_cache[cache_key] = payload
     _user_analytics_cache_time[cache_key] = now
     return payload
+
+
+# ==============================================================================
+# 4. SPINPALS: CRATEMATES & ACOUSTIC CHEMISTRY ENGINE
+# ==============================================================================
+def fetch_pals_directory(current_user_id):
+    """Fetches all approved community members in the Listening Lounge."""
+    ds_client = get_datastore_client()
+    query = ds_client.query(kind="User")
+    query.add_filter(filter=datastore.query.PropertyFilter("is_approved", "=", True))
+    users = list(query.fetch())
+
+    bq_client = bigquery.Client(project=PROJECT_ID)
+    q_counts = f"""
+    SELECT user_id, COUNT(*) as album_count
+    FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+    GROUP BY user_id
+    """
+    df_counts = bq_client.query(q_counts).to_dataframe()
+    counts_map = dict(zip(df_counts["user_id"], df_counts["album_count"]))
+
+    pals = []
+    for u in users:
+        uid = u.key.name or u.get("spotify_id")
+        if uid == "vaultica":  # Skip system alias
+            continue
+        pals.append({
+            "spotify_id": uid,
+            "display_name": u.get("display_name") or uid,
+            "avatar_url": u.get("avatar_url") or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+            "album_count": int(counts_map.get(uid, 0)),
+            "is_self": (uid == current_user_id)
+        })
+
+    # Sort so self is first, followed by others alphabetically
+    pals.sort(key=lambda p: (not p["is_self"], p["display_name"].lower()))
+    return pals
+
+
+def compute_pal_compatibility(current_user_id, pal_id):
+    """Computes acoustic chemistry, shared vinyl, and top 5 borrow recommendations."""
+    bq_client = bigquery.Client(project=PROJECT_ID)
+    ds_client = get_datastore_client()
+
+    pal_key = ds_client.key("User", pal_id)
+    pal_entity = ds_client.get(pal_key)
+    pal_name = pal_entity.get("display_name") if pal_entity else pal_id
+    pal_avatar = pal_entity.get("avatar_url") if pal_entity else ""
+    if not pal_avatar:
+        pal_avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
+
+    q_pal_albums = f"""
+    SELECT 
+      f.album_id,
+      f.album_name,
+      f.album_artist_name,
+      f.album_image_url,
+      f.release_year,
+      f.album_genres,
+      f.album_track_plays,
+      f.album_plays,
+      f.pitchfork_score,
+      f.metacritic_score,
+      f.discogs_rating,
+      f.discogs_votes,
+      f.album_description,
+      f.personnel,
+      f.wikipedia_url,
+      f.discogs_url,
+      f.enriched_styles,
+      CASE WHEN my.album_id IS NOT NULL THEN 1 ELSE 0 END as current_user_owns
+    FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features` f
+    LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` my
+      ON my.user_id = @current_user_id AND f.album_id = my.album_id
+    WHERE f.user_id = @pal_id
+    ORDER BY f.album_plays DESC, f.added_at DESC
+    """
+    job_cfg = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("current_user_id", "STRING", current_user_id),
+            bigquery.ScalarQueryParameter("pal_id", "STRING", pal_id)
+        ]
+    )
+    df_pal = bq_client.query(q_pal_albums, job_config=job_cfg).to_dataframe()
+
+    q_my_count = f"""
+    SELECT COUNT(*) as total_albums
+    FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+    WHERE user_id = @current_user_id
+    """
+    my_cnt_cfg = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("current_user_id", "STRING", current_user_id)]
+    )
+    df_my_count = bq_client.query(q_my_count, job_config=my_cnt_cfg).to_dataframe()
+    my_total_albums = int(df_my_count["total_albums"].iloc[0]) if not df_my_count.empty else 0
+
+    processed_pal_albums = []
+    for _, row in df_pal.iterrows():
+        raw_personnel = row.get("personnel")
+        personnel_list = []
+        if isinstance(raw_personnel, list):
+            personnel_list = raw_personnel
+        elif isinstance(raw_personnel, str) and raw_personnel.strip():
+            try:
+                personnel_list = json.loads(raw_personnel)
+            except Exception:
+                personnel_list = [p.strip() for p in raw_personnel.split(",") if p.strip()]
+
+        desc_str = safe_str(row.get("album_description"))
+        pf_str = safe_str(row.get("pitchfork_score"))
+        meta_str = safe_str(row.get("metacritic_score"))
+        am_str = safe_str(row.get("allmusic_score"))
+        disc_str = safe_str(row.get("discogs_rating"))
+        has_gatefold = bool(desc_str or pf_str or meta_str or am_str or disc_str or personnel_list)
+
+        processed_pal_albums.append({
+            "album_id": safe_str(row.get("album_id")),
+            "album_name": safe_str(row.get("album_name"), "Unknown Album"),
+            "album_artist_name": safe_str(row.get("album_artist_name"), "Unknown Artist"),
+            "release_year": safe_str(row.get("release_year")),
+            "album_track_plays": safe_int(row.get("album_track_plays")),
+            "album_plays": safe_float(row.get("album_plays")),
+            "album_image_url": safe_str(row.get("album_image_url")) or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
+            "album_url": f"https://open.spotify.com/album/{safe_str(row.get('album_id'))}",
+            "album_genres": safe_str(row.get("album_genres")),
+            "has_gatefold": has_gatefold,
+            "album_description": desc_str,
+            "pitchfork_score": pf_str,
+            "metacritic_score": meta_str,
+            "allmusic_score": am_str,
+            "discogs_rating": disc_str,
+            "discogs_votes": safe_int(row.get("discogs_votes")),
+            "wikipedia_url": safe_str(row.get("wikipedia_url")),
+            "discogs_url": safe_str(row.get("discogs_url")),
+            "styles": safe_str(row.get("enriched_styles")) or safe_str(row.get("album_genres")),
+            "personnel": personnel_list,
+            "current_user_owns": bool(row.get("current_user_owns", 0))
+        })
+
+    shared_albums = [a for a in processed_pal_albums if a["current_user_owns"]]
+    unowned_albums = [a for a in processed_pal_albums if not a["current_user_owns"]]
+
+    # Compare shared artists
+    q_shared_artists = f"""
+    WITH artists_a AS (
+      SELECT DISTINCT LOWER(TRIM(artist_name)) as artist
+      FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+      WHERE user_id = @current_user_id
+    ),
+    artists_b AS (
+      SELECT DISTINCT LOWER(TRIM(artist_name)) as artist
+      FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+      WHERE user_id = @pal_id
+    )
+    SELECT a.artist
+    FROM artists_a a
+    JOIN artists_b b ON a.artist = b.artist
+    """
+    df_art = bq_client.query(q_shared_artists, job_config=job_cfg).to_dataframe()
+    shared_artists = [a.title() for a in df_art["artist"].tolist()] if not df_art.empty else []
+
+    # Hybrid match percentage
+    min_catalog = min(my_total_albums, len(processed_pal_albums)) if (my_total_albums > 0 and len(processed_pal_albums) > 0) else 1
+    album_ratio = len(shared_albums) / min_catalog
+    artist_ratio = len(shared_artists) / max(1, min(my_total_albums, len(processed_pal_albums), 20))
+    raw_match = int(round(50 * album_ratio + 50 * artist_ratio))
+    match_pct = max(15, min(99, raw_match))
+
+    if match_pct >= 80:
+        kinship = {
+            "tier": "Vinyl Soulmates",
+            "badge": "🔥 Vinyl Soulmates",
+            "color": "text-rose-400 bg-rose-500/10 border-rose-500/30",
+            "desc": "Uncanny acoustic connection! Your record crates and listening habits are cut from the exact same cloth."
+        }
+    elif match_pct >= 60:
+        kinship = {
+            "tier": "Acoustic Kin",
+            "badge": "📻 Acoustic Kin",
+            "color": "text-amber-400 bg-amber-500/10 border-amber-500/30",
+            "desc": "Deep taste alignment across heavy rotations and key genres, with plenty of common ground."
+        }
+    elif match_pct >= 40:
+        kinship = {
+            "tier": "Crate Companions",
+            "badge": "🤝 Crate Companions",
+            "color": "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
+            "desc": "Solid overlapping favorites with fantastic new territory to discover on each other's shelves."
+        }
+    elif match_pct >= 25:
+        kinship = {
+            "tier": "Curious Explorers",
+            "badge": "🔍 Curious Explorers",
+            "color": "text-blue-400 bg-blue-500/10 border-blue-500/30",
+            "desc": "Distinct record collections with intriguing common threads waiting to be explored."
+        }
+    else:
+        kinship = {
+            "tier": "Fresh Discoveries Ahead",
+            "badge": "🌌 Fresh Discoveries Ahead",
+            "color": "text-purple-400 bg-purple-500/10 border-purple-500/30",
+            "desc": "Completely fresh territory! Their record shelf is an uncharted goldmine of new sounds for your ears."
+        }
+
+    # Top 5 Meaningful Recommendations to Borrow
+    def borrow_score(alb):
+        score = alb["album_plays"] * 5
+        if alb["pitchfork_score"]:
+            try:
+                score += float(alb["pitchfork_score"].split("/")[0]) * 2
+            except Exception: pass
+        if alb["discogs_rating"]:
+            try:
+                score += float(alb["discogs_rating"]) * 3
+            except Exception: pass
+        if alb["has_gatefold"]:
+            score += 10
+        return score
+
+    unowned_sorted = sorted(unowned_albums, key=borrow_score, reverse=True)
+    top_borrow = unowned_sorted[:5]
+
+    for item in top_borrow:
+        reasons = []
+        if item["album_plays"] > 0:
+            reasons.append(f"{pal_name}'s Heavy Rotation ({int(item['album_plays'])} spins)")
+        if item["pitchfork_score"]:
+            reasons.append(f"Pitchfork {item['pitchfork_score']}")
+        elif item["discogs_rating"]:
+            reasons.append(f"Discogs {item['discogs_rating']}★")
+        if not reasons:
+            reasons.append(f"From {pal_name}'s Crate")
+        item["borrow_reason"] = " • ".join(reasons)
+
+    return {
+        "pal": {
+            "spotify_id": pal_id,
+            "display_name": pal_name,
+            "avatar_url": pal_avatar,
+            "album_count": len(processed_pal_albums)
+        },
+        "compatibility": {
+            "match_pct": match_pct,
+            "kinship": kinship,
+            "shared_albums_count": len(shared_albums),
+            "shared_artists_count": len(shared_artists),
+            "borrow_count": len(unowned_albums),
+            "shared_artists": shared_artists[:10]
+        },
+        "top_borrow": top_borrow,
+        "shared_albums": shared_albums[:24],
+        "pal_full_crate": processed_pal_albums
+    }
 
 
 # ==============================================================================
@@ -684,13 +928,16 @@ LOGIN_HTML_TEMPLATE = """
 
         <!-- Fast Testing Switcher -->
         <div class="mt-6 pt-5 border-t border-gray-800/80">
-            <p class="text-[10px] font-mono uppercase text-gray-500 mb-2.5 font-bold tracking-wider">🛠️ 1-Click Test Switcher</p>
-            <div class="flex items-center justify-center gap-2.5">
-                <a href="/beta/dev-switch/sergebou" class="px-3.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-emerald-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
-                    <span>👑</span> Serge (Admin)
+            <p class="text-[10px] font-mono uppercase text-gray-500 mb-2.5 font-bold tracking-wider">🛠️ 1-Click Fast Switcher (For Testing)</p>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+                <a href="/beta/dev-switch/sergebou" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-emerald-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
+                    <span>👑</span> Serge
                 </a>
-                <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="px-3.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-amber-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
-                    <span>🐹</span> Guinea Pig
+                <a href="/beta/dev-switch/sarahboosch" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-rose-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
+                    <span>👩</span> Sarah
+                </a>
+                <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-amber-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
+                    <span>🐹</span> GuineaPig
                 </a>
             </div>
         </div>
@@ -926,6 +1173,22 @@ def callback():
 
         return redirect("/beta/")
 
+    except spotipy.exceptions.SpotifyException as se:
+        if se.http_status == 403:
+            logger.warning("User not registered in Spotify Developer Dashboard: %s", se)
+            return render_template_string("""
+                <body style="background:#0c0f12; color:#fff; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; text-align:center; padding:20px;">
+                    <div style="max-width:440px; background:#14181f; border:1px solid #374151; padding:30px; border-radius:24px;">
+                        <h2 style="color:#f59e0b; font-size:22px; margin-bottom:10px;">⏳ Spotify Allowlist Required</h2>
+                        <p style="color:#9ca3af; font-size:13px; line-height:1.6;">
+                            SpinSleeve is currently in Spotify Development Mode. Your Spotify account email needs to be added to Serge's developer dashboard.
+                        </p>
+                        <p style="color:#10b981; font-size:12px; margin-top:15px;">Ask Serge to add your email, then try again!</p>
+                        <a href="/beta/login" style="display:inline-block; margin-top:20px; background:#1DB954; color:#000; padding:10px 20px; border-radius:12px; font-weight:bold; font-size:13px; text-decoration:none;">Return to Login</a>
+                    </div>
+                </body>
+            """), 403
+        return f"Authentication error: {se}", 500
     except Exception as e:
         logger.exception("Error in Spotify OAuth callback: %s", e)
         return f"Authentication error: {e}", 500
@@ -940,7 +1203,7 @@ def logout():
 
 @app.route("/beta/dev-switch/<user_id>")
 def dev_switch(user_id):
-    if user_id not in ("sergebou", "31sevhztrcbajfcowsahl7z2p26q", "vaultica"):
+    if user_id not in ("sergebou", "sarahboosch", "31sevhztrcbajfcowsahl7z2p26q", "vaultica"):
         return "Unauthorized test switch", 403
     ds_client = get_datastore_client()
     key = ds_client.key("User", user_id)
@@ -1082,20 +1345,22 @@ BETA_EXPLORER_HTML = """
                     ⚙️ Admin
                 </a>
                 {% endif %}
-                <div class="flex items-center gap-2.5 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
-                    <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700">
+                <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
+                    <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    {% if user.user_id == 'sergebou' %}
-                    <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">
-                        🐹 Guinea Pig
-                    </a>
-                    {% else %}
-                    <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">
-                        👑 Admin
-                    </a>
-                    {% endif %}
+                    <div class="flex items-center gap-1">
+                        {% if user.user_id != 'sergebou' %}
+                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
+                        {% endif %}
+                        {% if user.user_id != 'sarahboosch' %}
+                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
+                        {% endif %}
+                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
+                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        {% endif %}
+                    </div>
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
@@ -1112,12 +1377,14 @@ BETA_EXPLORER_HTML = """
             <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
                 <span>📊</span> Analytics
             </a>
+            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>👯</span> SpinPals
+            </a>
         </nav>
 
         <!-- Filter Controls Toolbar -->
         <div class="card-bg p-4 rounded-xl border border-gray-800 mb-6 shadow-sm">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-center">
-                <!-- Search -->
                 <div class="relative lg:col-span-2">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">🔍</span>
                     <input type="text" id="searchInput" placeholder="Search your albums or artists..."
@@ -1125,7 +1392,6 @@ BETA_EXPLORER_HTML = """
                            oninput="onFilterChange()">
                 </div>
 
-                <!-- Genre Selector -->
                 <div>
                     <select id="genreSelect" onchange="onFilterChange()"
                             class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
@@ -1136,7 +1402,6 @@ BETA_EXPLORER_HTML = """
                     </select>
                 </div>
 
-                <!-- Sort Selector (With new Artist A-Z, Albums Year desc) -->
                 <div>
                     <select id="sortSelect" onchange="onFilterChange()"
                             class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
@@ -1152,17 +1417,14 @@ BETA_EXPLORER_HTML = """
         </div>
 
         <!-- Album Grid -->
-        <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <!-- Populated via JS -->
-        </div>
+        <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
 
-        <!-- Load More Trigger -->
         <div id="loadMoreTrigger" class="text-center py-10">
             <span class="text-xs text-gray-500">Showing <span id="displayedCount">0</span> of <span id="totalMatchCount">0</span> albums</span>
         </div>
     </div>
 
-    <!-- Pinned Audio Preview Floating Toast -->
+    <!-- Pinned Preview Toast -->
     <div id="previewToast" class="fixed bottom-6 right-6 z-40 bg-[#161a22]/95 border border-emerald-500/30 rounded-2xl p-3.5 shadow-2xl backdrop-blur-md flex items-center gap-3.5 max-w-sm transition-all duration-300 translate-y-28 opacity-0 pointer-events-none">
         <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
             <div class="flex items-end gap-0.5 h-3">
@@ -1178,10 +1440,9 @@ BETA_EXPLORER_HTML = """
         <button onclick="stopPreview()" class="text-gray-400 hover:text-white p-1 text-sm font-bold">&times;</button>
     </div>
 
-    <!-- 12" Gatefold Modal Markup (With Pinned 30s Audio Player) -->
+    <!-- 12" Gatefold Modal Markup -->
     <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6" onclick="onModalBackdropClick(event)">
         <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[620px]" onclick="event.stopPropagation()">
-            <!-- Left 12" Panel: Cover Art & Streaming -->
             <div class="w-full md:w-5/12 bg-black/40 p-4 md:p-6 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-gray-800/80">
                 <div class="w-full flex justify-between items-center mb-3">
                     <span class="text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold uppercase">12" Gatefold Edition</span>
@@ -1197,10 +1458,8 @@ BETA_EXPLORER_HTML = """
                 </div>
             </div>
 
-            <!-- Right 12" Panel: Liner Notes & Pinned 30s Audio Player -->
             <div class="w-full md:w-7/12 p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll">
                 <div>
-                    <!-- Pinned 30s Audio Snippet Bar -->
                     <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 min-w-0">
                             <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()" class="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shrink-0 transition shadow">
@@ -1226,10 +1485,8 @@ BETA_EXPLORER_HTML = """
                         <button onclick="closeGatefold()" class="hidden md:block text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
                     </div>
 
-                    <!-- Scores & Badges -->
                     <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
 
-                    <!-- Liner Notes Prose -->
                     <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
                         <div id="modalDescriptionSection">
                             <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Album Narrative &amp; Critical Reception</h4>
@@ -1250,13 +1507,11 @@ BETA_EXPLORER_HTML = """
         </div>
     </div>
 
-    <!-- Client Script -->
     <script>
         const ALL_ALBUMS = {{ albums | tojson }};
         let filteredAlbums = [...ALL_ALBUMS];
         let displayLimit = 48;
 
-        // Hover Audio Preview Controller
         let hoverTimer = null;
         let activeAudio = new Audio();
         let currentHoverKey = null;
@@ -1321,7 +1576,7 @@ BETA_EXPLORER_HTML = """
 
         function onCardLeave(cardEl) {
             if (hoverTimer) clearTimeout(hoverTimer);
-            if (isModalOpen) return; // Audio continuity preserved!
+            if (isModalOpen) return;
             currentHoverKey = null;
             stopPreview();
             if (cardEl) {
@@ -1436,7 +1691,6 @@ BETA_EXPLORER_HTML = """
             document.getElementById("modalArtist").innerText = album.album_artist_name;
             document.getElementById("modalSpotifyLink").href = album.album_url;
 
-            // Audio continuity: check if already playing from hover
             const key = `${album.album_artist_name.toLowerCase()}::${album.album_name.toLowerCase()}`;
             if (!activeAudio.paused && currentHoverKey === key) {
                 updateModalPlayIcon(true);
@@ -1444,7 +1698,6 @@ BETA_EXPLORER_HTML = """
                 updateModalPlayIcon(false);
             }
 
-            // Fetch preview track name for pinned bar
             let pData = previewUrlCache.get(key);
             if (!pData) {
                 try {
@@ -1609,7 +1862,7 @@ BETA_RECOMMEND_HTML = """
 </head>
 <body class="min-h-screen p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
-        <!-- Persistent Header (Always 'SpinSleeve') -->
+        <!-- Persistent Header -->
         <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
             <div>
                 <div class="flex items-center gap-3">
@@ -1632,20 +1885,22 @@ BETA_RECOMMEND_HTML = """
                 <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition shadow-md flex items-center gap-1.5">
                     <span>🎲</span> Spin Again
                 </button>
-                <div class="flex items-center gap-2.5 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
-                    <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700">
+                <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
+                    <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    {% if user.user_id == 'sergebou' %}
-                    <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">
-                        🐹 Guinea Pig
-                    </a>
-                    {% else %}
-                    <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">
-                        👑 Admin
-                    </a>
-                    {% endif %}
+                    <div class="flex items-center gap-1">
+                        {% if user.user_id != 'sergebou' %}
+                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
+                        {% endif %}
+                        {% if user.user_id != 'sarahboosch' %}
+                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
+                        {% endif %}
+                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
+                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        {% endif %}
+                    </div>
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
@@ -1662,12 +1917,14 @@ BETA_RECOMMEND_HTML = """
             <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
                 <span>📊</span> Analytics
             </a>
+            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>👯</span> SpinPals
+            </a>
         </nav>
 
-        <!-- Control Deck: Filter & Preference Configurator -->
+        <!-- Control Deck -->
         <div class="card-bg p-5 rounded-2xl border border-gray-800 mb-8 shadow-lg">
             <div class="space-y-4">
-                <!-- 1. Listening Mode -->
                 <div>
                     <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">1. Listening Mode</label>
                     <div class="flex flex-wrap gap-2.5">
@@ -1680,7 +1937,6 @@ BETA_RECOMMEND_HTML = """
                     </div>
                 </div>
 
-                <!-- 2. Mood & Vibe -->
                 <div>
                     <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">2. Mood &amp; Vibe</label>
                     <div class="flex flex-wrap gap-2">
@@ -1692,7 +1948,6 @@ BETA_RECOMMEND_HTML = """
                     </div>
                 </div>
 
-                <!-- 3. Era & Genre Refinement -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-800/80">
                     <div>
                         <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">3. Era Preference</label>
@@ -1716,7 +1971,6 @@ BETA_RECOMMEND_HTML = """
             </div>
         </div>
 
-        <!-- Section: Top 3 Spotlight Picks -->
         <div class="mb-10">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
@@ -1728,20 +1982,15 @@ BETA_RECOMMEND_HTML = """
                 </div>
             </div>
 
-            <div id="spotlightContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <!-- Populated via JS -->
-            </div>
+            <div id="spotlightContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- Section: Ranked Candidate Pool Below -->
         <div>
             <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-800">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300">All Matching Candidates</h3>
                 <span class="text-xs text-gray-500" id="candidateSubtext"></span>
             </div>
-            <div id="candidatePoolGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <!-- Populated via JS -->
-            </div>
+            <div id="candidatePoolGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
         </div>
     </div>
 
@@ -1761,10 +2010,9 @@ BETA_RECOMMEND_HTML = """
         <button onclick="stopPreview()" class="text-gray-400 hover:text-white p-1 text-sm font-bold">&times;</button>
     </div>
 
-    <!-- 12" Gatefold Modal Markup (Pinned 30s Audio Player) -->
+    <!-- 12" Gatefold Modal Markup -->
     <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6" onclick="onModalBackdropClick(event)">
         <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[620px]" onclick="event.stopPropagation()">
-            <!-- Left 12" Panel -->
             <div class="w-full md:w-5/12 bg-black/40 p-4 md:p-6 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-gray-800/80">
                 <div class="w-full flex justify-between items-center mb-3">
                     <span class="text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold uppercase">12" Gatefold Edition</span>
@@ -1780,10 +2028,8 @@ BETA_RECOMMEND_HTML = """
                 </div>
             </div>
 
-            <!-- Right 12" Panel -->
             <div class="w-full md:w-7/12 p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll">
                 <div>
-                    <!-- Pinned 30s Audio Bar -->
                     <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 min-w-0">
                             <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()" class="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shrink-0 transition shadow">
@@ -1831,7 +2077,6 @@ BETA_RECOMMEND_HTML = """
         </div>
     </div>
 
-    <!-- Crate Digger Engine Script -->
     <script>
         const ALL_ALBUMS = {{ albums | tojson }};
         let selectedMode = 'discover';
@@ -1840,7 +2085,6 @@ BETA_RECOMMEND_HTML = """
         let selectedGenre = '';
         let currentSeed = Math.random();
 
-        // Audio Preview Controller
         let hoverTimer = null;
         let activeAudio = new Audio();
         let currentHoverKey = null;
@@ -1885,9 +2129,7 @@ BETA_RECOMMEND_HTML = """
                         const res = await fetch(`/beta/api/preview?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`);
                         data = await res.json();
                         previewUrlCache.set(key, data);
-                    } catch (e) {
-                        return;
-                    }
+                    } catch (e) { return; }
                 }
 
                 if (currentHoverKey !== key) return;
@@ -2345,20 +2587,22 @@ BETA_ANALYTICS_HTML = """
                     ⚙️ Admin
                 </a>
                 {% endif %}
-                <div class="flex items-center gap-2.5 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
-                    <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700">
+                <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
+                    <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    {% if user.user_id == 'sergebou' %}
-                    <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">
-                        🐹 Guinea Pig
-                    </a>
-                    {% else %}
-                    <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">
-                        👑 Admin
-                    </a>
-                    {% endif %}
+                    <div class="flex items-center gap-1">
+                        {% if user.user_id != 'sergebou' %}
+                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
+                        {% endif %}
+                        {% if user.user_id != 'sarahboosch' %}
+                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
+                        {% endif %}
+                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
+                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        {% endif %}
+                    </div>
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
@@ -2375,11 +2619,13 @@ BETA_ANALYTICS_HTML = """
             <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
                 <span>📊</span> Analytics
             </a>
+            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>👯</span> SpinPals
+            </a>
         </nav>
 
-        <!-- Filter Control Bar (With 'This Year' Option!) -->
+        <!-- Filter Control Bar -->
         <div class="card-bg p-4 rounded-2xl border border-gray-800 mb-6 shadow-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-            <!-- Date Range Quick Presets -->
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1">Period:</span>
                 <button onclick="setRange('1d')" id="btn-1d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">Last 24h</button>
@@ -2391,7 +2637,6 @@ BETA_ANALYTICS_HTML = """
                 <button onclick="setRange('all')" id="btn-all" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">All Time</button>
             </div>
 
-            <!-- Calendar Range Picker & Genre Dropdown -->
             <div class="flex flex-wrap items-center gap-3">
                 <div class="relative flex items-center">
                     <input type="text" id="calendarPicker" placeholder="📅 Pick custom dates..." 
@@ -2501,9 +2746,7 @@ BETA_ANALYTICS_HTML = """
                         <span>💿</span> Top 10 Albums
                     </h3>
                 </div>
-                <div id="topAlbumsList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll">
-                    <!-- Populated via JS -->
-                </div>
+                <div id="topAlbumsList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll"></div>
             </div>
 
             <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col">
@@ -2523,9 +2766,7 @@ BETA_ANALYTICS_HTML = """
                         <span>🎵</span> Top 10 Tracks
                     </h3>
                 </div>
-                <div id="topTracksList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll">
-                    <!-- Populated via JS -->
-                </div>
+                <div id="topTracksList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll"></div>
             </div>
         </div>
 
@@ -2587,15 +2828,12 @@ BETA_ANALYTICS_HTML = """
                         <div class="flex-1 text-center">{{ "%02d" % h }}</div>
                         {% endfor %}
                     </div>
-                    <div id="heatmapGrid" class="space-y-1.5">
-                        <!-- Populated via JS -->
-                    </div>
+                    <div id="heatmapGrid" class="space-y-1.5"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Analytics Dashboard Engine -->
     <script>
         let currentRange = '30d';
         let customStart = null;
@@ -2654,7 +2892,6 @@ BETA_ANALYTICS_HTML = """
         }
 
         function renderDashboard(data) {
-            // 1. KPIs
             document.getElementById('kpiAlbums').textContent = (data.kpis.total_albums || 0).toLocaleString();
             document.getElementById('kpiAlbumsSub').textContent = `${data.discovery_vs_repeat.fresh_albums} fresh / ${data.discovery_vs_repeat.repeat_albums} repeat`;
             document.getElementById('kpiTracks').textContent = (data.kpis.total_tracks || 0).toLocaleString();
@@ -2951,6 +3188,623 @@ BETA_ANALYTICS_HTML = """
 
             loadAnalytics();
         });
+    </script>
+</body>
+</html>
+"""
+
+
+# ==============================================================================
+# 5. TAB 4: SPINPALS (CRATEMATES & ACOUSTIC CHEMISTRY) ROUTE & TEMPLATE
+# ==============================================================================
+@app.route("/pals")
+@app.route("/beta/pals")
+@app.route("/pals/<pal_id>")
+@app.route("/beta/pals/<pal_id>")
+@login_required
+def beta_pals(pal_id=None):
+    current_user_id = session["user_id"]
+    pals_directory = fetch_pals_directory(current_user_id)
+
+    # Pick target pal: either requested pal_id, or first other member in directory
+    other_pals = [p for p in pals_directory if not p["is_self"]]
+    if not other_pals:
+        return render_template_string("""
+            <body style="background:#0c0f12; color:#fff; font-family:sans-serif; padding:40px; text-align:center;">
+                <h2>No Other Pals In The Club Yet!</h2>
+                <p style="color:#9ca3af;">Invite a friend to join SpinSleeve to unlock taste compatibility and crate borrowing.</p>
+                <a href="/beta/" style="color:#1DB954;">Return to Library</a>
+            </body>
+        """)
+
+    target_pal = None
+    if pal_id:
+        target_pal = next((p for p in other_pals if p["spotify_id"] == pal_id), None)
+    if not target_pal:
+        target_pal = other_pals[0]
+
+    pal_data = compute_pal_compatibility(current_user_id, target_pal["spotify_id"])
+
+    return render_template_string(
+        BETA_PALS_HTML,
+        user=session,
+        pals=pals_directory,
+        selected_pal=pal_data["pal"],
+        compatibility=pal_data["compatibility"],
+        top_borrow=pal_data["top_borrow"],
+        shared_albums=pal_data["shared_albums"],
+        pal_crate=pal_data["pal_full_crate"],
+        brand_icon=ICON_A_SVG,
+        gatefold_icon=ICON_GATEFOLD_SVG
+    )
+
+
+BETA_PALS_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinPals: CrateMates - {{ user.display_name }} × {{ selected_pal.display_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
+        .card-bg { background-color: #14181f; }
+        .sleeve-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6); }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        @keyframes soundWave { 0%, 100% { height: 4px; } 50% { height: 16px; } }
+        .wave-bar { animation: soundWave 1.2s ease-in-out infinite; }
+        .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Persistent Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 flex-shrink-0">
+                        {{ brand_icon | safe }}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
+                        <span class="bg-rose-500/20 text-rose-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-rose-500/30">SPINPALS: CRATEMATES</span>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Acoustic chemistry, taste overlap &amp; vinyl shelf borrowing</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
+                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
+                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
+                </button>
+                {% if user.role == 'admin' %}
+                <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
+                    ⚙️ Admin
+                </a>
+                {% endif %}
+                <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
+                    <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
+                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
+                    </div>
+                    <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
+                    <div class="flex items-center gap-1">
+                        {% if user.user_id != 'sergebou' %}
+                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
+                        {% endif %}
+                        {% if user.user_id != 'sarahboosch' %}
+                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
+                        {% endif %}
+                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
+                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        {% endif %}
+                    </div>
+                    <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
+            <a href="/beta/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📚</span> Library Explorer
+            </a>
+            <a href="/beta/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📻</span> Crate Digger
+            </a>
+            <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+                <span>📊</span> Analytics
+            </a>
+            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
+                <span>👯</span> SpinPals
+            </a>
+        </nav>
+
+        <!-- 1. THE LISTENING LOUNGE (Active Club Members Carousel) -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-3 px-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm">🍸</span>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">The Listening Lounge (Vinyl Club Directory)</h3>
+                </div>
+                <span class="text-[11px] text-gray-500">Click a friend to calculate acoustic chemistry</span>
+            </div>
+
+            <div class="flex items-center gap-3 overflow-x-auto pb-2 custom-scroll">
+                {% for p in pals %}
+                {% if not p.is_self %}
+                <a href="/beta/pals/{{ p.spotify_id }}"
+                   class="flex items-center gap-3 p-2.5 pr-4 rounded-2xl border transition shrink-0 shadow-md {{ 'bg-emerald-950/20 border-emerald-500/50 shadow-emerald-500/10' if p.spotify_id == selected_pal.spotify_id else 'card-bg border-gray-800 hover:border-gray-700' }}">
+                    <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-800 border {{ 'border-emerald-400 ring-2 ring-emerald-500/30' if p.spotify_id == selected_pal.spotify_id else 'border-gray-700' }} shrink-0">
+                        <img src="{{ p.avatar_url }}" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-bold text-white">{{ p.display_name }}</span>
+                            {% if p.spotify_id == selected_pal.spotify_id %}
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            {% endif %}
+                        </div>
+                        <span class="text-[10px] text-gray-400">{{ p.album_count }} saved albums</span>
+                    </div>
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 2. CRATEMATES COMPARISON HERO (Acoustic Chemistry Gauge) -->
+        <div class="card-bg rounded-3xl border border-gray-800 p-6 md:p-8 mb-8 shadow-xl relative overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
+                <!-- Chemistry Gauge & Narrative -->
+                <div class="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                    <!-- Gauge Meter -->
+                    <div class="relative w-28 h-28 shrink-0 flex items-center justify-center rounded-full bg-[#0c0f12] border-4 border-emerald-500/40 shadow-inner">
+                        <div class="text-center">
+                            <span class="text-3xl font-black text-white leading-none block">{{ compatibility.match_pct }}%</span>
+                            <span class="text-[9px] font-mono text-emerald-400 font-bold uppercase tracking-wider">Taste Match</span>
+                        </div>
+                    </div>
+
+                    <!-- Narrative -->
+                    <div>
+                        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
+                            <span class="text-xs text-gray-400 font-bold">{{ user.display_name }} × {{ selected_pal.display_name }}</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border {{ compatibility.kinship.color }}">
+                                {{ compatibility.kinship.badge }}
+                            </span>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">Acoustic Chemistry &amp; Kinship</h2>
+                        <p class="text-xs text-gray-300 mt-1 max-w-lg leading-relaxed">
+                            {{ compatibility.kinship.desc }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 3 Stats Tiles -->
+                <div class="grid grid-cols-3 gap-3 w-full lg:w-auto shrink-0">
+                    <div class="bg-black/40 border border-gray-800 rounded-2xl p-3.5 text-center">
+                        <span class="text-xl md:text-2xl font-black text-white block">{{ compatibility.shared_albums_count }}</span>
+                        <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Shared Records</span>
+                    </div>
+                    <div class="bg-black/40 border border-gray-800 rounded-2xl p-3.5 text-center">
+                        <span class="text-xl md:text-2xl font-black text-emerald-400 block">{{ compatibility.shared_artists_count }}</span>
+                        <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Mutual Artists</span>
+                    </div>
+                    <div class="bg-black/40 border border-gray-800 rounded-2xl p-3.5 text-center">
+                        <span class="text-xl md:text-2xl font-black text-amber-400 block">{{ compatibility.borrow_count }}</span>
+                        <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">To Borrow</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mutual Artists Pill Bar -->
+            {% if compatibility.shared_artists %}
+            <div class="mt-6 pt-4 border-t border-gray-800/80 flex flex-wrap items-center gap-2 text-xs">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">🤝 Mutual Obsessions:</span>
+                {% for artist in compatibility.shared_artists %}
+                <span class="px-2.5 py-1 rounded-lg bg-gray-800/60 border border-gray-700/60 text-gray-300 font-medium text-[11px]">
+                    {{ artist }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 3. TOP 5 RECORDS TO BORROW FROM PAL -->
+        <div class="mb-10">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    <h2 class="text-xl font-black text-white tracking-tight">Top 5 Records to Borrow from {{ selected_pal.display_name }}</h2>
+                </div>
+                <span class="text-xs text-gray-400">Curated gems on their shelf you haven't saved yet</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {% if top_borrow %}
+                {% for a in top_borrow %}
+                <div class="card-bg border border-gray-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between hover:border-amber-500/40 transition group cursor-pointer relative overflow-hidden"
+                     onmouseenter="onCardHover('{{ a.album_artist_name | replace(\"'\", \"\\\\'\") }}', '{{ a.album_name | replace(\"'\", \"\\\\'\") }}', '{{ a.album_url }}', this)"
+                     onmouseleave="onCardLeave(this)"
+                     onclick='openGatefold({{ a | tojson }})'>
+                    <div>
+                        <div class="aspect-square w-full rounded-xl overflow-hidden bg-gray-900 border border-gray-800/80 mb-3 sleeve-shadow relative">
+                            <img src="{{ a.album_image_url }}" alt="{{ a.album_name }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            {% if a.has_gatefold %}
+                            <div class="absolute top-2 left-2 bg-black/75 backdrop-blur-md rounded-lg p-1.5 border border-white/10" title="12&quot; Gatefold Liner Notes Available">
+                                {{ gatefold_icon | safe }}
+                            </div>
+                            {% endif %}
+                            <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
+                                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            </div>
+                        </div>
+
+                        <span class="text-[9px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 inline-block mb-1.5">
+                            {{ a.borrow_reason }}
+                        </span>
+                        <h4 class="text-xs font-black text-white truncate group-hover:text-amber-400 transition" title="{{ a.album_name }}">{{ a.album_name }}</h4>
+                        <p class="text-[11px] text-gray-400 truncate mt-0.5" title="{{ a.album_artist_name }}">{{ a.album_artist_name }}</p>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-2 font-mono">{{ a.release_year }}</p>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-span-full py-8 text-center text-gray-500 text-xs">
+                    You already own every single album in {{ selected_pal.display_name }}'s crate!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 4. FLIP THROUGH PAL'S VIRTUAL CRATE -->
+        <div>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-800 mb-6 gap-2">
+                <div>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+                        <span>📦</span> Flip Through {{ selected_pal.display_name }}'s Virtual Crate
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Browse all {{ pal_crate | length }} records in their collection</p>
+                </div>
+            </div>
+
+            <div id="palCrateGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {% for a in pal_crate %}
+                <div class="group relative flex flex-col cursor-pointer"
+                     onmouseenter="onCardHover('{{ a.album_artist_name | replace(\"'\", \"\\\\'\") }}', '{{ a.album_name | replace(\"'\", \"\\\\'\") }}', '{{ a.album_url }}', this)"
+                     onmouseleave="onCardLeave(this)"
+                     onclick='openGatefold({{ a | tojson }})'>
+                    <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-800/80 sleeve-shadow transition duration-300 group-hover:scale-[1.03] group-hover:border-gray-700 relative">
+                        <img src="{{ a.album_image_url }}" alt="{{ a.album_name }}" class="w-full h-full object-cover">
+                        {% if a.has_gatefold %}
+                        <div class="absolute top-2 left-2 bg-black/75 backdrop-blur-md rounded-lg p-1.5 border border-white/10 shadow" title="12&quot; Gatefold Liner Notes Available">
+                            {{ gatefold_icon | safe }}
+                        </div>
+                        {% endif %}
+                        {% if a.current_user_owns %}
+                        <div class="absolute top-2 right-2 bg-emerald-500/80 backdrop-blur-md rounded-lg px-2 py-0.5 border border-emerald-400 text-[10px] font-black text-black" title="You both own this record!">
+                            🤝 Both Own
+                        </div>
+                        {% endif %}
+                        <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 px-0.5">
+                        <h4 class="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition" title="{{ a.album_name }}">{{ a.album_name }}</h4>
+                        <p class="text-[11px] text-gray-400 truncate" title="{{ a.album_artist_name }}">{{ a.album_artist_name }}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">{{ a.release_year }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pinned Preview Toast -->
+    <div id="previewToast" class="fixed bottom-6 right-6 z-40 bg-[#161a22]/95 border border-emerald-500/30 rounded-2xl p-3.5 shadow-2xl backdrop-blur-md flex items-center gap-3.5 max-w-sm transition-all duration-300 translate-y-28 opacity-0 pointer-events-none">
+        <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+            <div class="flex items-end gap-0.5 h-3">
+                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+            </div>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p id="toastTrack" class="text-xs font-bold text-white truncate">Preview Snippet</p>
+            <p id="toastArtist" class="text-[11px] text-gray-400 truncate">--</p>
+        </div>
+        <button onclick="stopPreview()" class="text-gray-400 hover:text-white p-1 text-sm font-bold">&times;</button>
+    </div>
+
+    <!-- 12" Gatefold Modal Markup -->
+    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6" onclick="onModalBackdropClick(event)">
+        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[620px]" onclick="event.stopPropagation()">
+            <div class="w-full md:w-5/12 bg-black/40 p-4 md:p-6 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-gray-800/80">
+                <div class="w-full flex justify-between items-center mb-3">
+                    <span class="text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold uppercase">12" Gatefold Edition</span>
+                    <button onclick="closeGatefold()" class="md:hidden text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
+                </div>
+                <div class="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto">
+                    <img id="modalCover" src="" class="w-full h-full object-cover">
+                </div>
+                <div class="w-full mt-4 flex flex-col gap-2">
+                    <a id="modalSpotifyLink" href="#" target="_blank" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <span>Play on Spotify</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="w-full md:w-7/12 p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll">
+                <div>
+                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()" class="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shrink-0 transition shadow">
+                                <span id="gatefoldPlayIcon">▶</span>
+                            </button>
+                            <div class="min-w-0">
+                                <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
+                                <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                            </div>
+                        </div>
+                        <div id="gatefoldWaveform" class="hidden items-end gap-1 h-4 pr-1">
+                            <span class="w-1 bg-emerald-400 wave-bar"></span>
+                            <span class="w-1 bg-emerald-400 wave-bar"></span>
+                            <span class="w-1 bg-emerald-400 wave-bar"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-4 mb-2">
+                        <div>
+                            <h3 id="modalTitle" class="text-xl md:text-2xl font-black text-white leading-tight">--</h3>
+                            <p id="modalArtist" class="text-sm font-semibold text-emerald-400 mt-0.5">--</p>
+                        </div>
+                        <button onclick="closeGatefold()" class="hidden md:block text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
+                    </div>
+
+                    <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
+
+                    <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
+                        <div id="modalDescriptionSection">
+                            <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Album Narrative &amp; Critical Reception</h4>
+                            <p id="modalDescription" class="italic text-gray-300">--</p>
+                        </div>
+                        <div id="modalPersonnelSection">
+                            <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Production &amp; Personnel Credits</h4>
+                            <div id="modalPersonnel" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-gray-400"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
+                    <span id="modalMetaInfo">--</span>
+                    <span class="text-emerald-500 font-mono">SpinSleeve Verified</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let hoverTimer = null;
+        let activeAudio = new Audio();
+        let currentHoverKey = null;
+        let isAudioEnabled = true;
+        let isModalOpen = false;
+        let currentModalAlbum = null;
+        const previewUrlCache = new Map();
+
+        activeAudio.volume = 0.75;
+        activeAudio.addEventListener('ended', () => {
+            hidePreviewToast();
+            updateModalPlayIcon(false);
+        });
+
+        function toggleHoverAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const btnText = document.getElementById('audioText');
+            const btnIcon = document.getElementById('audioIcon');
+            if (isAudioEnabled) {
+                btnText.innerText = 'Hover Audio: ON';
+                btnIcon.innerText = '🔊';
+            } else {
+                stopPreview();
+                btnText.innerText = 'Hover Audio: MUTED';
+                btnIcon.innerText = '🔇';
+            }
+        }
+
+        function onCardHover(artist, album, spotifyUrl, cardEl) {
+            if (!isAudioEnabled || isModalOpen) return;
+            const key = `${artist.toLowerCase()}::${album.toLowerCase()}`;
+            currentHoverKey = key;
+
+            if (hoverTimer) clearTimeout(hoverTimer);
+
+            hoverTimer = setTimeout(async () => {
+                if (currentHoverKey !== key) return;
+
+                let data = previewUrlCache.get(key);
+                if (!data) {
+                    try {
+                        const res = await fetch(`/beta/api/preview?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`);
+                        data = await res.json();
+                        previewUrlCache.set(key, data);
+                    } catch (e) { return; }
+                }
+
+                if (currentHoverKey !== key) return;
+
+                if (data && data.preview_url) {
+                    activeAudio.src = data.preview_url;
+                    activeAudio.play().then(() => {
+                        showPreviewToast(artist, album, data.track_name || 'Preview Snippet', data.apple_music_url, spotifyUrl);
+                        const pulse = cardEl.querySelector('.audio-pulse');
+                        if (pulse) pulse.classList.remove('hidden');
+                    }).catch(e => {});
+                }
+            }, 350);
+        }
+
+        function onCardLeave(cardEl) {
+            if (hoverTimer) clearTimeout(hoverTimer);
+            if (isModalOpen) return;
+            currentHoverKey = null;
+            stopPreview();
+            if (cardEl) {
+                const pulse = cardEl.querySelector('.audio-pulse');
+                if (pulse) pulse.classList.add('hidden');
+            }
+        }
+
+        function stopPreview() {
+            activeAudio.pause();
+            activeAudio.currentTime = 0;
+            hidePreviewToast();
+            document.querySelectorAll('.audio-pulse').forEach(el => el.classList.add('hidden'));
+            updateModalPlayIcon(false);
+        }
+
+        function showPreviewToast(artist, album, track, appleUrl, spotifyUrl) {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            document.getElementById('toastTrack').innerText = track;
+            document.getElementById('toastArtist').innerText = `${artist} • ${album}`;
+            toast.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }
+
+        function hidePreviewToast() {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            toast.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+        }
+
+        async function openGatefold(album) {
+            isModalOpen = true;
+            currentModalAlbum = album;
+
+            document.getElementById("modalCover").src = album.album_image_url;
+            document.getElementById("modalTitle").innerText = album.album_name;
+            document.getElementById("modalArtist").innerText = album.album_artist_name;
+            document.getElementById("modalSpotifyLink").href = album.album_url;
+
+            const key = `${album.album_artist_name.toLowerCase()}::${album.album_name.toLowerCase()}`;
+            if (!activeAudio.paused && currentHoverKey === key) {
+                updateModalPlayIcon(true);
+            } else {
+                updateModalPlayIcon(false);
+            }
+
+            let pData = previewUrlCache.get(key);
+            if (!pData) {
+                try {
+                    const res = await fetch(`/beta/api/preview?artist=${encodeURIComponent(album.album_artist_name)}&album=${encodeURIComponent(album.album_name)}`);
+                    pData = await res.json();
+                    previewUrlCache.set(key, pData);
+                } catch(e){}
+            }
+            if (pData && pData.track_name) {
+                document.getElementById('gatefoldAudioTrack').innerText = pData.track_name;
+            } else {
+                document.getElementById('gatefoldAudioTrack').innerText = '30-Second Audio Preview';
+            }
+
+            const scoresContainer = document.getElementById("modalScores");
+            scoresContainer.innerHTML = '';
+            if (album.pitchfork_score) {
+                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-md text-[11px] font-bold">Pitchfork ${album.pitchfork_score}</span>`;
+            }
+            if (album.metacritic_score) {
+                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-md text-[11px] font-bold">Metacritic ${album.metacritic_score}</span>`;
+            }
+            if (album.discogs_rating) {
+                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md text-[11px] font-bold">Discogs ${album.discogs_rating} ★</span>`;
+            }
+
+            const descEl = document.getElementById("modalDescription");
+            descEl.innerText = album.album_description || "No archival liner notes found for this release yet.";
+
+            const personnelEl = document.getElementById("modalPersonnel");
+            if (album.personnel && album.personnel.length > 0) {
+                personnelEl.innerHTML = album.personnel.map(p => `<div>• ${p}</div>`).join('');
+                document.getElementById("modalPersonnelSection").classList.remove("hidden");
+            } else {
+                document.getElementById("modalPersonnelSection").classList.add("hidden");
+            }
+
+            document.getElementById("modalMetaInfo").innerText = `${album.release_year || 'Unknown Year'} • ${album.album_tracks_total || 0} tracks • ${album.album_track_plays || 0} total plays`;
+            document.getElementById("gatefoldModal").classList.remove("hidden");
+        }
+
+        async function toggleModalAudioPlayback() {
+            if (!currentModalAlbum) return;
+            const key = `${currentModalAlbum.album_artist_name.toLowerCase()}::${currentModalAlbum.album_name.toLowerCase()}`;
+
+            if (!activeAudio.paused && currentHoverKey === key) {
+                activeAudio.pause();
+                updateModalPlayIcon(false);
+                return;
+            }
+
+            let data = previewUrlCache.get(key);
+            if (!data) {
+                try {
+                    const res = await fetch(`/beta/api/preview?artist=${encodeURIComponent(currentModalAlbum.album_artist_name)}&album=${encodeURIComponent(currentModalAlbum.album_name)}`);
+                    data = await res.json();
+                    previewUrlCache.set(key, data);
+                } catch(e) { return; }
+            }
+
+            if (data && data.preview_url) {
+                currentHoverKey = key;
+                activeAudio.src = data.preview_url;
+                activeAudio.play().then(() => {
+                    updateModalPlayIcon(true);
+                }).catch(e => {});
+            }
+        }
+
+        function updateModalPlayIcon(isPlaying) {
+            const icon = document.getElementById('gatefoldPlayIcon');
+            const wave = document.getElementById('gatefoldWaveform');
+            if (!icon || !wave) return;
+            if (isPlaying) {
+                icon.innerText = '❚❚';
+                wave.classList.remove('hidden');
+                wave.classList.add('flex');
+            } else {
+                icon.innerText = '▶';
+                wave.classList.remove('flex');
+                wave.classList.add('hidden');
+            }
+        }
+
+        function closeGatefold() {
+            isModalOpen = false;
+            currentModalAlbum = null;
+            document.getElementById("gatefoldModal").classList.add("hidden");
+            stopPreview();
+        }
+
+        function onModalBackdropClick(e) {
+            closeGatefold();
+        }
     </script>
 </body>
 </html>
