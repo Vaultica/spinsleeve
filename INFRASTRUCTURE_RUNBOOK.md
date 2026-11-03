@@ -169,16 +169,25 @@ SELECT * FROM `secret-compass-181513.spotify.album_enriched_metadata`;
 #### View: `user_albums_features` (Dynamic Multi-Tenant View)
 ```sql
 CREATE OR REPLACE VIEW `secret-compass-181513.spotify_v2.user_albums_features` AS
-WITH album_plays AS (
+WITH album_plays_by_id AS (
+  SELECT 
+    user_id,
+    album_id,
+    COUNT(*) as track_plays_by_id
+  FROM `secret-compass-181513.spotify_v2.playback_history`
+  WHERE album_id IS NOT NULL AND album_id != ""
+  GROUP BY user_id, album_id
+),
+album_plays_by_name AS (
   SELECT 
     user_id,
     LOWER(TRIM(album_name)) as norm_album_name,
-    COUNT(*) as total_track_plays
+    COUNT(*) as track_plays_by_name
   FROM `secret-compass-181513.spotify_v2.playback_history`
   GROUP BY user_id, norm_album_name
 ),
 raw_albums AS (
-  SELECT
+  SELECT 
     a.*,
     ROW_NUMBER() OVER(
       PARTITION BY a.user_id, LOWER(TRIM(a.artist_name)), LOWER(TRIM(a.album_name))
@@ -192,7 +201,7 @@ raw_albums AS (
 deduped AS (
   SELECT * FROM raw_albums WHERE dedupe_rank = 1
 )
-SELECT
+SELECT 
   d.user_id,
   d.album_id,
   d.album_name,
@@ -205,8 +214,8 @@ SELECT
   d.label as album_label,
   d.image_url as album_image_url,
   d.genres as album_genres,
-  COALESCE(p.total_track_plays, 0) as album_track_plays,
-  ROUND(COALESCE(p.total_track_plays, 0) / NULLIF(d.tracks_total, 0), 1) as album_plays,
+  GREATEST(COALESCE(pid.track_plays_by_id, 0), COALESCE(pname.track_plays_by_name, 0)) as album_track_plays,
+  ROUND(GREATEST(COALESCE(pid.track_plays_by_id, 0), COALESCE(pname.track_plays_by_name, 0)) / NULLIF(d.tracks_total, 0), 1) as album_plays,
   CONCAT("https://open.spotify.com/album/", d.album_id) as album_url,
   e.pitchfork_score,
   e.metacritic_score,
@@ -219,8 +228,10 @@ SELECT
   e.discogs_url,
   e.styles as enriched_styles
 FROM deduped d
-LEFT JOIN album_plays p
-  ON d.user_id = p.user_id AND LOWER(TRIM(d.album_name)) = p.norm_album_name
+LEFT JOIN album_plays_by_id pid
+  ON d.user_id = pid.user_id AND d.album_id = pid.album_id
+LEFT JOIN album_plays_by_name pname
+  ON d.user_id = pname.user_id AND LOWER(TRIM(d.album_name)) = pname.norm_album_name
 LEFT JOIN `secret-compass-181513.spotify_v2.album_enriched_metadata` e
   ON d.album_id = e.album_id;
 ```
