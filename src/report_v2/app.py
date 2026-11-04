@@ -1171,7 +1171,8 @@ ADMIN_HTML_TEMPLATE = """
                             {% endif %}
                         </td>
                         <td class="p-4">
-                            {% if u.pals_opt_in %}
+                            {% set is_admin_account = (u.role == 'admin') or (u.spotify_id in ['serbou', 'sergebou', 'vaultica']) %}
+                            {% if u.pals_opt_in or is_admin_account %}
                             <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md font-bold text-[10px]">
                                 ACTIVE
                             </span>
@@ -1187,6 +1188,7 @@ ADMIN_HTML_TEMPLATE = """
                                 <a href="/beta/admin/assume/{{ u.spotify_id }}" class="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm" title="Assume this user's view">
                                     👤 Assume View
                                 </a>
+                                {% if not is_admin_account %}
                                 <form action="/beta/admin/toggle-pals/{{ u.spotify_id }}" method="POST" class="inline">
                                     {% if u.pals_opt_in %}
                                     <button type="submit" class="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition">
@@ -1198,6 +1200,7 @@ ADMIN_HTML_TEMPLATE = """
                                     </button>
                                     {% endif %}
                                 </form>
+                                {% endif %}
                                 <form action="/beta/admin/toggle/{{ u.spotify_id }}" method="POST" class="inline">
                                     {% if u.is_approved %}
                                     <button type="submit" class="text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg text-[11px] font-bold transition">
@@ -1415,7 +1418,17 @@ def admin_panel():
     client = get_datastore_client()
     query = client.query(kind="User")
     users = list(query.fetch())
-    return render_template_string(ADMIN_HTML_TEMPLATE, users=users)
+    # Auto-heal: Ensure all administrator entities in Datastore have pals_opt_in set to True
+    for u in users:
+        uid = u.key.name or u.get("spotify_id")
+        if uid in ADMIN_USER_IDS or u.get("role") == "admin":
+            if not u.get("pals_opt_in"):
+                u["pals_opt_in"] = True
+                try:
+                    client.put(u)
+                except Exception as e:
+                    logger.warning("Could not persist pals_opt_in for admin %s: %s", uid, e)
+    return render_template_string(ADMIN_HTML_TEMPLATE, users=users, brand_icon=ICON_A_SVG)
 
 
 @app.route("/beta/admin/toggle/<spotify_id>", methods=["POST"])
@@ -1586,7 +1599,7 @@ BETA_EXPLORER_HTML = """
                 <span>📊</span> Analytics
             </a>
             <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>{% if is_admin or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
+                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
@@ -2284,7 +2297,7 @@ BETA_RECOMMEND_HTML = """
                 <span>📊</span> Analytics
             </a>
             <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>{% if is_admin or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
+                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
@@ -3139,7 +3152,7 @@ BETA_ANALYTICS_HTML = """
                 <span>📊</span> Analytics
             </a>
             <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>{% if is_admin or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
+                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
@@ -3730,6 +3743,20 @@ PALS_LOCKED_HTML = """
 </head>
 <body class="min-h-screen p-6 md:p-10 flex flex-col justify-between">
     <div class="max-w-4xl mx-auto w-full">
+        {% if is_impersonating %}
+        <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-4 py-2.5 rounded-2xl text-xs flex items-center justify-between mb-6 shadow-lg">
+            <span class="flex items-center gap-2">
+                👑 <span>Currently testing as: <strong class="text-white">{{ session.display_name }}</strong> (SpinPals Locked for this account)</span>
+            </span>
+            <div class="flex items-center gap-2">
+                <a href="/beta/admin" class="text-xs text-amber-400 hover:text-amber-300 font-bold px-2 py-1">⚙️ Admin Deck</a>
+                <a href="/beta/admin/revert" class="bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-3 py-1 rounded-xl text-xs transition">
+                    ↩ Revert to Admin
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
         <header class="flex items-center justify-between pb-6 mb-8 border-b border-gray-800">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 shrink-0">{{ brand_icon | safe }}</div>
@@ -3738,9 +3765,16 @@ PALS_LOCKED_HTML = """
                     <p class="text-[10px] font-mono tracking-widest text-emerald-400 uppercase">Listening Lounge</p>
                 </div>
             </div>
-            <a href="/beta/" class="text-xs font-bold text-gray-300 hover:text-white bg-gray-800 border border-gray-700 px-3.5 py-1.5 rounded-xl transition">
-                ← Back to Library
-            </a>
+            <div class="flex items-center gap-2">
+                {% if is_admin %}
+                <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
+                    ⚙️ Admin
+                </a>
+                {% endif %}
+                <a href="/beta/" class="text-xs font-bold text-gray-300 hover:text-white bg-gray-800 border border-gray-700 px-3.5 py-1.5 rounded-xl transition">
+                    ← Back to Library
+                </a>
+            </div>
         </header>
 
         <div class="max-w-md mx-auto text-center py-12 px-6 bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl">
@@ -3772,9 +3806,21 @@ def beta_pals(pal_id=None):
     ds_client = get_datastore_client()
     key = ds_client.key("User", current_user_id)
     curr_user = ds_client.get(key)
-    is_admin = (current_user_id in ADMIN_USER_IDS) or (session.get("admin_user_id") in ADMIN_USER_IDS) or (session.get("role") == "admin")
 
-    if not is_admin and not (curr_user and curr_user.get("pals_opt_in")):
+    is_impersonating = bool(session.get("is_impersonating", False))
+    # If the real admin is logged in directly as themselves (not impersonating), they have full access
+    is_admin_direct = (
+        (current_user_id in ADMIN_USER_IDS)
+        and (session.get("role") == "admin")
+        and not is_impersonating
+    )
+
+    # When impersonating, strictly evaluate the assumed user's opt-in status!
+    has_access = is_admin_direct or bool(
+        curr_user and curr_user.get("pals_opt_in")
+    )
+
+    if not has_access:
         return render_template_string(PALS_LOCKED_HTML, user=session, brand_icon=ICON_A_SVG)
 
     pals_directory = fetch_pals_directory(current_user_id)

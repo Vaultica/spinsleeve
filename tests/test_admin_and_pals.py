@@ -108,19 +108,47 @@ class TestAdminAndPalsFeatures(unittest.TestCase):
                 self.assertIn("Assuming: Sarah", rendered)
                 self.assertIn("↩ Revert", rendered)
 
+    def test_impersonating_non_opted_in_shows_lock_tab_and_escape_banner(self):
+        """When an admin impersonates a user who has NOT opted into SpinPals:
+        1. The navigation tab should show the lock icon (🔒 SpinPals).
+        2. The PALS_LOCKED_HTML template must have the impersonation banner,
+           Admin Deck link, and Revert button to guarantee the admin never gets locked out."""
+        context = {
+            **self.dummy_context,
+            "user": {"display_name": "Sarah", "user_id": "sarahboosch", "avatar_url": "", "pals_opt_in": False},
+            "is_admin": True,
+            "is_impersonating": True
+        }
+        # In explorer, recommend, analytics:
+        for name in ["explorer", "recommend", "analytics"]:
+            t = jinja2.Template(self.templates[name])
+            rendered = t.render(**context)
+            self.assertIn("🔒</span> SpinPals", rendered, f"Expected lock icon in {name}")
+
+        # In PALS_LOCKED_HTML:
+        t_locked = jinja2.Template(PALS_LOCKED_HTML)
+        rendered_locked = t_locked.render(session={"display_name": "Sarah"}, is_impersonating=True, is_admin=True, brand_icon=ICON_A_SVG)
+        self.assertIn("↩ Revert to Admin", rendered_locked)
+        self.assertIn("⚙️ Admin Deck", rendered_locked)
+        self.assertIn("SpinPals: Members Only", rendered_locked)
+
     def test_admin_control_deck_features(self):
-        """Verify Admin Control Deck has Assume View, SpinPals column, and toggle buttons."""
+        """Verify Admin Control Deck has Assume View, SpinPals column, and toggle buttons.
+        Also verify that sergebou is rendered as ACTIVE even if pals_opt_in was False/None in DB."""
         self.assertIn("👤 Assume View", ADMIN_HTML_TEMPLATE)
         self.assertIn("/beta/admin/assume/", ADMIN_HTML_TEMPLATE)
         self.assertIn("/beta/admin/toggle-pals/", ADMIN_HTML_TEMPLATE)
         self.assertIn("SpinPals Social", ADMIN_HTML_TEMPLATE)
 
-    def test_pals_locked_template(self):
-        """Verify PALS_LOCKED_HTML renders cleanly with lock icon and return to library link."""
-        t = jinja2.Template(PALS_LOCKED_HTML)
-        rendered = t.render(user={"display_name": "NewUser"}, brand_icon=ICON_A_SVG)
-        self.assertIn("SpinPals: Members Only", rendered)
-        self.assertIn("Return to Library Explorer", rendered)
+        # Test rendering admin user row with pals_opt_in=False
+        t = jinja2.Template(ADMIN_HTML_TEMPLATE)
+        dummy_users = [
+            {"spotify_id": "sergebou", "display_name": "Serge", "role": "admin", "pals_opt_in": False, "is_approved": True},
+            {"spotify_id": "sarahboosch", "display_name": "Sarah", "role": "user", "pals_opt_in": False, "is_approved": True}
+        ]
+        rendered = t.render(users=dummy_users, brand_icon=ICON_A_SVG, is_impersonating=False)
+        self.assertIn("ACTIVE", rendered)
+        self.assertIn("DISABLED", rendered)
 
 
 if __name__ == "__main__":
