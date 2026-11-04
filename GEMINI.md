@@ -57,7 +57,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **Phase 3** | Feature Parity: 30s Audio Previews, Crate Digger, Analytics | ✅ COMPLETED |
 | **Phase 4** | Automated Multi-Tenant Pipeline (`spotify-v2-pipeline-job`) | ✅ COMPLETED |
 | **Phase 5a** | Multi-User Social: **SpinPals (CrateMates Edition)** | ✅ COMPLETED (Deployed: revision `00012-rz4`) |
-| **Phase 5b** | **Pre-Production Gatefold & Admin Polish** (Mobile <110px header, audio scrubber, SpinPals default-off with Admin opt-in, Admin 'assume view', 33 RPM spinning logo) | ✅ COMPLETED |
+| **Phase 5b** | **Pre-Production Gatefold & Admin Polish** (Mobile <110px header, audio scrubber, SpinPals default-off with Admin opt-in, Admin 'assume view', 33 RPM spinning logo) | ✅ COMPLETED (Deployed: revision `00014-67q`) |
 | **Phase 6** | **Production Cutover** (Zero-downtime Firebase rewrite flip to `spinsleeve.cc`) | ⏳ **CURRENT NEXT FOCUS** |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (MusicKit JS & BQ Sync) | ⏳ Planned |
 
