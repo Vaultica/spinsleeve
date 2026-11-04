@@ -1232,10 +1232,11 @@ ADMIN_HTML_TEMPLATE = """
 @app.route("/beta/login")
 def login():
     if "user_id" in session:
-        return redirect("/beta/")
+        return redirect("/")
     return render_template_string(LOGIN_HTML_TEMPLATE, brand_icon=ICON_A_SVG)
 
 
+@app.route("/auth")
 @app.route("/beta/auth")
 def auth():
     sp_oauth = get_oauth_client(request)
@@ -1249,7 +1250,7 @@ def callback():
     sp_oauth = get_oauth_client(request)
     code = request.args.get("code")
     if not code:
-        return redirect("/beta/login")
+        return redirect("/login")
 
     try:
         token_info = sp_oauth.get_access_token(code)
@@ -1317,7 +1318,7 @@ def callback():
             user["sync_status"] = "idle"
             ds_client.put(user)
 
-        return redirect("/beta/")
+        return redirect("/")
 
     except spotipy.exceptions.SpotifyException as se:
         if se.http_status == 403:
@@ -1330,7 +1331,7 @@ def callback():
                             SpinSleeve is currently in Spotify Development Mode. Your Spotify account email needs to be added to Serge's developer dashboard.
                         </p>
                         <p style="color:#10b981; font-size:12px; margin-top:15px;">Ask Serge to add your email, then try again!</p>
-                        <a href="/beta/login" style="display:inline-block; margin-top:20px; background:#1DB954; color:#000; padding:10px 20px; border-radius:12px; font-weight:bold; font-size:13px; text-decoration:none;">Return to Login</a>
+                        <a href="/login" style="display:inline-block; margin-top:20px; background:#1DB954; color:#000; padding:10px 20px; border-radius:12px; font-weight:bold; font-size:13px; text-decoration:none;">Return to Login</a>
                     </div>
                 </body>
             """), 403
@@ -1344,9 +1345,10 @@ def callback():
 @app.route("/beta/logout")
 def logout():
     session.clear()
-    return redirect("/beta/login")
+    return redirect("/login")
 
 
+@app.route("/admin/assume/<target_id>")
 @app.route("/beta/admin/assume/<target_id>")
 @admin_required
 def admin_assume(target_id):
@@ -1374,20 +1376,21 @@ def admin_assume(target_id):
         _user_analytics_cache_time.pop(k, None)
 
     logger.info("Admin %s assumed identity of: %s (%s)", real_admin, target_id, session["display_name"])
-    return redirect("/beta/")
+    return redirect("/")
 
 
+@app.route("/admin/revert")
 @app.route("/beta/admin/revert")
 def admin_revert():
     real_admin = session.get("admin_user_id")
     if not real_admin or real_admin not in ADMIN_USER_IDS:
-        return redirect("/beta/login")
+        return redirect("/login")
 
     ds_client = get_datastore_client()
     key = ds_client.key("User", real_admin)
     admin_user = ds_client.get(key)
     if not admin_user:
-        return redirect("/beta/login")
+        return redirect("/login")
 
     session["user_id"] = real_admin
     session["display_name"] = admin_user.get("display_name", real_admin)
@@ -1397,9 +1400,10 @@ def admin_revert():
     session["is_impersonating"] = False
 
     logger.info("Admin %s reverted back to admin profile", real_admin)
-    return redirect("/beta/admin")
+    return redirect("/admin")
 
 
+@app.route("/dev-switch/<user_id>")
 @app.route("/beta/dev-switch/<user_id>")
 def dev_switch(user_id):
     real_admin = session.get("admin_user_id") or session.get("user_id")
@@ -1431,6 +1435,7 @@ def admin_panel():
     return render_template_string(ADMIN_HTML_TEMPLATE, users=users, brand_icon=ICON_A_SVG)
 
 
+@app.route("/admin/toggle/<spotify_id>", methods=["POST"])
 @app.route("/beta/admin/toggle/<spotify_id>", methods=["POST"])
 @admin_required
 def admin_toggle(spotify_id):
@@ -1440,9 +1445,10 @@ def admin_toggle(spotify_id):
     if user:
         user["is_approved"] = not user.get("is_approved", False)
         client.put(user)
-    return redirect("/beta/admin")
+    return redirect("/admin")
 
 
+@app.route("/admin/toggle-pals/<spotify_id>", methods=["POST"])
 @app.route("/beta/admin/toggle-pals/<spotify_id>", methods=["POST"])
 @admin_required
 def admin_toggle_pals(spotify_id):
@@ -1452,9 +1458,10 @@ def admin_toggle_pals(spotify_id):
     if user:
         user["pals_opt_in"] = not user.get("pals_opt_in", False)
         client.put(user)
-    return redirect("/beta/admin")
+    return redirect("/admin")
 
 
+@app.route("/admin/whitelist", methods=["POST"])
 @app.route("/beta/admin/whitelist", methods=["POST"])
 @admin_required
 def admin_whitelist():
@@ -1481,7 +1488,7 @@ def admin_whitelist():
             if display_name:
                 user["display_name"] = display_name
         client.put(user)
-    return redirect("/beta/admin")
+    return redirect("/admin")
 
 
 # ==============================================================================

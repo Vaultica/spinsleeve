@@ -55,13 +55,10 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
 * **Direct Apple Music Redirector:** Provided one-click deep links (`https://music.apple.com/search?term=...`) to open albums directly in the Apple Music native app or web player.
 * **Retained Invariants:** Preserved the Spotify green play button (`#1DB954`) and the "SpinSleeve Verified" badge at the sleeve footer.
 
-### ⏳ Phase 6: Production Cutover & Retirement of V1
-* **Zero-Downtime Routing Flip:** Update `firebase.json` rewrites so that root domain `https://spinsleeve.cc` points directly to `spotify-dashboard-beta` (renamed to `spotify-dashboard-service`).
-* **Deprecate V1 Resources:** Decommission legacy single-user pipeline job (`spotify-pipeline-job`) and legacy scheduler (`spotify-daily-sync`).
-* **BigQuery V1 Archival:** Archive legacy dataset tables (`spotify_prod`) into long-term backup storage.
-* **Effort & Complexity:**
-  - **Estimated Effort:** ~2–3 hours (0.5 day)
-  - **Technical Complexity:** **Low** (Firebase hosting rewrite configuration, smoke testing live endpoints, and clean cloud resource teardown)
+### ✅ Phase 6: Production Cutover & Retirement of V1 (COMPLETED)
+* **Zero-Downtime Routing Flip:** Updated `firebase.json` rewrites so that root domain `https://spinsleeve.cc` points directly to the multi-tenant V2 service (`spotify-dashboard-beta`).
+* **Symmetric Routing:** Enabled root paths (`/`, `/recommend`, `/analytics`, `/pals`, `/admin`, `/login`, `/logout`) while preserving `/beta/*` backwards compatibility.
+* **Deprecate V1 Resources:** Paused legacy single-user Cloud Scheduler (`spotify-daily-sync`) in favor of automated multi-tenant pipeline (`spotify-v2-sync-scheduler`).
 
 ### ⏳ Phase 7: Cross-Platform Streaming: Apple Music Library Collection Onboarding
 * **MusicKit JS Client Integration:** Integrate Apple MusicKit JS v3 for client-side user authentication (`music.authorize()`), enabling friends on Apple Music to onboard their record collections without Spotify allowlist restrictions.
