@@ -16,7 +16,8 @@ from flask import (
     jsonify,
     redirect,
     url_for,
-    session
+    session,
+    Response
 )
 import pandas as pd
 import requests
@@ -81,18 +82,64 @@ def get_oauth_client(request_obj):
     )
 
 
-# Brand Logo
+# Brand Logo: Original 33 RPM Rotating Platter + Spotify Soundwaves + Tonearm
 ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <circle cx="50" cy="50" r="46" fill="#14181f" stroke="#1DB954" stroke-width="4"/>
-  <circle cx="50" cy="50" r="34" stroke="#28323c" stroke-width="1.5" stroke-dasharray="3 3"/>
-  <circle cx="50" cy="50" r="24" stroke="#28323c" stroke-width="1.5"/>
-  <circle cx="50" cy="50" r="14" fill="#1DB954"/>
-  <circle cx="50" cy="50" r="4" fill="#0c0f12"/>
+  <defs>
+    <style>
+      @keyframes spin33 {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .spin-record {
+        transform-origin: 48px 52px;
+        animation: spin33 1.8s linear infinite;
+      }
+    </style>
+  </defs>
+  <!-- Spinning Vinyl Platter (33 RPM = 1.80s per revolution) -->
+  <g class="spin-record">
+    <!-- Vinyl Platter Base / Dark Rim -->
+    <circle cx="48" cy="52" r="46" fill="#0C0F12" stroke="#1DB954" stroke-width="3"/>
+    <!-- Spotify Green Core Platter -->
+    <circle cx="48" cy="52" r="40" fill="#1DB954"/>
+    <!-- Spotify Soundwaves in Bold Black -->
+    <path d="M30 40c9-2.5 19-1.5 27 3" stroke="#0C0F12" stroke-width="5" stroke-linecap="round"/>
+    <path d="M33 49c8-1.8 16-1 22 2.5" stroke="#0C0F12" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M36 58c6-1.2 12-0.5 17 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Center Spindle -->
+    <circle cx="48" cy="52" r="5" fill="#0C0F12"/>
+  </g>
+  <!-- Stationary Tonearm & Pivot (Does NOT rotate) -->
+  <circle cx="86" cy="14" r="9" fill="#181D22" stroke="#9CA3AF" stroke-width="3"/>
+  <circle cx="86" cy="14" r="4" fill="#1DB954"/>
+  <!-- Metallic Tonearm Rod in Bright White -->
+  <path d="M83 19 L66 62 L52 68" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Cartridge / Headshell Needle -->
+  <rect x="43" y="63" width="11" height="8" rx="2" fill="#0C0F12" stroke="#1DB954" stroke-width="1.5" transform="rotate(-22 48 67)"/>
 </svg>"""
 
 ICON_GATEFOLD_SVG = """<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
 </svg>"""
+
+
+@app.context_processor
+def inject_admin_context():
+    real_admin = session.get("admin_user_id") or session.get("user_id")
+    is_admin = (real_admin in ADMIN_USER_IDS) or (session.get("role") == "admin")
+    return {
+        "is_admin": is_admin,
+        "is_impersonating": bool(session.get("is_impersonating", False)),
+        "admin_user_id": session.get("admin_user_id")
+    }
+
+
+@app.route("/favicon.svg")
+@app.route("/favicon.ico")
+@app.route("/beta/favicon.svg")
+@app.route("/beta/favicon.ico")
+def favicon():
+    return Response(ICON_A_SVG, mimetype="image/svg+xml")
 
 
 # ==============================================================================
@@ -112,7 +159,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
             return redirect("/beta/login")
-        if session.get("role") != "admin" and session.get("user_id") not in ADMIN_USER_IDS:
+        if session.get("role") != "admin" and session.get("user_id") not in ADMIN_USER_IDS and session.get("admin_user_id") not in ADMIN_USER_IDS:
             return redirect("/beta/")
         return f(*args, **kwargs)
     return decorated_function
@@ -592,7 +639,12 @@ def fetch_pals_directory(current_user_id):
     ds_client = get_datastore_client()
     query = ds_client.query(kind="User")
     query.add_filter(filter=datastore.query.PropertyFilter("is_approved", "=", True))
-    users = list(query.fetch())
+    raw_users = list(query.fetch())
+    # Only include community members who have opted into SpinPals or are administrators
+    users = [
+        u for u in raw_users
+        if u.get("pals_opt_in") or (u.key.name in ADMIN_USER_IDS) or (u.get("spotify_id") in ADMIN_USER_IDS)
+    ]
 
     bq_client = bigquery.Client(project=PROJECT_ID)
     q_counts = f"""
@@ -1033,19 +1085,34 @@ ADMIN_HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpinSleeve - Admin Control Deck</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }</style>
 </head>
 <body class="min-h-screen p-6 md:p-10">
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
+        {% if is_impersonating %}
+        <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-4 py-2.5 rounded-2xl text-xs flex items-center justify-between mb-6 shadow-lg">
+            <span class="flex items-center gap-2">
+                👑 <span>Currently impersonating: <strong class="text-white">{{ session.display_name }}</strong> ({{ session.user_id }})</span>
+            </span>
+            <a href="/beta/admin/revert" class="bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-3 py-1 rounded-xl text-xs transition">
+                ↩ Revert to Admin
+            </a>
+        </div>
+        {% endif %}
+
         <div class="flex items-center justify-between pb-6 mb-8 border-b border-gray-800">
-            <div>
-                <h1 class="text-2xl font-black text-white">⚙️ Admin Control Deck</h1>
-                <p class="text-xs text-gray-400 mt-1">Manage private beta invitations and friends access</p>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 shrink-0">{{ brand_icon | safe }}</div>
+                <div>
+                    <h1 class="text-2xl font-black text-white">⚙️ Admin Control Deck</h1>
+                    <p class="text-xs text-gray-400 mt-0.5">Manage private beta invitations, SpinPals permissions, and user auditing</p>
+                </div>
             </div>
             <div class="flex items-center gap-3">
-                <a href="/beta/" class="text-xs font-bold bg-[#1DB954] text-black px-4 py-2 rounded-xl transition hover:bg-[#1ed760]">
+                <a href="/beta/" class="text-xs font-bold bg-[#1DB954] text-black px-4 py-2 rounded-xl transition hover:bg-[#1ed760] shadow">
                     Back to Library
                 </a>
             </div>
@@ -1053,12 +1120,18 @@ ADMIN_HTML_TEMPLATE = """
 
         <div class="bg-[#14181f] p-5 rounded-2xl border border-gray-800 mb-8 shadow-sm">
             <h3 class="text-sm font-bold text-white mb-3">Pre-Approve a Friend</h3>
-            <form action="/beta/admin/whitelist" method="POST" class="flex flex-col sm:flex-row gap-3">
-                <input type="text" name="spotify_id" placeholder="Spotify User ID or Username" required class="bg-[#0c0f12] border border-gray-700 rounded-xl px-4 py-2 text-xs text-white flex-1 focus:outline-none focus:border-[#1DB954]">
-                <input type="text" name="display_name" placeholder="Display Name (optional)" class="bg-[#0c0f12] border border-gray-700 rounded-xl px-4 py-2 text-xs text-white flex-1 focus:outline-none focus:border-[#1DB954]">
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 rounded-xl transition">
-                    + Whitelist User
-                </button>
+            <form action="/beta/admin/whitelist" method="POST" class="flex flex-col gap-3">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" name="spotify_id" placeholder="Spotify User ID or Username" required class="bg-[#0c0f12] border border-gray-700 rounded-xl px-4 py-2 text-xs text-white flex-1 focus:outline-none focus:border-[#1DB954]">
+                    <input type="text" name="display_name" placeholder="Display Name (optional)" class="bg-[#0c0f12] border border-gray-700 rounded-xl px-4 py-2 text-xs text-white flex-1 focus:outline-none focus:border-[#1DB954]">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 rounded-xl transition shrink-0">
+                        + Whitelist User
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="pals_opt_in" name="pals_opt_in" class="rounded bg-[#0c0f12] border-gray-700 text-emerald-500 focus:ring-0">
+                    <label for="pals_opt_in" class="text-xs text-gray-400 cursor-pointer">Activate SpinPals (Listening Lounge) immediately for this user</label>
+                </div>
             </form>
         </div>
 
@@ -1069,7 +1142,8 @@ ADMIN_HTML_TEMPLATE = """
                         <th class="p-4">User</th>
                         <th class="p-4">Spotify ID</th>
                         <th class="p-4">Email</th>
-                        <th class="p-4">Status</th>
+                        <th class="p-4">Account Status</th>
+                        <th class="p-4">SpinPals Social</th>
                         <th class="p-4">Role</th>
                         <th class="p-4 text-right">Actions</th>
                     </tr>
@@ -1096,19 +1170,46 @@ ADMIN_HTML_TEMPLATE = """
                             </span>
                             {% endif %}
                         </td>
+                        <td class="p-4">
+                            {% if u.pals_opt_in %}
+                            <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md font-bold text-[10px]">
+                                ACTIVE
+                            </span>
+                            {% else %}
+                            <span class="px-2.5 py-1 bg-gray-800 text-gray-400 border border-gray-700 rounded-md font-bold text-[10px]">
+                                DISABLED
+                            </span>
+                            {% endif %}
+                        </td>
                         <td class="p-4 text-gray-400">{{ u.role or 'user' }}</td>
                         <td class="p-4 text-right">
-                            <form action="/beta/admin/toggle/{{ u.spotify_id }}" method="POST" class="inline">
-                                {% if u.is_approved %}
-                                <button type="submit" class="text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-lg text-[11px] font-bold transition">
-                                    Revoke
-                                </button>
-                                {% else %}
-                                <button type="submit" class="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg text-[11px] font-bold transition">
-                                    ✓ Approve
-                                </button>
-                                {% endif %}
-                            </form>
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="/beta/admin/assume/{{ u.spotify_id }}" class="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm" title="Assume this user's view">
+                                    👤 Assume View
+                                </a>
+                                <form action="/beta/admin/toggle-pals/{{ u.spotify_id }}" method="POST" class="inline">
+                                    {% if u.pals_opt_in %}
+                                    <button type="submit" class="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition">
+                                        Deactivate Pals
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" class="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-[11px] font-bold transition">
+                                        + Opt-In Pals
+                                    </button>
+                                    {% endif %}
+                                </form>
+                                <form action="/beta/admin/toggle/{{ u.spotify_id }}" method="POST" class="inline">
+                                    {% if u.is_approved %}
+                                    <button type="submit" class="text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg text-[11px] font-bold transition">
+                                        Revoke
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" class="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-[11px] font-bold transition">
+                                        ✓ Approve
+                                    </button>
+                                    {% endif %}
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -1176,6 +1277,7 @@ def callback():
                 "avatar_url": avatar_url,
                 "is_approved": is_admin,
                 "role": "admin" if is_admin else "user",
+                "pals_opt_in": is_admin,
                 "refresh_token": refresh_token,
                 "created_at": datetime.datetime.now(datetime.timezone.utc),
                 "last_login_at": datetime.datetime.now(datetime.timezone.utc),
@@ -1189,6 +1291,7 @@ def callback():
             if is_admin:
                 user["role"] = "admin"
                 user["is_approved"] = True
+                user["pals_opt_in"] = True
             if refresh_token:
                 user["refresh_token"] = refresh_token
             user["last_login_at"] = datetime.datetime.now(datetime.timezone.utc)
@@ -1201,6 +1304,10 @@ def callback():
         session["display_name"] = display_name
         session["avatar_url"] = avatar_url
         session["role"] = user.get("role", "user")
+        session["pals_opt_in"] = bool(user.get("pals_opt_in", False))
+        if is_admin:
+            session["admin_user_id"] = spotify_id
+        session["is_impersonating"] = False
 
         if user.get("sync_status") == "pending":
             sync_user_initial_data(spotify_id, access_token)
@@ -1237,35 +1344,69 @@ def logout():
     return redirect("/beta/login")
 
 
-@app.route("/beta/dev-switch/<user_id>")
-def dev_switch(user_id):
-    if user_id not in ("sergebou", "sarahboosch", "31sevhztrcbajfcowsahl7z2p26q", "vaultica"):
-        return "Unauthorized test switch", 403
+@app.route("/beta/admin/assume/<target_id>")
+@admin_required
+def admin_assume(target_id):
     ds_client = get_datastore_client()
-    key = ds_client.key("User", user_id)
+    key = ds_client.key("User", target_id)
     user = ds_client.get(key)
     if not user:
-        return f"User {user_id} not found in Datastore", 404
+        return f"User {target_id} not found in Datastore", 404
 
-    session["user_id"] = user_id
-    session["display_name"] = user.get("display_name", user_id)
+    real_admin = session.get("admin_user_id") or session.get("user_id")
+    session["admin_user_id"] = real_admin
+    session["user_id"] = target_id
+    session["display_name"] = user.get("display_name", target_id)
     session["avatar_url"] = user.get("avatar_url", "")
     session["role"] = user.get("role", "user")
+    session["pals_opt_in"] = bool(user.get("pals_opt_in", False))
+    session["is_impersonating"] = (target_id not in ADMIN_USER_IDS)
 
     # Invalidate in-memory caches for this user
-    _user_album_cache.pop(user_id, None)
-    _user_album_cache_time.pop(user_id, None)
-    keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
+    _user_album_cache.pop(target_id, None)
+    _user_album_cache_time.pop(target_id, None)
+    keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{target_id}::")]
     for k in keys_to_del:
         _user_analytics_cache.pop(k, None)
         _user_analytics_cache_time.pop(k, None)
 
-    logger.info("Dev switched session to: %s (%s)", user_id, session["display_name"])
+    logger.info("Admin %s assumed identity of: %s (%s)", real_admin, target_id, session["display_name"])
     return redirect("/beta/")
 
 
+@app.route("/beta/admin/revert")
+def admin_revert():
+    real_admin = session.get("admin_user_id")
+    if not real_admin or real_admin not in ADMIN_USER_IDS:
+        return redirect("/beta/login")
+
+    ds_client = get_datastore_client()
+    key = ds_client.key("User", real_admin)
+    admin_user = ds_client.get(key)
+    if not admin_user:
+        return redirect("/beta/login")
+
+    session["user_id"] = real_admin
+    session["display_name"] = admin_user.get("display_name", real_admin)
+    session["avatar_url"] = admin_user.get("avatar_url", "")
+    session["role"] = "admin"
+    session["pals_opt_in"] = True
+    session["is_impersonating"] = False
+
+    logger.info("Admin %s reverted back to admin profile", real_admin)
+    return redirect("/beta/admin")
+
+
+@app.route("/beta/dev-switch/<user_id>")
+def dev_switch(user_id):
+    real_admin = session.get("admin_user_id") or session.get("user_id")
+    if real_admin not in ADMIN_USER_IDS:
+        return "Unauthorized switch. Only administrators can assume user profiles.", 403
+    return admin_assume(user_id)
+
+
 # ==============================================================================
-# ADMIN ROUTES (INVITE ALLOWLIST)
+# ADMIN ROUTES (INVITE ALLOWLIST & PERMISSIONS)
 # ==============================================================================
 @app.route("/admin")
 @app.route("/beta/admin")
@@ -1289,11 +1430,24 @@ def admin_toggle(spotify_id):
     return redirect("/beta/admin")
 
 
+@app.route("/beta/admin/toggle-pals/<spotify_id>", methods=["POST"])
+@admin_required
+def admin_toggle_pals(spotify_id):
+    client = get_datastore_client()
+    key = client.key("User", spotify_id)
+    user = client.get(key)
+    if user:
+        user["pals_opt_in"] = not user.get("pals_opt_in", False)
+        client.put(user)
+    return redirect("/beta/admin")
+
+
 @app.route("/beta/admin/whitelist", methods=["POST"])
 @admin_required
 def admin_whitelist():
     spotify_id = request.form.get("spotify_id", "").strip()
     display_name = request.form.get("display_name", "").strip()
+    pals_opt_in = request.form.get("pals_opt_in") == "on"
     if spotify_id:
         client = get_datastore_client()
         key = client.key("User", spotify_id)
@@ -1305,6 +1459,7 @@ def admin_whitelist():
                 "display_name": display_name or spotify_id,
                 "is_approved": True,
                 "role": "user",
+                "pals_opt_in": pals_opt_in,
                 "created_at": datetime.datetime.now(datetime.timezone.utc),
                 "sync_status": "pending"
             })
@@ -1385,7 +1540,7 @@ BETA_EXPLORER_HTML = """
                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
                     <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
                 </button>
-                {% if user.role == 'admin' %}
+                {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
                     ⚙️ Admin
                 </a>
@@ -1395,17 +1550,25 @@ BETA_EXPLORER_HTML = """
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    <div class="flex items-center gap-1">
+                    {% if is_admin or is_impersonating %}
+                    <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
+                        {% if is_impersonating %}
+                        <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
+                        {% else %}
+                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
                         {% if user.user_id != 'sergebou' %}
-                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
+                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded transition">👑 Serge</a>
                         {% endif %}
                         {% if user.user_id != 'sarahboosch' %}
-                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
+                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded transition">👩 Sarah</a>
                         {% endif %}
                         {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
-                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        {% endif %}
                         {% endif %}
                     </div>
+                    {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
@@ -1423,7 +1586,7 @@ BETA_EXPLORER_HTML = """
                 <span>📊</span> Analytics
             </a>
             <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>👯</span> SpinPals
+                <span>{% if is_admin or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
@@ -2075,12 +2238,23 @@ BETA_RECOMMEND_HTML = """
                 <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition shadow-md flex items-center gap-1.5">
                     <span>🎲</span> Spin Again
                 </button>
+                {% if is_admin %}
+                <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
+                    ⚙️ Admin
+                </a>
+                {% endif %}
                 <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
                     <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    <div class="flex items-center gap-1">
+                    {% if is_admin or is_impersonating %}
+                    <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
+                        {% if is_impersonating %}
+                        <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
+                        {% else %}
+                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
                         {% if user.user_id != 'sergebou' %}
                         <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
                         {% endif %}
@@ -2090,7 +2264,9 @@ BETA_RECOMMEND_HTML = """
                         {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
                         <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
                         {% endif %}
+                        {% endif %}
                     </div>
+                    {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
@@ -2108,7 +2284,7 @@ BETA_RECOMMEND_HTML = """
                 <span>📊</span> Analytics
             </a>
             <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>👯</span> SpinPals
+                <span>{% if is_admin or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
@@ -2917,7 +3093,7 @@ BETA_ANALYTICS_HTML = """
             </div>
             
             <div class="flex items-center gap-3">
-                {% if user.role == 'admin' %}
+                {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
                     ⚙️ Admin
                 </a>
@@ -2927,17 +3103,25 @@ BETA_ANALYTICS_HTML = """
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    <div class="flex items-center gap-1">
+                    {% if is_admin or is_impersonating %}
+                    <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
+                        {% if is_impersonating %}
+                        <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
+                        {% else %}
+                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
                         {% if user.user_id != 'sergebou' %}
-                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
+                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded transition">👑 Serge</a>
                         {% endif %}
                         {% if user.user_id != 'sarahboosch' %}
-                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
+                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded transition">👩 Sarah</a>
                         {% endif %}
                         {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
-                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        {% endif %}
                         {% endif %}
                     </div>
+                    {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
@@ -2955,7 +3139,7 @@ BETA_ANALYTICS_HTML = """
                 <span>📊</span> Analytics
             </a>
             <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>👯</span> SpinPals
+                <span>{% if is_admin or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
@@ -3532,6 +3716,52 @@ BETA_ANALYTICS_HTML = """
 # ==============================================================================
 # 5. TAB 4: SPINPALS (CRATEMATES & ACOUSTIC CHEMISTRY) ROUTE & TEMPLATE
 # ==============================================================================
+PALS_LOCKED_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinPals - Private Listening Lounge</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }</style>
+</head>
+<body class="min-h-screen p-6 md:p-10 flex flex-col justify-between">
+    <div class="max-w-4xl mx-auto w-full">
+        <header class="flex items-center justify-between pb-6 mb-8 border-b border-gray-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 shrink-0">{{ brand_icon | safe }}</div>
+                <div>
+                    <h1 class="text-xl font-black text-white">SpinSleeve</h1>
+                    <p class="text-[10px] font-mono tracking-widest text-emerald-400 uppercase">Listening Lounge</p>
+                </div>
+            </div>
+            <a href="/beta/" class="text-xs font-bold text-gray-300 hover:text-white bg-gray-800 border border-gray-700 px-3.5 py-1.5 rounded-xl transition">
+                ← Back to Library
+            </a>
+        </header>
+
+        <div class="max-w-md mx-auto text-center py-12 px-6 bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4 text-2xl">
+                🔒
+            </div>
+            <h2 class="text-xl font-black text-white tracking-tight mb-2">SpinPals: Members Only</h2>
+            <p class="text-xs text-gray-400 leading-relaxed mb-6">
+                The Listening Lounge and friend-to-friend acoustic chemistry engine is currently private.
+                If you'd like to link your crate, compare vinyl taste, and borrow records with friends, contact Serge to activate your access!
+            </p>
+            <a href="/beta/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs transition shadow-lg">
+                <span>📚</span> Return to Library Explorer
+            </a>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+
 @app.route("/pals")
 @app.route("/beta/pals")
 @app.route("/pals/<pal_id>")
@@ -3539,6 +3769,14 @@ BETA_ANALYTICS_HTML = """
 @login_required
 def beta_pals(pal_id=None):
     current_user_id = session["user_id"]
+    ds_client = get_datastore_client()
+    key = ds_client.key("User", current_user_id)
+    curr_user = ds_client.get(key)
+    is_admin = (current_user_id in ADMIN_USER_IDS) or (session.get("admin_user_id") in ADMIN_USER_IDS) or (session.get("role") == "admin")
+
+    if not is_admin and not (curr_user and curr_user.get("pals_opt_in")):
+        return render_template_string(PALS_LOCKED_HTML, user=session, brand_icon=ICON_A_SVG)
+
     pals_directory = fetch_pals_directory(current_user_id)
 
     # Pick target pal: either requested pal_id, or first other member in directory
@@ -3546,9 +3784,11 @@ def beta_pals(pal_id=None):
     if not other_pals:
         return render_template_string("""
             <body style="background:#0c0f12; color:#fff; font-family:sans-serif; padding:40px; text-align:center;">
-                <h2>No Other Pals In The Club Yet!</h2>
-                <p style="color:#9ca3af;">Invite a friend to join SpinSleeve to unlock taste compatibility and crate borrowing.</p>
-                <a href="/beta/" style="color:#1DB954;">Return to Library</a>
+                <div style="max-width:440px; margin:40px auto; background:#14181f; border:1px solid #374151; padding:30px; border-radius:24px;">
+                    <h2 style="font-size:20px; font-weight:bold; margin-bottom:10px;">No Other Pals in the Lounge Yet</h2>
+                    <p style="color:#9ca3af; font-size:13px; line-height:1.6;">Once more friends are approved and opted in, you'll see acoustic compatibility, shared records, and borrow picks here!</p>
+                    <a href="/beta/" style="display:inline-block; margin-top:20px; background:#1DB954; color:#000; padding:10px 20px; border-radius:12px; font-weight:bold; font-size:13px; text-decoration:none;">Return to Library</a>
+                </div>
             </body>
         """)
 
@@ -3616,12 +3856,8 @@ BETA_PALS_HTML = """
                 <p class="text-xs text-gray-400 mt-1">Acoustic chemistry, taste overlap &amp; vinyl shelf borrowing</p>
             </div>
             
-            <div class="flex flex-wrap items-center gap-3">
-                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
-                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
-                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
-                </button>
-                {% if user.role == 'admin' %}
+            <div class="flex items-center gap-3">
+                {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
                     ⚙️ Admin
                 </a>
@@ -3631,17 +3867,25 @@ BETA_PALS_HTML = """
                         <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    <div class="flex items-center gap-1">
+                    {% if is_admin or is_impersonating %}
+                    <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
+                        {% if is_impersonating %}
+                        <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
+                        {% else %}
+                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
                         {% if user.user_id != 'sergebou' %}
-                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
+                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded transition">👑 Serge</a>
                         {% endif %}
                         {% if user.user_id != 'sarahboosch' %}
-                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
+                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded transition">👩 Sarah</a>
                         {% endif %}
                         {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
-                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded transition">🐹 GuineaPig</a>
+                        {% endif %}
                         {% endif %}
                     </div>
+                    {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
@@ -3659,7 +3903,7 @@ BETA_PALS_HTML = """
                 <span>📊</span> Analytics
             </a>
             <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
-                <span>👯</span> SpinPals
+                <span>🤝</span> SpinPals
             </a>
         </nav>
 
