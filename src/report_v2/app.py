@@ -149,7 +149,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
-            return redirect("/beta/login")
+            return redirect("/login")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -158,9 +158,9 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
-            return redirect("/beta/login")
+            return redirect("/login")
         if session.get("role") != "admin" and session.get("user_id") not in ADMIN_USER_IDS and session.get("admin_user_id") not in ADMIN_USER_IDS:
-            return redirect("/beta/")
+            return redirect("/")
         return f(*args, **kwargs)
     return decorated_function
 
