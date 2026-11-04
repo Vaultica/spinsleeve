@@ -48,14 +48,12 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
   (Mobile gatefolds, scrubbers, links)      (spinsleeve.cc zero-downtime)     (Cross-platform crate & SpinPals)
 ```
 
-### ⏳ Phase 5b: Pre-Production Gatefold Polish
-* **Mobile-Compact Header:** Optimize the 12" gatefold header on screens `<768px` to ensure album title, artist, and play buttons occupy `<110px` without vertical scrolling.
-* **Interactive Audio Progress Scrubber:** Add a visual 30-second seek-bar allowing users to drag or click to scrub through audio snippets in the gatefold modal.
-* **Archival Deep Links:** Add external badge links directly to original Pitchfork reviews, Discogs release pages, and Wikipedia articles inside the gatefold reader.
-* **Direct Apple Music Redirector:** Provide one-click deep links to open albums directly in the Apple Music native app.
-* **Effort & Complexity:**
-  - **Estimated Effort:** ~4–6 hours (0.5 to 1 day)
-  - **Technical Complexity:** **Low** (HTML/Tailwind CSS layout adjustments, native audio element timeupdate listeners, and modal deep-link formatting)
+### ✅ Phase 5b: Pre-Production Gatefold Polish (COMPLETED)
+* **Mobile-Compact Header:** Optimized the 12" gatefold header on screens `<768px` to ensure album thumbnail (64x64px), title, artist, Spotify/Apple Music buttons, and close button occupy `<110px` without vertical scrolling.
+* **Interactive Audio Progress Scrubber:** Added a visual 30-second seek-bar allowing users to click, tap, or scrub through audio snippets in the gatefold modal with live timestamp display (`0:00 / 0:30`).
+* **Archival Deep Links:** Added external badge links directly to original Pitchfork reviews, Discogs release pages with vote counts, Wikipedia articles, and Metacritic inside the gatefold reader.
+* **Direct Apple Music Redirector:** Provided one-click deep links (`https://music.apple.com/search?term=...`) to open albums directly in the Apple Music native app or web player.
+* **Retained Invariants:** Preserved the Spotify green play button (`#1DB954`) and the "SpinSleeve Verified" badge at the sleeve footer.
 
 ### ⏳ Phase 6: Production Cutover & Retirement of V1
 * **Zero-Downtime Routing Flip:** Update `firebase.json` rewrites so that root domain `https://spinsleeve.cc` points directly to `spotify-dashboard-beta` (renamed to `spotify-dashboard-service`).

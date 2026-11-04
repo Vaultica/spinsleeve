@@ -1487,51 +1487,96 @@ BETA_EXPLORER_HTML = """
 
     <!-- 12" Gatefold Modal Markup -->
     <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6" onclick="onModalBackdropClick(event)">
-        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[620px]" onclick="event.stopPropagation()">
-            <div class="w-full md:w-5/12 bg-black/40 p-4 md:p-6 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-gray-800/80">
-                <div class="w-full flex justify-between items-center mb-3">
+        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[88vh] md:h-[640px]" onclick="event.stopPropagation()">
+            <!-- LEFT PANEL: 12" Vinyl Jacket (Desktop) / Compact Header (Mobile <110px) -->
+            <div class="w-full md:w-5/12 bg-black/40 p-3 sm:p-4 md:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800/80 shrink-0">
+                <!-- Mobile Compact Header (<md: <110px height without scrolling) -->
+                <div class="md:hidden flex items-center justify-between gap-3 w-full">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg border border-gray-800 shrink-0">
+                            <img id="modalCoverMobile" src="" class="w-full h-full object-cover" alt="Album Cover">
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[9px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase inline-block mb-0.5">12" Gatefold</span>
+                            <h3 id="modalTitleMobile" class="text-sm font-bold text-white truncate leading-snug">--</h3>
+                            <p id="modalArtistMobile" class="text-xs font-semibold text-emerald-400 truncate">--</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a id="modalSpotifyLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Play on Spotify" class="w-8 h-8 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
+                        </a>
+                        <a id="modalAppleMusicLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Listen on Apple Music" class="w-8 h-8 rounded-full bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </a>
+                        <button onclick="closeGatefold()" class="w-8 h-8 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-lg font-bold transition">&times;</button>
+                    </div>
+                </div>
+
+                <!-- Desktop Full Jacket (>md) -->
+                <div class="hidden md:flex w-full justify-between items-center mb-3">
                     <span class="text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold uppercase">12" Gatefold Edition</span>
-                    <button onclick="closeGatefold()" class="md:hidden text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
                 </div>
-                <div class="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto">
-                    <img id="modalCover" src="" class="w-full h-full object-cover">
+                <div class="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto mx-auto shrink-0">
+                    <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
                 </div>
-                <div class="w-full mt-4 flex flex-col gap-2">
-                    <a id="modalSpotifyLink" href="#" target="_blank" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                <div class="hidden md:flex w-full mt-4 flex-col gap-2">
+                    <a id="modalSpotifyLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
                         <span>Play on Spotify</span>
+                    </a>
+                    <a id="modalAppleMusicLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 font-bold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        <span>Open in Apple Music</span>
                     </a>
                 </div>
             </div>
 
-            <div class="w-full md:w-7/12 p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll">
+            <!-- RIGHT PANEL: Gatefold Liner Notes, Audio Scrubber & Archival Review Badges -->
+            <div class="w-full md:w-7/12 p-3 sm:p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll flex-1">
                 <div>
-                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()" class="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shrink-0 transition shadow">
-                                <span id="gatefoldPlayIcon">▶</span>
-                            </button>
-                            <div class="min-w-0">
-                                <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
-                                <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                    <!-- Audio Scrubber & Player Bar -->
+                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex flex-col gap-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()"
+                                        class="w-9 h-9 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center shrink-0 transition shadow-lg">
+                                    <span id="gatefoldPlayIcon" class="text-xs">▶</span>
+                                </button>
+                                <div class="min-w-0">
+                                    <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
+                                    <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span id="gatefoldAudioTime" class="text-[10px] font-mono text-gray-400">0:00 / 0:30</span>
+                                <div id="gatefoldWaveform" class="hidden items-end gap-0.5 h-3.5 pr-1">
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                </div>
                             </div>
                         </div>
-                        <div id="gatefoldWaveform" class="hidden items-end gap-1 h-4 pr-1">
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
+                        <!-- Scrubber Track -->
+                        <div id="gatefoldScrubber" class="relative w-full bg-gray-800/80 hover:bg-gray-700/80 h-2 rounded-full overflow-hidden cursor-pointer transition-colors"
+                             onpointerdown="seekGatefoldAudio(event)">
+                            <div id="gatefoldProgressBar" class="h-full bg-[#1DB954] rounded-full w-0 transition-[width] duration-100 pointer-events-none"></div>
                         </div>
                     </div>
 
-                    <div class="flex items-start justify-between gap-4 mb-2">
+                    <!-- Desktop Title & Artist (md:flex) -->
+                    <div class="hidden md:flex items-start justify-between gap-4 mb-2">
                         <div>
                             <h3 id="modalTitle" class="text-xl md:text-2xl font-black text-white leading-tight">--</h3>
                             <p id="modalArtist" class="text-sm font-semibold text-emerald-400 mt-0.5">--</p>
                         </div>
-                        <button onclick="closeGatefold()" class="hidden md:block text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
+                        <button onclick="closeGatefold()" class="text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
                     </div>
 
+                    <!-- Archival Badges with External Deep Links -->
                     <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
 
+                    <!-- Liner Notes & Personnel -->
                     <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
                         <div id="modalDescriptionSection">
                             <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Album Narrative &amp; Critical Reception</h4>
@@ -1544,9 +1589,13 @@ BETA_EXPLORER_HTML = """
                     </div>
                 </div>
 
+                <!-- Footer with Meta Info and SpinSleeve Verified -->
                 <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
                     <span id="modalMetaInfo">--</span>
-                    <span class="text-emerald-500 font-mono">SpinSleeve Verified</span>
+                    <span class="text-emerald-500 font-mono font-semibold flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        SpinSleeve Verified
+                    </span>
                 </div>
             </div>
         </div>
@@ -1731,16 +1780,40 @@ BETA_EXPLORER_HTML = """
             isModalOpen = true;
             currentModalAlbum = album;
 
-            document.getElementById("modalCover").src = album.album_image_url;
-            document.getElementById("modalTitle").innerText = album.album_name;
-            document.getElementById("modalArtist").innerText = album.album_artist_name;
-            document.getElementById("modalSpotifyLink").href = album.album_url;
+            // Desktop elements
+            const coverEl = document.getElementById("modalCover");
+            if (coverEl) coverEl.src = album.album_image_url;
+            const titleEl = document.getElementById("modalTitle");
+            if (titleEl) titleEl.innerText = album.album_name;
+            const artistEl = document.getElementById("modalArtist");
+            if (artistEl) artistEl.innerText = album.album_artist_name;
+            const spotEl = document.getElementById("modalSpotifyLink");
+            if (spotEl) spotEl.href = album.album_url;
+
+            // Mobile compact elements (<110px header)
+            const coverMob = document.getElementById("modalCoverMobile");
+            if (coverMob) coverMob.src = album.album_image_url;
+            const titleMob = document.getElementById("modalTitleMobile");
+            if (titleMob) titleMob.innerText = album.album_name;
+            const artistMob = document.getElementById("modalArtistMobile");
+            if (artistMob) artistMob.innerText = album.album_artist_name;
+            const spotMob = document.getElementById("modalSpotifyLinkMobile");
+            if (spotMob) spotMob.href = album.album_url;
+
+            // Apple Music deep links
+            const appleMusicUrl = `https://music.apple.com/search?term=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+            const appleEl = document.getElementById("modalAppleMusicLink");
+            if (appleEl) appleEl.href = appleMusicUrl;
+            const appleMob = document.getElementById("modalAppleMusicLinkMobile");
+            if (appleMob) appleMob.href = appleMusicUrl;
 
             const key = `${album.album_artist_name.toLowerCase()}::${album.album_name.toLowerCase()}`;
             if (!activeAudio.paused && currentHoverKey === key) {
                 updateModalPlayIcon(true);
+                updateModalProgress();
             } else {
                 updateModalPlayIcon(false);
+                resetModalProgress();
             }
 
             let pData = previewUrlCache.get(key);
@@ -1760,13 +1833,45 @@ BETA_EXPLORER_HTML = """
             const scoresContainer = document.getElementById("modalScores");
             scoresContainer.innerHTML = '';
             if (album.pitchfork_score) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-md text-[11px] font-bold">Pitchfork ${album.pitchfork_score}</span>`;
-            }
-            if (album.metacritic_score) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-md text-[11px] font-bold">Metacritic ${album.metacritic_score}</span>`;
+                const pfUrl = album.pitchfork_url || `https://pitchfork.com/search/?query=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${pfUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Review on Pitchfork"
+                       class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Pitchfork ${album.pitchfork_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
             }
             if (album.discogs_rating) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md text-[11px] font-bold">Discogs ${album.discogs_rating} ★</span>`;
+                const discUrl = album.discogs_url || `https://www.discogs.com/search/?q=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}&type=release`;
+                const votes = album.discogs_votes ? ` (${album.discogs_votes.toLocaleString()} votes)` : '';
+                scoresContainer.innerHTML += `
+                    <a href="${discUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View Pressings on Discogs${votes}"
+                       class="px-2.5 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Discogs ${album.discogs_rating} ★</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.metacritic_score) {
+                const mcUrl = `https://www.metacritic.com/search/${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}/?page=1&category=1`;
+                scoresContainer.innerHTML += `
+                    <a href="${mcUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View on Metacritic"
+                       class="px-2.5 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Metacritic ${album.metacritic_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.wikipedia_url || album.album_description) {
+                const wikiUrl = album.wikipedia_url || `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Wikipedia Article"
+                       class="px-2.5 py-1 bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 hover:text-white border border-gray-600/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Wikipedia</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
             }
 
             const descEl = document.getElementById("modalDescription");
@@ -1808,9 +1913,48 @@ BETA_EXPLORER_HTML = """
                 activeAudio.src = data.preview_url;
                 activeAudio.play().then(() => {
                     updateModalPlayIcon(true);
+                    updateModalProgress();
                 }).catch(e => {});
             }
         }
+
+        function seekGatefoldAudio(e) {
+            if (!activeAudio || !activeAudio.duration || isNaN(activeAudio.duration) || activeAudio.duration <= 0) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clickX = clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
+            activeAudio.currentTime = pct * activeAudio.duration;
+            updateModalProgress();
+        }
+
+        function updateModalProgress() {
+            const cur = activeAudio.currentTime || 0;
+            const dur = (activeAudio.duration && !isNaN(activeAudio.duration) && activeAudio.duration > 0) ? activeAudio.duration : 30;
+            const pct = Math.min(100, Math.max(0, (cur / dur) * 100));
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = `${pct}%`;
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) {
+                const curSec = Math.floor(cur);
+                const durSec = Math.floor(dur);
+                timeEl.innerText = `0:${curSec < 10 ? '0' : ''}${curSec} / 0:${durSec < 10 ? '0' : ''}${durSec}`;
+            }
+        }
+
+        function resetModalProgress() {
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = '0%';
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) timeEl.innerText = '0:00 / 0:30';
+        }
+
+        activeAudio.addEventListener('timeupdate', () => {
+            if (isModalOpen) updateModalProgress();
+        });
+        activeAudio.addEventListener('ended', () => {
+            resetModalProgress();
+        });
 
         function updateModalPlayIcon(isPlaying) {
             const icon = document.getElementById('gatefoldPlayIcon');
@@ -1832,6 +1976,7 @@ BETA_EXPLORER_HTML = """
             currentModalAlbum = null;
             document.getElementById("gatefoldModal").classList.add("hidden");
             stopPreview();
+            resetModalProgress();
         }
 
         function onModalBackdropClick(e) {
@@ -2057,51 +2202,96 @@ BETA_RECOMMEND_HTML = """
 
     <!-- 12" Gatefold Modal Markup -->
     <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6" onclick="onModalBackdropClick(event)">
-        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[620px]" onclick="event.stopPropagation()">
-            <div class="w-full md:w-5/12 bg-black/40 p-4 md:p-6 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-gray-800/80">
-                <div class="w-full flex justify-between items-center mb-3">
+        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[88vh] md:h-[640px]" onclick="event.stopPropagation()">
+            <!-- LEFT PANEL: 12" Vinyl Jacket (Desktop) / Compact Header (Mobile <110px) -->
+            <div class="w-full md:w-5/12 bg-black/40 p-3 sm:p-4 md:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800/80 shrink-0">
+                <!-- Mobile Compact Header (<md: <110px height without scrolling) -->
+                <div class="md:hidden flex items-center justify-between gap-3 w-full">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg border border-gray-800 shrink-0">
+                            <img id="modalCoverMobile" src="" class="w-full h-full object-cover" alt="Album Cover">
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[9px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase inline-block mb-0.5">12" Gatefold</span>
+                            <h3 id="modalTitleMobile" class="text-sm font-bold text-white truncate leading-snug">--</h3>
+                            <p id="modalArtistMobile" class="text-xs font-semibold text-emerald-400 truncate">--</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a id="modalSpotifyLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Play on Spotify" class="w-8 h-8 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
+                        </a>
+                        <a id="modalAppleMusicLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Listen on Apple Music" class="w-8 h-8 rounded-full bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </a>
+                        <button onclick="closeGatefold()" class="w-8 h-8 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-lg font-bold transition">&times;</button>
+                    </div>
+                </div>
+
+                <!-- Desktop Full Jacket (>md) -->
+                <div class="hidden md:flex w-full justify-between items-center mb-3">
                     <span class="text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold uppercase">12" Gatefold Edition</span>
-                    <button onclick="closeGatefold()" class="md:hidden text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
                 </div>
-                <div class="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto">
-                    <img id="modalCover" src="" class="w-full h-full object-cover">
+                <div class="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto mx-auto shrink-0">
+                    <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
                 </div>
-                <div class="w-full mt-4 flex flex-col gap-2">
-                    <a id="modalSpotifyLink" href="#" target="_blank" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                <div class="hidden md:flex w-full mt-4 flex-col gap-2">
+                    <a id="modalSpotifyLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
                         <span>Play on Spotify</span>
+                    </a>
+                    <a id="modalAppleMusicLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 font-bold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        <span>Open in Apple Music</span>
                     </a>
                 </div>
             </div>
 
-            <div class="w-full md:w-7/12 p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll">
+            <!-- RIGHT PANEL: Gatefold Liner Notes, Audio Scrubber & Archival Review Badges -->
+            <div class="w-full md:w-7/12 p-3 sm:p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll flex-1">
                 <div>
-                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()" class="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shrink-0 transition shadow">
-                                <span id="gatefoldPlayIcon">▶</span>
-                            </button>
-                            <div class="min-w-0">
-                                <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
-                                <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                    <!-- Audio Scrubber & Player Bar -->
+                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex flex-col gap-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()"
+                                        class="w-9 h-9 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center shrink-0 transition shadow-lg">
+                                    <span id="gatefoldPlayIcon" class="text-xs">▶</span>
+                                </button>
+                                <div class="min-w-0">
+                                    <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
+                                    <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span id="gatefoldAudioTime" class="text-[10px] font-mono text-gray-400">0:00 / 0:30</span>
+                                <div id="gatefoldWaveform" class="hidden items-end gap-0.5 h-3.5 pr-1">
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                </div>
                             </div>
                         </div>
-                        <div id="gatefoldWaveform" class="hidden items-end gap-1 h-4 pr-1">
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
+                        <!-- Scrubber Track -->
+                        <div id="gatefoldScrubber" class="relative w-full bg-gray-800/80 hover:bg-gray-700/80 h-2 rounded-full overflow-hidden cursor-pointer transition-colors"
+                             onpointerdown="seekGatefoldAudio(event)">
+                            <div id="gatefoldProgressBar" class="h-full bg-[#1DB954] rounded-full w-0 transition-[width] duration-100 pointer-events-none"></div>
                         </div>
                     </div>
 
-                    <div class="flex items-start justify-between gap-4 mb-2">
+                    <!-- Desktop Title & Artist (md:flex) -->
+                    <div class="hidden md:flex items-start justify-between gap-4 mb-2">
                         <div>
                             <h3 id="modalTitle" class="text-xl md:text-2xl font-black text-white leading-tight">--</h3>
                             <p id="modalArtist" class="text-sm font-semibold text-emerald-400 mt-0.5">--</p>
                         </div>
-                        <button onclick="closeGatefold()" class="hidden md:block text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
+                        <button onclick="closeGatefold()" class="text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
                     </div>
 
+                    <!-- Archival Badges with External Deep Links -->
                     <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
 
+                    <!-- Liner Notes & Personnel -->
                     <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
                         <div id="modalDescriptionSection">
                             <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Album Narrative &amp; Critical Reception</h4>
@@ -2114,9 +2304,13 @@ BETA_RECOMMEND_HTML = """
                     </div>
                 </div>
 
+                <!-- Footer with Meta Info and SpinSleeve Verified -->
                 <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
                     <span id="modalMetaInfo">--</span>
-                    <span class="text-emerald-500 font-mono">SpinSleeve Verified</span>
+                    <span class="text-emerald-500 font-mono font-semibold flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        SpinSleeve Verified
+                    </span>
                 </div>
             </div>
         </div>
@@ -2426,16 +2620,40 @@ BETA_RECOMMEND_HTML = """
             isModalOpen = true;
             currentModalAlbum = album;
 
-            document.getElementById("modalCover").src = album.album_image_url;
-            document.getElementById("modalTitle").innerText = album.album_name;
-            document.getElementById("modalArtist").innerText = album.album_artist_name;
-            document.getElementById("modalSpotifyLink").href = album.album_url;
+            // Desktop elements
+            const coverEl = document.getElementById("modalCover");
+            if (coverEl) coverEl.src = album.album_image_url;
+            const titleEl = document.getElementById("modalTitle");
+            if (titleEl) titleEl.innerText = album.album_name;
+            const artistEl = document.getElementById("modalArtist");
+            if (artistEl) artistEl.innerText = album.album_artist_name;
+            const spotEl = document.getElementById("modalSpotifyLink");
+            if (spotEl) spotEl.href = album.album_url;
+
+            // Mobile compact elements (<110px header)
+            const coverMob = document.getElementById("modalCoverMobile");
+            if (coverMob) coverMob.src = album.album_image_url;
+            const titleMob = document.getElementById("modalTitleMobile");
+            if (titleMob) titleMob.innerText = album.album_name;
+            const artistMob = document.getElementById("modalArtistMobile");
+            if (artistMob) artistMob.innerText = album.album_artist_name;
+            const spotMob = document.getElementById("modalSpotifyLinkMobile");
+            if (spotMob) spotMob.href = album.album_url;
+
+            // Apple Music deep links
+            const appleMusicUrl = `https://music.apple.com/search?term=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+            const appleEl = document.getElementById("modalAppleMusicLink");
+            if (appleEl) appleEl.href = appleMusicUrl;
+            const appleMob = document.getElementById("modalAppleMusicLinkMobile");
+            if (appleMob) appleMob.href = appleMusicUrl;
 
             const key = `${album.album_artist_name.toLowerCase()}::${album.album_name.toLowerCase()}`;
             if (!activeAudio.paused && currentHoverKey === key) {
                 updateModalPlayIcon(true);
+                updateModalProgress();
             } else {
                 updateModalPlayIcon(false);
+                resetModalProgress();
             }
 
             let pData = previewUrlCache.get(key);
@@ -2455,13 +2673,45 @@ BETA_RECOMMEND_HTML = """
             const scoresContainer = document.getElementById("modalScores");
             scoresContainer.innerHTML = '';
             if (album.pitchfork_score) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-md text-[11px] font-bold">Pitchfork ${album.pitchfork_score}</span>`;
-            }
-            if (album.metacritic_score) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-md text-[11px] font-bold">Metacritic ${album.metacritic_score}</span>`;
+                const pfUrl = album.pitchfork_url || `https://pitchfork.com/search/?query=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${pfUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Review on Pitchfork"
+                       class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Pitchfork ${album.pitchfork_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
             }
             if (album.discogs_rating) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md text-[11px] font-bold">Discogs ${album.discogs_rating} ★</span>`;
+                const discUrl = album.discogs_url || `https://www.discogs.com/search/?q=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}&type=release`;
+                const votes = album.discogs_votes ? ` (${album.discogs_votes.toLocaleString()} votes)` : '';
+                scoresContainer.innerHTML += `
+                    <a href="${discUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View Pressings on Discogs${votes}"
+                       class="px-2.5 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Discogs ${album.discogs_rating} ★</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.metacritic_score) {
+                const mcUrl = `https://www.metacritic.com/search/${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}/?page=1&category=1`;
+                scoresContainer.innerHTML += `
+                    <a href="${mcUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View on Metacritic"
+                       class="px-2.5 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Metacritic ${album.metacritic_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.wikipedia_url || album.album_description) {
+                const wikiUrl = album.wikipedia_url || `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Wikipedia Article"
+                       class="px-2.5 py-1 bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 hover:text-white border border-gray-600/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Wikipedia</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
             }
 
             const descEl = document.getElementById("modalDescription");
@@ -2503,9 +2753,48 @@ BETA_RECOMMEND_HTML = """
                 activeAudio.src = data.preview_url;
                 activeAudio.play().then(() => {
                     updateModalPlayIcon(true);
+                    updateModalProgress();
                 }).catch(e => {});
             }
         }
+
+        function seekGatefoldAudio(e) {
+            if (!activeAudio || !activeAudio.duration || isNaN(activeAudio.duration) || activeAudio.duration <= 0) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clickX = clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
+            activeAudio.currentTime = pct * activeAudio.duration;
+            updateModalProgress();
+        }
+
+        function updateModalProgress() {
+            const cur = activeAudio.currentTime || 0;
+            const dur = (activeAudio.duration && !isNaN(activeAudio.duration) && activeAudio.duration > 0) ? activeAudio.duration : 30;
+            const pct = Math.min(100, Math.max(0, (cur / dur) * 100));
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = `${pct}%`;
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) {
+                const curSec = Math.floor(cur);
+                const durSec = Math.floor(dur);
+                timeEl.innerText = `0:${curSec < 10 ? '0' : ''}${curSec} / 0:${durSec < 10 ? '0' : ''}${durSec}`;
+            }
+        }
+
+        function resetModalProgress() {
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = '0%';
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) timeEl.innerText = '0:00 / 0:30';
+        }
+
+        activeAudio.addEventListener('timeupdate', () => {
+            if (isModalOpen) updateModalProgress();
+        });
+        activeAudio.addEventListener('ended', () => {
+            resetModalProgress();
+        });
 
         function updateModalPlayIcon(isPlaying) {
             const icon = document.getElementById('gatefoldPlayIcon');
@@ -2527,6 +2816,7 @@ BETA_RECOMMEND_HTML = """
             currentModalAlbum = null;
             document.getElementById("gatefoldModal").classList.add("hidden");
             stopPreview();
+            resetModalProgress();
         }
 
         function onModalBackdropClick(e) {
@@ -3579,51 +3869,96 @@ BETA_PALS_HTML = """
 
     <!-- 12" Gatefold Modal Markup -->
     <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6" onclick="onModalBackdropClick(event)">
-        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[620px]" onclick="event.stopPropagation()">
-            <div class="w-full md:w-5/12 bg-black/40 p-4 md:p-6 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-gray-800/80">
-                <div class="w-full flex justify-between items-center mb-3">
+        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[88vh] md:h-[640px]" onclick="event.stopPropagation()">
+            <!-- LEFT PANEL: 12" Vinyl Jacket (Desktop) / Compact Header (Mobile <110px) -->
+            <div class="w-full md:w-5/12 bg-black/40 p-3 sm:p-4 md:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800/80 shrink-0">
+                <!-- Mobile Compact Header (<md: <110px height without scrolling) -->
+                <div class="md:hidden flex items-center justify-between gap-3 w-full">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg border border-gray-800 shrink-0">
+                            <img id="modalCoverMobile" src="" class="w-full h-full object-cover" alt="Album Cover">
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[9px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase inline-block mb-0.5">12" Gatefold</span>
+                            <h3 id="modalTitleMobile" class="text-sm font-bold text-white truncate leading-snug">--</h3>
+                            <p id="modalArtistMobile" class="text-xs font-semibold text-emerald-400 truncate">--</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a id="modalSpotifyLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Play on Spotify" class="w-8 h-8 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
+                        </a>
+                        <a id="modalAppleMusicLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Listen on Apple Music" class="w-8 h-8 rounded-full bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </a>
+                        <button onclick="closeGatefold()" class="w-8 h-8 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-lg font-bold transition">&times;</button>
+                    </div>
+                </div>
+
+                <!-- Desktop Full Jacket (>md) -->
+                <div class="hidden md:flex w-full justify-between items-center mb-3">
                     <span class="text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold uppercase">12" Gatefold Edition</span>
-                    <button onclick="closeGatefold()" class="md:hidden text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
                 </div>
-                <div class="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto">
-                    <img id="modalCover" src="" class="w-full h-full object-cover">
+                <div class="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto mx-auto shrink-0">
+                    <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
                 </div>
-                <div class="w-full mt-4 flex flex-col gap-2">
-                    <a id="modalSpotifyLink" href="#" target="_blank" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                <div class="hidden md:flex w-full mt-4 flex-col gap-2">
+                    <a id="modalSpotifyLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
                         <span>Play on Spotify</span>
+                    </a>
+                    <a id="modalAppleMusicLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 font-bold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        <span>Open in Apple Music</span>
                     </a>
                 </div>
             </div>
 
-            <div class="w-full md:w-7/12 p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll">
+            <!-- RIGHT PANEL: Gatefold Liner Notes, Audio Scrubber & Archival Review Badges -->
+            <div class="w-full md:w-7/12 p-3 sm:p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll flex-1">
                 <div>
-                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()" class="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shrink-0 transition shadow">
-                                <span id="gatefoldPlayIcon">▶</span>
-                            </button>
-                            <div class="min-w-0">
-                                <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
-                                <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                    <!-- Audio Scrubber & Player Bar -->
+                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex flex-col gap-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()"
+                                        class="w-9 h-9 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center shrink-0 transition shadow-lg">
+                                    <span id="gatefoldPlayIcon" class="text-xs">▶</span>
+                                </button>
+                                <div class="min-w-0">
+                                    <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
+                                    <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span id="gatefoldAudioTime" class="text-[10px] font-mono text-gray-400">0:00 / 0:30</span>
+                                <div id="gatefoldWaveform" class="hidden items-end gap-0.5 h-3.5 pr-1">
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                </div>
                             </div>
                         </div>
-                        <div id="gatefoldWaveform" class="hidden items-end gap-1 h-4 pr-1">
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
-                            <span class="w-1 bg-emerald-400 wave-bar"></span>
+                        <!-- Scrubber Track -->
+                        <div id="gatefoldScrubber" class="relative w-full bg-gray-800/80 hover:bg-gray-700/80 h-2 rounded-full overflow-hidden cursor-pointer transition-colors"
+                             onpointerdown="seekGatefoldAudio(event)">
+                            <div id="gatefoldProgressBar" class="h-full bg-[#1DB954] rounded-full w-0 transition-[width] duration-100 pointer-events-none"></div>
                         </div>
                     </div>
 
-                    <div class="flex items-start justify-between gap-4 mb-2">
+                    <!-- Desktop Title & Artist (md:flex) -->
+                    <div class="hidden md:flex items-start justify-between gap-4 mb-2">
                         <div>
                             <h3 id="modalTitle" class="text-xl md:text-2xl font-black text-white leading-tight">--</h3>
                             <p id="modalArtist" class="text-sm font-semibold text-emerald-400 mt-0.5">--</p>
                         </div>
-                        <button onclick="closeGatefold()" class="hidden md:block text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
+                        <button onclick="closeGatefold()" class="text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
                     </div>
 
+                    <!-- Archival Badges with External Deep Links -->
                     <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
 
+                    <!-- Liner Notes & Personnel -->
                     <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
                         <div id="modalDescriptionSection">
                             <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Album Narrative &amp; Critical Reception</h4>
@@ -3636,9 +3971,13 @@ BETA_PALS_HTML = """
                     </div>
                 </div>
 
+                <!-- Footer with Meta Info and SpinSleeve Verified -->
                 <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
                     <span id="modalMetaInfo">--</span>
-                    <span class="text-emerald-500 font-mono">SpinSleeve Verified</span>
+                    <span class="text-emerald-500 font-mono font-semibold flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        SpinSleeve Verified
+                    </span>
                 </div>
             </div>
         </div>
@@ -3744,16 +4083,40 @@ BETA_PALS_HTML = """
             isModalOpen = true;
             currentModalAlbum = album;
 
-            document.getElementById("modalCover").src = album.album_image_url;
-            document.getElementById("modalTitle").innerText = album.album_name;
-            document.getElementById("modalArtist").innerText = album.album_artist_name;
-            document.getElementById("modalSpotifyLink").href = album.album_url;
+            // Desktop elements
+            const coverEl = document.getElementById("modalCover");
+            if (coverEl) coverEl.src = album.album_image_url;
+            const titleEl = document.getElementById("modalTitle");
+            if (titleEl) titleEl.innerText = album.album_name;
+            const artistEl = document.getElementById("modalArtist");
+            if (artistEl) artistEl.innerText = album.album_artist_name;
+            const spotEl = document.getElementById("modalSpotifyLink");
+            if (spotEl) spotEl.href = album.album_url;
+
+            // Mobile compact elements (<110px header)
+            const coverMob = document.getElementById("modalCoverMobile");
+            if (coverMob) coverMob.src = album.album_image_url;
+            const titleMob = document.getElementById("modalTitleMobile");
+            if (titleMob) titleMob.innerText = album.album_name;
+            const artistMob = document.getElementById("modalArtistMobile");
+            if (artistMob) artistMob.innerText = album.album_artist_name;
+            const spotMob = document.getElementById("modalSpotifyLinkMobile");
+            if (spotMob) spotMob.href = album.album_url;
+
+            // Apple Music deep links
+            const appleMusicUrl = `https://music.apple.com/search?term=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+            const appleEl = document.getElementById("modalAppleMusicLink");
+            if (appleEl) appleEl.href = appleMusicUrl;
+            const appleMob = document.getElementById("modalAppleMusicLinkMobile");
+            if (appleMob) appleMob.href = appleMusicUrl;
 
             const key = `${album.album_artist_name.toLowerCase()}::${album.album_name.toLowerCase()}`;
             if (!activeAudio.paused && currentHoverKey === key) {
                 updateModalPlayIcon(true);
+                updateModalProgress();
             } else {
                 updateModalPlayIcon(false);
+                resetModalProgress();
             }
 
             let pData = previewUrlCache.get(key);
@@ -3773,13 +4136,45 @@ BETA_PALS_HTML = """
             const scoresContainer = document.getElementById("modalScores");
             scoresContainer.innerHTML = '';
             if (album.pitchfork_score) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-md text-[11px] font-bold">Pitchfork ${album.pitchfork_score}</span>`;
-            }
-            if (album.metacritic_score) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-md text-[11px] font-bold">Metacritic ${album.metacritic_score}</span>`;
+                const pfUrl = album.pitchfork_url || `https://pitchfork.com/search/?query=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${pfUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Review on Pitchfork"
+                       class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Pitchfork ${album.pitchfork_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
             }
             if (album.discogs_rating) {
-                scoresContainer.innerHTML += `<span class="px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md text-[11px] font-bold">Discogs ${album.discogs_rating} ★</span>`;
+                const discUrl = album.discogs_url || `https://www.discogs.com/search/?q=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}&type=release`;
+                const votes = album.discogs_votes ? ` (${album.discogs_votes.toLocaleString()} votes)` : '';
+                scoresContainer.innerHTML += `
+                    <a href="${discUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View Pressings on Discogs${votes}"
+                       class="px-2.5 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Discogs ${album.discogs_rating} ★</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.metacritic_score) {
+                const mcUrl = `https://www.metacritic.com/search/${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}/?page=1&category=1`;
+                scoresContainer.innerHTML += `
+                    <a href="${mcUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View on Metacritic"
+                       class="px-2.5 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Metacritic ${album.metacritic_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.wikipedia_url || album.album_description) {
+                const wikiUrl = album.wikipedia_url || `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Wikipedia Article"
+                       class="px-2.5 py-1 bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 hover:text-white border border-gray-600/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Wikipedia</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
             }
 
             const descEl = document.getElementById("modalDescription");
@@ -3821,9 +4216,48 @@ BETA_PALS_HTML = """
                 activeAudio.src = data.preview_url;
                 activeAudio.play().then(() => {
                     updateModalPlayIcon(true);
+                    updateModalProgress();
                 }).catch(e => {});
             }
         }
+
+        function seekGatefoldAudio(e) {
+            if (!activeAudio || !activeAudio.duration || isNaN(activeAudio.duration) || activeAudio.duration <= 0) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clickX = clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
+            activeAudio.currentTime = pct * activeAudio.duration;
+            updateModalProgress();
+        }
+
+        function updateModalProgress() {
+            const cur = activeAudio.currentTime || 0;
+            const dur = (activeAudio.duration && !isNaN(activeAudio.duration) && activeAudio.duration > 0) ? activeAudio.duration : 30;
+            const pct = Math.min(100, Math.max(0, (cur / dur) * 100));
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = `${pct}%`;
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) {
+                const curSec = Math.floor(cur);
+                const durSec = Math.floor(dur);
+                timeEl.innerText = `0:${curSec < 10 ? '0' : ''}${curSec} / 0:${durSec < 10 ? '0' : ''}${durSec}`;
+            }
+        }
+
+        function resetModalProgress() {
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = '0%';
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) timeEl.innerText = '0:00 / 0:30';
+        }
+
+        activeAudio.addEventListener('timeupdate', () => {
+            if (isModalOpen) updateModalProgress();
+        });
+        activeAudio.addEventListener('ended', () => {
+            resetModalProgress();
+        });
 
         function updateModalPlayIcon(isPlaying) {
             const icon = document.getElementById('gatefoldPlayIcon');
@@ -3845,6 +4279,7 @@ BETA_PALS_HTML = """
             currentModalAlbum = null;
             document.getElementById("gatefoldModal").classList.add("hidden");
             stopPreview();
+            resetModalProgress();
         }
 
         function onModalBackdropClick(e) {
