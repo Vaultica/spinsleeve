@@ -240,58 +240,33 @@ LEFT JOIN `secret-compass-181513.spotify_v2.album_enriched_metadata` e
 
 ## 6. Cloud Run Services (Web Applications)
 
-### Service 1: `spotify-dashboard-service` (V1 Live Production)
-Serves traffic for `https://spinsleeve.cc`:
+### Primary Service: `spotify-dashboard-beta` (V2 Multi-Tenant Production)
+Serves all live production traffic for `https://spinsleeve.cc` (as well as `/beta/*` backward-compatible paths):
 ```bash
-# Build
-gcloud builds submit /path/to/spotify-dash/src/report \
-    --tag=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard:latest
+# Build production multi-tenant container image
+CLOUDSDK_PYTHON=/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 \
+  gcloud builds submit src/report_v2 \
+    --tag=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard-v2:latest
 
-# Deploy
-gcloud run deploy spotify-dashboard-service \
-    --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard:latest \
-    --region=europe-west2 \
-    --service-account=spotify-data@secret-compass-181513.iam.gserviceaccount.com \
-    --allow-unauthenticated
-```
-
-### Service 2: `spotify-dashboard-beta` (V2 Multi-Tenant Beta)
-Serves traffic for `https://spinsleeve.cc/beta`:
-```bash
-# Build
-gcloud builds submit /path/to/spotify-dash/src/report_v2 \
-    --tag=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard-beta:latest
-
-# Deploy
-gcloud run deploy spotify-dashboard-beta \
-    --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard-beta:latest \
+# Deploy to Cloud Run
+CLOUDSDK_PYTHON=/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 \
+  gcloud run deploy spotify-dashboard-beta \
+    --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard-v2:latest \
     --region=europe-west2 \
     --service-account=spotify-data@secret-compass-181513.iam.gserviceaccount.com \
     --set-env-vars=GCP_PROJECT=secret-compass-181513 \
     --allow-unauthenticated
 ```
 
+### Legacy Service: `spotify-dashboard-service` (V1 Single-User - Deprecated)
+Retained for disaster recovery rollback. All public traffic has been flipped to `spotify-dashboard-beta` via Firebase Hosting.
+
 ---
 
 ## 7. Cloud Run Jobs (Ingestion & Enrichment Pipelines)
 
-### Job 1: `spotify-pipeline-job` (Automated 2-Hour Ingestion)
-Syncs both recently played tracks and recently saved albums into BigQuery:
-```bash
-# Build pipeline container
-gcloud builds submit /path/to/spotify-dash \
-    --tag=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-pipeline:latest
-
-# Deploy Job
-gcloud run jobs deploy spotify-pipeline-job \
-    --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-pipeline:latest \
-    --region=europe-west2 \
-    --service-account=spotify-data@secret-compass-181513.iam.gserviceaccount.com \
-    --set-env-vars=GCP_PROJECT=secret-compass-181513,GCS_BUCKET=secret-compass-181513 \
-    --set-secrets=SPOTIPY_CLIENT_ID=SPOTIPY_CLIENT_ID:latest,SPOTIPY_CLIENT_SECRET=SPOTIPY_CLIENT_SECRET:latest,SPOTIPY_REFRESH_TOKEN=SPOTIPY_REFRESH_TOKEN:latest \
-    --max-retries=1 \
-    --task-timeout=15m
-```
+### Job 1: `spotify-pipeline-job` (V1 Ingestion - Deprecated)
+Legacy single-user ingestion job. Triggers were paused in Phase 6.
 
 ### Job 2: `spotify-enrichment-job` (Batch Archive Enrichment)
 Extracts Wikipedia narratives, Pitchfork ratings, and Discogs personnel:
@@ -312,11 +287,11 @@ gcloud run jobs deploy spotify-enrichment-job \
 gcloud run jobs execute spotify-enrichment-job --region=europe-west2 --args="enrich,100"
 ```
 
-### Job 3: `spotify-v2-pipeline-job` (V2 Automated Multi-Tenant Pipeline)
+### Job 3: `spotify-v2-pipeline-job` (Active V2 Multi-Tenant Pipeline)
 Loops through all approved friends in Datastore, refreshes their individual tokens, and syncs tracks and saved albums into `spotify_v2`:
 ```bash
 # Build multi-tenant pipeline container
-gcloud builds submit /path/to/spotify-dash/src/pipeline_v2 \
+gcloud builds submit src/pipeline_v2 \
     --tag=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-v2-pipeline:latest
 
 # Deploy Job
@@ -339,20 +314,17 @@ gcloud run jobs execute spotify-v2-pipeline-job --region=europe-west2
 
 ## 8. Cloud Scheduler (Automation)
 
-### Scheduler 1: `spotify-daily-sync` (V1 Production Sync)
-Triggers the legacy single-user pipeline every 2 hours:
+### Scheduler 1: `spotify-daily-sync` (V1 Single-User - PAUSED)
+Legacy single-user scheduler. Paused during Phase 6 cutover:
 ```bash
-gcloud scheduler jobs create http spotify-daily-sync \
-    --location=europe-west2 \
-    --schedule="0 */2 * * *" \
-    --time-zone="UTC" \
-    --uri="https://europe-west2-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/secret-compass-181513/jobs/spotify-pipeline-job:run" \
-    --http-method=POST \
-    --oauth-service-account-email="spotify-data@secret-compass-181513.iam.gserviceaccount.com" \
-    --description="Automated 2-hour sync for Spotify listening history and saved albums"
+# Pause legacy scheduler
+gcloud scheduler jobs pause spotify-daily-sync --location=europe-west2
+
+# Resume legacy scheduler (disaster recovery rollback only)
+gcloud scheduler jobs resume spotify-daily-sync --location=europe-west2
 ```
 
-### Scheduler 2: `spotify-v2-sync-scheduler` (V2 Multi-Tenant Sync)
+### Scheduler 2: `spotify-v2-sync-scheduler` (Active V2 Multi-Tenant Scheduler)
 Triggers the multi-tenant pipeline every 2 hours for all approved users:
 ```bash
 gcloud scheduler jobs create http spotify-v2-sync-scheduler \
@@ -376,6 +348,7 @@ Cloud Run in `europe-west2` does not support legacy GCP domain mappings. Domain 
 * **Type CNAME (`www`):** `spinsleeve.cc.`
 
 ### Firebase Configuration (`firebase.json`)
+All production routes (`**`) are routed directly to the multi-tenant V2 application on Cloud Run:
 ```json
 {
   "hosting": {
@@ -387,23 +360,9 @@ Cloud Run in `europe-west2` does not support legacy GCP domain mappings. Domain 
     ],
     "rewrites": [
       {
-        "source": "/beta",
-        "run": {
-          "serviceId": "spotify-dashboard-beta",
-          "region": "europe-west2"
-        }
-      },
-      {
-        "source": "/beta/**",
-        "run": {
-          "serviceId": "spotify-dashboard-beta",
-          "region": "europe-west2"
-        }
-      },
-      {
         "source": "**",
         "run": {
-          "serviceId": "spotify-dashboard-service",
+          "serviceId": "spotify-dashboard-beta",
           "region": "europe-west2"
         }
       }
@@ -414,7 +373,7 @@ Cloud Run in `europe-west2` does not support legacy GCP domain mappings. Domain 
 
 ### Deploying Routing Updates
 ```bash
-npx firebase-tools deploy --only hosting --project=secret-compass-181513
+firebase deploy --only hosting
 ```
 
 ---
