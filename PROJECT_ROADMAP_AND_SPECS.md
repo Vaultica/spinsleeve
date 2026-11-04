@@ -44,8 +44,8 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
 ## 2. Upcoming Phases Before Production Go-Live
 
 ```text
-  Phase 5b: Pre-Production UI Polish  ──►  Phase 6: Production Cutover  ──►  LIVE
-  (Mobile gatefolds, scrubbers, links)      (spinsleeve.cc zero-downtime)
+  Phase 5b: Pre-Production UI Polish  ──►  Phase 6: Production Cutover  ──►  Phase 7: Apple Music Onboarding
+  (Mobile gatefolds, scrubbers, links)      (spinsleeve.cc zero-downtime)     (Cross-platform crate & SpinPals)
 ```
 
 ### ⏳ Phase 5b: Pre-Production Gatefold Polish
@@ -53,11 +53,27 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
 * **Interactive Audio Progress Scrubber:** Add a visual 30-second seek-bar allowing users to drag or click to scrub through audio snippets in the gatefold modal.
 * **Archival Deep Links:** Add external badge links directly to original Pitchfork reviews, Discogs release pages, and Wikipedia articles inside the gatefold reader.
 * **Direct Apple Music Redirector:** Provide one-click deep links to open albums directly in the Apple Music native app.
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~4–6 hours (0.5 to 1 day)
+  - **Technical Complexity:** **Low** (HTML/Tailwind CSS layout adjustments, native audio element timeupdate listeners, and modal deep-link formatting)
 
 ### ⏳ Phase 6: Production Cutover & Retirement of V1
 * **Zero-Downtime Routing Flip:** Update `firebase.json` rewrites so that root domain `https://spinsleeve.cc` points directly to `spotify-dashboard-beta` (renamed to `spotify-dashboard-service`).
 * **Deprecate V1 Resources:** Decommission legacy single-user pipeline job (`spotify-pipeline-job`) and legacy scheduler (`spotify-daily-sync`).
 * **BigQuery V1 Archival:** Archive legacy dataset tables (`spotify_prod`) into long-term backup storage.
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~2–3 hours (0.5 day)
+  - **Technical Complexity:** **Low** (Firebase hosting rewrite configuration, smoke testing live endpoints, and clean cloud resource teardown)
+
+### ⏳ Phase 7: Cross-Platform Streaming: Apple Music Library Collection Onboarding
+* **MusicKit JS Client Integration:** Integrate Apple MusicKit JS v3 for client-side user authentication (`music.authorize()`), enabling friends on Apple Music to onboard their record collections without Spotify allowlist restrictions.
+* **Backend Apple Developer Token Minting:** Implement automated ES256 Developer JWT signing using Apple Music Private Key (`.p8`) stored in GCP Secret Manager.
+* **Apple Music Library Collection Ingestion (`sync.py` & Initial Ingestion):** Ingest user saved library albums via `GET /v1/me/library/albums?include=catalog` with pagination, mapping album artwork, release dates, track counts, and catalog UPCs.
+* **Provider-Agnostic User Vault & BigQuery Architecture:** Extend Datastore `User` entity to support `provider: "apple_music"`, store 6-month Media User Tokens (`Music-User-Token`), and update BigQuery `user_albums_features` to join archival liner notes across both platforms via normalized `(artist, album)` and UPC.
+* **Cross-Platform SpinPals & Shared Vinyl:** Update acoustic chemistry and `🤝 Both Own` crate comparison to resolve shared albums across Spotify and Apple Music users seamlessly.
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~16–24 hours (2 to 3 days)
+  - **Technical Complexity:** **Medium** (Dual authentication management, browser popup handling, 6-month token lifecycle, and cross-catalog metadata normalization)
 
 ---
 
@@ -78,6 +94,9 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
   - Store vector SVG illustrations in `/static/avatars/`.
   - Add an "Avatar Settings" modal in the top navigation.
   - Store `custom_avatar_id` in the Datastore `User` entity, falling back to Spotify's profile picture if unselected.
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~4–5 hours (0.5 day)
+  - **Technical Complexity:** **Low** (Vector SVG curation, adding `custom_avatar_id` to Datastore, and updating frontend avatar rendering)
 
 ---
 
@@ -94,6 +113,9 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
 * **Implementation:**
   - Add `social_opt_in` (Boolean, default `False` until accepted) to the Datastore `User` entity.
   - Modify `fetch_pals_directory` to filter for `social_opt_in == True`.
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~4–6 hours (0.5 to 1 day)
+  - **Technical Complexity:** **Low** (First-login modal prompt, Datastore boolean flag, and filtering queries in `fetch_pals_directory`)
 
 ---
 
@@ -112,6 +134,9 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
   • Email: charlie@rollingstones.com
   👉 Click here to approve: https://spinsleeve.cc/beta/admin
   ```
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~3–4 hours (0.5 day)
+  - **Technical Complexity:** **Low** (Webhook POST to Telegram Bot API or transactional email via SendGrid when `is_approved == False`)
 
 ---
 
@@ -124,3 +149,61 @@ SpinSleeve transforms a personal Spotify library into a physical-style vinyl rec
     - Note input: Multi-line text field.
     - Context auto-attached: Current user ID, browser OS, active route, timestamp.
   - **Storage:** Feedback stored in Datastore under a new `Feedback` kind, viewable in the `/beta/admin` panel with status pills (`New`, `In Progress`, `Implemented`).
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~5–7 hours (1 day)
+  - **Technical Complexity:** **Low–Medium** (Modal UI drawer, Datastore `Feedback` kind, and `/beta/admin` triage dashboard)
+
+---
+
+### 🍏 Feature 5: Cross-Platform Streaming: Apple Music Library Collection Onboarding
+* **Problem:**
+  1. Many music lovers and vinyl collectors stream primarily through Apple Music rather than Spotify.
+  2. Spotify enforces strict developer allowlists (hard-capped at 5–25 users in Development Mode with no programmatic API to add them) and requires 250k MAU + business registration for Quota Extension.
+  3. SpinSleeve is currently locked to Spotify OAuth for user onboarding, artificially restricting the vinyl club's reach.
+* **Solution:**
+  Allow users to authenticate and onboard their entire saved album collection from **Apple Music** into SpinSleeve's virtual vinyl crate, enjoy full 12" gatefold archival liner notes, preview audio, and crate dig with friends via SpinPals.
+* **API Feasibility & Data Availability:**
+  - **Library Endpoint:** `GET https://api.music.apple.com/v1/me/library/albums?include=catalog` (supports pagination up to 100 items per request).
+  - **Data Acquired:** Local & catalog album titles, artist names, artwork URLs (`600x600`), release dates, track counts, dates added to library, genre names, record labels, and universal catalog barcodes (UPC).
+  - **Audio Previews:** Apple Music catalog provides 30-second AAC audio snippets (`previewUrl`), and SpinSleeve already has an active iTunes Search API preview engine in `app.py`.
+  - **Archival Metadata Enrichment:** Existing Wikipedia liner notes, Pitchfork reviews, and Discogs ratings map automatically to Apple Music albums by joining on `LOWER(TRIM(artist_name))` and `LOWER(TRIM(album_name))` or catalog UPC.
+* **Detailed Technical Architecture:**
+  1. **Apple Developer Configuration:**
+     - Provision MusicKit Private Key (`.p8`), Key ID, and Team ID in Apple Developer Portal ($99/yr program).
+     - Store private key securely in GCP Secret Manager (`apple-musickit-p8-key`).
+  2. **Authentication Flow (MusicKit JS v3):**
+     - Cloud Run backend exposes `GET /beta/api/musickit-token` to serve short-lived signed ES256 Developer JWTs.
+     - Login page `/beta/login` provides `🍏 Connect with Apple Music` alongside `🟢 Connect with Spotify`.
+     - Frontend invokes `MusicKit.getInstance().authorize()`, triggering Apple's native authentication popup.
+     - On approval, the client receives a **Media User Token (`Music-User-Token`)** and POSTs it to `/beta/auth/apple`.
+     - Display name is resolved via user's personal radio station (`GET /v1/catalog/{storefront}/stations?filter[identity]=personal`) or user input prompt.
+  3. **User Vault & Token Lifecycle:**
+     - Datastore `User` entity gains:
+       - `provider`: `"apple_music"`
+       - `apple_user_token`: Encrypted `Music-User-Token`
+       - `storefront`: User's regional storefront (e.g., `"us"`, `"gb"`)
+       - `token_issued_at` / `token_expires_at`: 6-month validity window (prompting re-auth once per 180 days).
+  4. **Multi-Tenant Ingestion Pipeline (`src/pipeline_v2/sync.py`):**
+     - Add `sync_apple_music_user_saved_albums()` supporting `limit=100` and `offset` pagination.
+     - Normalizes artwork URLs by replacing `{w}x{h}` with `600x600`.
+     - Ingests into BigQuery `spotify_v2.user_saved_albums` with `provider: 'apple'` and `album_id: 'am_<catalog_id>'`.
+  5. **Cross-Platform SpinPals & Shared Vinyl:**
+     - Update `current_user_owns` join in `compute_pals_compatibility()` from exact `album_id` to normalized `(artist_name, album_name)` and UPC.
+     - Allows Spotify users and Apple Music users to dig through each other's crates, calculate acoustic kinship, and display `🤝 Both Own` badges across different platforms.
+* **Effort & Complexity:**
+  - **Estimated Effort:** ~16–24 hours (2 to 3 days)
+  - **Technical Complexity:** **Medium** (Dual auth providers, MusicKit JS popup flows, 6-month token expiration handling, and cross-catalog metadata normalization)
+
+---
+
+## 4. Pipeline Effort & Complexity Evaluation Matrix
+
+| Milestone / Feature | Scope & Focus | Estimated Effort | Complexity | Key Tech Stack & Dependencies | Strategic Value |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Phase 5b: Gatefold Polish** | Mobile <110px header, audio progress scrubber, Pitchfork/Discogs links | **4–6 hours** (0.5–1 day) | **Low** | Tailwind CSS, Vanilla JS Audio API, HTML5 | Polishes core listening experience for mobile beta testers before launch. |
+| **Phase 6: Production Cutover** | Zero-downtime Firebase rewrite flip to `spinsleeve.cc`, V1 retirement | **2–3 hours** (0.5 day) | **Low** | Firebase Hosting, Cloud Run, Cloud Scheduler | Launches multi-tenant V2 to the public domain and reduces legacy cloud costs. |
+| **Feature 1: Legend Avatar Picker** | Stylized SVG musician avatars (Bowie, Beatles, Mozart, etc.) | **4–5 hours** (0.5 day) | **Low** | SVG Assets, Cloud Datastore, Tailwind CSS | High aesthetic delight; gives users iconic club personas without Spotify profile photos. |
+| **Feature 2: Social Privacy Opt-In** | First-login consent prompt and toggle to hide profile from Lounge | **4–6 hours** (0.5–1 day) | **Low** | Datastore `User`, BigQuery query filters | Ensures GDPR/privacy compliance and lets cautious users keep their crates private. |
+| **Feature 3: Real-Time Admin Alerts** | Telegram Bot webhook or SendGrid email on new pending join requests | **3–4 hours** (0.5 day) | **Low** | Telegram Bot API / SendGrid, Secret Manager | Instant mobile notification for Serge to approve friends in 1 click without checking dashboard. |
+| **Feature 4: In-App Feedback Drawer** | Floating feedback widget with categorization and admin triage deck | **5–7 hours** (1 day) | **Low–Medium** | Cloud Datastore (`Feedback`), Flask, Admin UI | Frictionless bug reporting and liner notes suggestions directly from beta testers. |
+| **Phase 7 / Feature 5: Apple Music Onboarding** | Full library ingestion from Apple Music via MusicKit JS and BigQuery sync | **16–24 hours** (2–3 days) | **Medium** | MusicKit JS v3, Apple Developer Key (.p8), BigQuery, Cloud Run Job | **Massive:** Bypasses Spotify allowlist limits and expands SpinSleeve to all Apple Music friends. |

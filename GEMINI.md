@@ -59,6 +59,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **Phase 5a** | Multi-User Social: **SpinPals (CrateMates Edition)** | ✅ COMPLETED (Deployed: revision `00012-rz4`) |
 | **Phase 5b** | **Pre-Production Gatefold Polish** (Mobile <110px header, audio progress scrubber, Pitchfork/Discogs links) | ⏳ **CURRENT NEXT FOCUS** |
 | **Phase 6** | **Production Cutover** (Zero-downtime Firebase rewrite flip to `spinsleeve.cc`) | ⏳ Upcoming |
+| **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (MusicKit JS & BQ Sync) | ⏳ Planned |
 
 ---
 
