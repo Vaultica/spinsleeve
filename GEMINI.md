@@ -75,7 +75,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **Phase 6f** | **Header Polish & Semantic Versioning** (`POLISH-04`, `POLISH-05`) (v2.2.0 release badge, clean profile avatar) | ✅ COMPLETED (Deployed: revision `00022-z5t`) |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (`APP-02`) | ⏳ Backlog |
 
-*See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform, Sub-100ms Caching & Materialization), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle, Played Not Owned), `POLISH` (Harmonised Heavy Rotation, 30D sorting fix, decimal plays, dynamic versioning, clean header, admin table alignment), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*
+*See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform, Sub-100ms Caching & Materialization), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle, Played Not Owned, Turntable Web Player), `POLISH` (Harmonised Heavy Rotation, 30D sorting fix, decimal plays, dynamic versioning, clean header, admin table alignment), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*
 
 ## 5. Quick Commands
 

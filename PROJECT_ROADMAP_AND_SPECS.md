@@ -107,6 +107,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~ | Core App | 2–3 hours | Completed (Revision `00018-c67`) |
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed (Revision `00019-9ds`) |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
+| **`APP-08`** | Full-Length Virtual Turntable Player (Spotify Web Playback SDK) | Core App | 8–12 hours | Medium |
 | **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Simplify Crate Digger | Tactical Polish | 2–3 hours | Low |
 | **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering (Strict 30D Descending) | Tactical Polish | 1–2 hours | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
@@ -323,6 +324,19 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `APP-08`: Full-Length Virtual Turntable Web Player (Spotify Web Playback SDK & Spinning Vinyl Disc)
+* **Problem:**  
+  While the 30-second needle-drop preview snippets provide quick auditioning, listeners cannot stream full album tracks directly inside SpinSleeve. Listeners who want to spin an entire record must leave the web app to open Spotify, breaking the immersive physical vinyl ritual.
+* **Solution:**  
+  Build an interactive, physical-style Virtual Turntable Player powered by the **Spotify Web Playback SDK**:
+  1. **Vinyl Disc Extraction Animation:** Clicking "Spin Record" triggers a tactile animation where the high-res 12" vinyl disc slides out from the album jacket sleeve and drops onto the turntable platter.
+  2. **Authentic 33⅓ RPM Platter Rotation:** The vinyl platter and center label art rotate at authentic 33⅓ RPM while playing, synchronized with the tonearm gently resting on the outer groove.
+  3. **Full-Length Streaming (Spotify Premium):** Integrated Spotify Connect device (*"SpinSleeve Hi-Fi Turntable"*). Stream full album tracklists with play/pause, scrub, pitch control, and next/previous track controls.
+  4. **Universal Free Tier Fallback:** If a listener has a Spotify Free account (or Web Playback SDK is unavailable), the player automatically falls back to the existing 30-second needle-drop preview snippets with clear guidance.
+* **Effort & Complexity:** ~8–12 hours (1.5 days) • **Complexity:** **Medium**
+
+---
+
 ### 🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)
 
 #### `POLISH-01`: Harmonise "Heavy Rotation" Filter Across Tabs & Simplify Crate Digger Selection
@@ -431,6 +445,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge~~ | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed** (Revision `00018-c67`): Normalized spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals Dynamic Time Horizon~~ | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | ✅ **Completed:** Rolling 30D play count aggregation in BQ view, 2-way horizon toggles in Crate Digger & SpinPals, and 30D library sort. |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
+| **`APP-08`** | Full-Length Virtual Turntable Web Player | Core App | 8–12h | Spotify Web Playback SDK, CSS Keyframes, Web Audio | **High:** Immersive full-length streaming with vinyl disc sliding from sleeve onto rotating 33⅓ platter. |
 | **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Crate Digger UX | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | **Medium:** Unified filtering terminology across all views and streamlined recommender controls. |
 | **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering by 30D Plays | Tactical Polish | 1–2h | JavaScript, Array Sorting | **Medium:** Enforce strict deterministic descending order by 30-day plays. |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
