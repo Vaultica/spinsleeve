@@ -313,7 +313,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
     client = bigquery.Client(project=PROJECT_ID)
     query = f"""
     SELECT *
-    FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features`
+    FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
     WHERE user_id = @user_id
     ORDER BY album_plays DESC, added_at DESC
     """
@@ -751,7 +751,7 @@ def compute_pal_compatibility(current_user_id, pal_id, horizon="30d"):
       f.discogs_url,
       f.enriched_styles,
       CASE WHEN my.album_id IS NOT NULL THEN 1 ELSE 0 END as current_user_owns
-    FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features` f
+    FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table` f
     LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` my
       ON my.user_id = @current_user_id AND f.album_id = my.album_id
     WHERE f.user_id = @pal_id

@@ -54,6 +54,11 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Dynamic time horizon toggle in SpinPals Top 5 to Borrow (`?horizon=30d` vs `?horizon=all_time`), highlighting pal's current obsessions this month.
   - Added `🔥 Heavy Rotation (Last 30 Days)` sorting in Library Explorer with dynamic 30D badge display.
   - Deployed live revision `spotify-dashboard-beta-00019-9ds`.
+* **Phase 6d: Materialized High-Performance Analytical Table (`INFRA-03a`)**
+  - Created clustered physical table `secret-compass-181513.spotify_v2.user_albums_features_table` (`CLUSTER BY user_id`), replacing dynamic view compilation with pre-computed reads (2.3x query speedup).
+  - Added automated re-materialization step in `src/pipeline_v2/sync.py` (`rematerialize_user_albums_features`).
+  - Switched `src/report_v2/app.py` queries in `fetch_user_album_data` and `compute_pal_compatibility` to the physical clustered table.
+  - Deployed live revision `spotify-dashboard-beta-00020-vrw`.
 
 ---
 
@@ -80,7 +85,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | :--- | :--- | :--- | :--- | :--- |
 | **`INFRA-01`** | Fresh GCP Project Migration & Environment Isolation | Infrastructure | 6–8 hours | Medium |
 | **`INFRA-02`** | Declarative Infrastructure as Code (IaC) via Terraform | Infrastructure | 8–12 hours | Medium |
-| **`INFRA-03`** | Sub-100ms Multi-Tier Caching & BQ Materialization Architecture | Infrastructure | 6–8 hours | Medium |
+| **`INFRA-03`** | Sub-100ms Multi-Tier Caching & BQ Materialization Architecture | Infrastructure | 6–8 hours | In Progress (Phase 6d Live: Revision `00020-vrw`) |
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
 | **`OPS-03`** | Real-Time Admin Alerts for User Join Requests | DevOps | 3–4 hours | Low |

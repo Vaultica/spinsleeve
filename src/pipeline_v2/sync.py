@@ -303,10 +303,29 @@ def run_pipeline():
             except Exception:
                 pass
 
+    # Re-materialize clustered physical table for sub-second web app queries (INFRA-03a)
+    rematerialize_user_albums_features(bq_client)
+
     logger.info("============================================================")
     logger.info("SpinSleeve V2 Ingestion Pipeline Run Finished.")
     logger.info("Summary: %d new tracks, %d new albums synced across %d users.", total_new_tracks, total_new_albums, len(approved_users))
     logger.info("============================================================")
+
+
+def rematerialize_user_albums_features(bq_client):
+    """Materializes the dynamic user_albums_features view into a clustered physical table (INFRA-03a)."""
+    logger.info("Materializing %s.user_albums_features_table...", DATASET_V2)
+    remat_q = f"""
+    CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
+    CLUSTER BY user_id AS
+    SELECT * FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features`
+    """
+    try:
+        job = bq_client.query(remat_q)
+        job.result()
+        logger.info("Successfully refreshed %s.user_albums_features_table!", DATASET_V2)
+    except Exception as e:
+        logger.error("Error refreshing materialized user_albums_features_table: %s", e)
 
 
 if __name__ == "__main__":

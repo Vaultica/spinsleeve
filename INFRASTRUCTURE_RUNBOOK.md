@@ -240,6 +240,14 @@ LEFT JOIN `secret-compass-181513.spotify_v2.album_enriched_metadata` e
   ON d.album_id = e.album_id;
 ```
 
+#### Table 4: `user_albums_features_table` (Materialized Physical Table - INFRA-03a)
+*Re-materialized automatically by `sync.py` and `enrich.py` pipeline runs to bypass analytical view compilation.*
+```sql
+CREATE OR REPLACE TABLE `secret-compass-181513.spotify_v2.user_albums_features_table`
+CLUSTER BY user_id AS
+SELECT * FROM `secret-compass-181513.spotify_v2.user_albums_features`;
+```
+
 ---
 
 ## 6. Cloud Run Services (Web Applications)
