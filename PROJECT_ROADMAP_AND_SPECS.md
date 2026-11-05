@@ -42,6 +42,12 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Zero-downtime Firebase CDN rewrite flip pointing root domain `https://spinsleeve.cc` to the multi-tenant V2 application.
   - Symmetrical root URL routing (`/`, `/recommend`, `/analytics`, `/pals`, `/admin`, `/login`, `/logout`) with full backward compatibility for `/beta/*`.
   - Paused legacy single-user Cloud Scheduler `spotify-daily-sync`.
+* **Phase 6b: Tactical Sleeve Polish (`APP-05`)**
+  - Normalized album spins calculation $\lfloor \text{track\_plays} / \text{tracks\_total} \rfloor$ with zero-track fallback.
+  - Tactile `🔥 X Plays` (and `🔥 1 Play`) sleeve badges across Library Explorer, Crate Digger (spotlight & pool), and SpinPals (Top Borrow & crate).
+  - Hover tooltips detailing complete breakdown: *"Estimated complete album spins based on {P} track plays across {T} tracks"*.
+  - Normalized play count sorting in Library Explorer with raw scrobbles tiebreaker.
+  - Deployed live revision `spotify-dashboard-beta-00018-c67`.
 
 ---
 
@@ -74,7 +80,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-02`** | Cross-Platform Apple Music Library Onboarding (Phase 7) | Core App | 16–24 hours | Medium |
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
 | **`APP-04`** | Music Legend Illustrated Avatar Persona Picker | Core App | 4–5 hours | Low |
-| **`APP-05`** | Album Sleeve Normalized Play Count Badge ("🔥 X Plays") | Core App | 2–3 hours | Low (✅ Completed) |
+| **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~ | Core App | 2–3 hours | Completed (Revision `00018-c67`) |
 | **`APP-06`** | Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time) | Core App | 5–7 hours | Low–Med |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
@@ -330,7 +336,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-02`** | Apple Music Library Onboarding (Phase 7) | Core App | 16–24h | MusicKit JS v3, Apple Developer Key (.p8), BigQuery | **Massive:** Bypasses Spotify allowlist limits and expands to Apple Music collectors. |
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
 | **`APP-04`** | Music Legend Illustrated Avatars | Core App | 4–5h | SVG Vector Graphics, Datastore, Tailwind CSS | **Low:** Aesthetic charm and personal flair for users without profile photos. |
-| **`APP-05`** | Album Sleeve Normalized Play Count Badge | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed:** Normalized album spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
+| **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge~~ | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed** (Revision `00018-c67`): Normalized spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
 | **`APP-06`** | Crate Digger & SpinPals Dynamic Time Horizon | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | **High:** Keeps recommendations vibrant and non-static by defaulting to rolling 30-day heavy rotation. |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
