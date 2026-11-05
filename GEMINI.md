@@ -54,6 +54,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 * **`manage_users.py`:** Standalone CLI tool to list, approve, and revoke users in Datastore.
 * **`INFRASTRUCTURE_RUNBOOK.md`:** Comprehensive disaster recovery guide with DDL, Cloud Run deploy commands, and Cloud Scheduler setups.
 * **`PROJECT_ROADMAP_AND_SPECS.md`:** Product specification covering completed phases and the categorized feature backlog (`INFRA`, `OPS`, `APP`, `BRAND`, `DOCS`).
+* **`CHANGELOG.md`:** Reverse-engineered release journal documenting every deployed version, technical rationale, and benchmark.
 
 ---
 
