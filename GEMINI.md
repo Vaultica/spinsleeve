@@ -50,6 +50,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
   - `SpinPals: CrateMates` (`/pals` & `/beta/pals`): The Listening Lounge member directory, hybrid acoustic compatibility gauge, top 5 borrow recommendations, and virtual crate digging.
   - `Admin Control Deck` (`/admin` & `/beta/admin`): Whitelist pre-approvals, SpinPals opt-in toggles, and 1-click user view assumption.
 * **`src/pipeline_v2/sync.py`:** Automated multi-tenant sync engine. Iterates approved Datastore users, refreshes individual tokens, and loads new plays/albums into `spotify_v2`.
+* **`src/pipeline_v2/enrich.py`:** V2 album metadata enrichment pipeline. Scrapes Wikipedia and Discogs for 12" gatefold archival liner notes, ratings, and personnel into shared table `spotify_v2.album_enriched_metadata`.
 * **`manage_users.py`:** Standalone CLI tool to list, approve, and revoke users in Datastore.
 * **`INFRASTRUCTURE_RUNBOOK.md`:** Comprehensive disaster recovery guide with DDL, Cloud Run deploy commands, and Cloud Scheduler setups.
 * **`PROJECT_ROADMAP_AND_SPECS.md`:** Product specification covering completed phases and the categorized feature backlog (`INFRA`, `OPS`, `APP`, `BRAND`, `DOCS`).
@@ -69,13 +70,16 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **Phase 6** | **Production Cutover** (Zero-downtime Firebase rewrite flip to `spinsleeve.cc`) | ✅ COMPLETED (Deployed: revision `00017-749`) |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (`APP-02`) | ⏳ Backlog |
 
-*See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*
+*See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*
 
 ## 5. Quick Commands
 
 ```bash
 # Execute multi-tenant pipeline on-demand
 gcloud run jobs execute spotify-v2-pipeline-job --region=europe-west2
+
+# Execute V2 album metadata enrichment on-demand (e.g. 50 or 100 albums)
+gcloud run jobs execute spotify-v2-enrichment-job --region=europe-west2 --args="enrich.py,100"
 
 # Deploy updated beta app
 CLOUDSDK_PYTHON=/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 \

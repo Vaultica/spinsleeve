@@ -268,33 +268,18 @@ Retained for disaster recovery rollback. All public traffic has been flipped to 
 ### Job 1: `spotify-pipeline-job` (V1 Ingestion - Deprecated)
 Legacy single-user ingestion job. Triggers were paused in Phase 6.
 
-### Job 2: `spotify-enrichment-job` (Batch Archive Enrichment)
-Extracts Wikipedia narratives, Pitchfork ratings, and Discogs personnel:
-```bash
-# Deploy Enrichment Job
-gcloud run jobs deploy spotify-enrichment-job \
-    --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-pipeline:latest \
-    --region=europe-west2 \
-    --service-account=spotify-data@secret-compass-181513.iam.gserviceaccount.com \
-    --set-env-vars=GCP_PROJECT=secret-compass-181513 \
-    --args="enrich,100" \
-    --max-retries=0 \
-    --task-timeout=30m \
-    --memory=512Mi \
-    --cpu=1
-
-# Execute on-demand batch run
-gcloud run jobs execute spotify-enrichment-job --region=europe-west2 --args="enrich,100"
-```
+### Job 2: `spotify-enrichment-job` (V1 Legacy Archive Enrichment - Deprecated)
+Legacy single-user enrichment job targeting `spotify.album_enriched_metadata`. Replaced by `spotify-v2-enrichment-job`.
 
 ### Job 3: `spotify-v2-pipeline-job` (Active V2 Multi-Tenant Pipeline)
 Loops through all approved friends in Datastore, refreshes their individual tokens, and syncs tracks and saved albums into `spotify_v2`:
 ```bash
-# Build multi-tenant pipeline container
-gcloud builds submit src/pipeline_v2 \
+# Build multi-tenant pipeline container (includes both sync.py and enrich.py)
+CLOUDSDK_PYTHON=/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 \
+  gcloud builds submit src/pipeline_v2 \
     --tag=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-v2-pipeline:latest
 
-# Deploy Job
+# Deploy Sync Job
 gcloud run jobs deploy spotify-v2-pipeline-job \
     --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-v2-pipeline:latest \
     --region=europe-west2 \
@@ -306,8 +291,31 @@ gcloud run jobs deploy spotify-v2-pipeline-job \
     --memory=512Mi \
     --cpu=1
 
-# Execute on-demand run
+# Execute on-demand sync run
 gcloud run jobs execute spotify-v2-pipeline-job --region=europe-west2
+```
+
+### Job 4: `spotify-v2-enrichment-job` (Active V2 On-Demand Archive Enrichment)
+Extracts Wikipedia narratives, Pitchfork reviews, Metacritic scores, and Discogs personnel into universal shared table `spotify_v2.album_enriched_metadata`:
+```bash
+# Deploy V2 Enrichment Job
+gcloud run jobs deploy spotify-v2-enrichment-job \
+    --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-v2-pipeline:latest \
+    --command="python" \
+    --args="enrich.py,50" \
+    --region=europe-west2 \
+    --service-account=spotify-data@secret-compass-181513.iam.gserviceaccount.com \
+    --set-env-vars=GCP_PROJECT=secret-compass-181513,BQ_DATASET=spotify_v2 \
+    --max-retries=0 \
+    --task-timeout=30m \
+    --memory=512Mi \
+    --cpu=1
+
+# Execute on-demand batch run (e.g. 50 or 100 albums)
+gcloud run jobs execute spotify-v2-enrichment-job --region=europe-west2 --args="enrich.py,100"
+
+# Run locally via virtualenv
+python src/pipeline_v2/enrich.py --batch-size 50
 ```
 
 ---

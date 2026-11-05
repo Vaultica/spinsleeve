@@ -74,6 +74,8 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-02`** | Cross-Platform Apple Music Library Onboarding (Phase 7) | Core App | 16–24 hours | Medium |
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
 | **`APP-04`** | Music Legend Illustrated Avatar Persona Picker | Core App | 4–5 hours | Low |
+| **`APP-05`** | Album Sleeve Normalized Play Count Badge ("🔥 X Plays") | Core App | 2–3 hours | Low |
+| **`APP-06`** | Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time) | Core App | 5–7 hours | Low–Med |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
@@ -224,6 +226,35 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `APP-05`: Album Sleeve Normalized Play Count Badge ("🔥 X Plays")
+* **Problem:**  
+  Currently, virtual vinyl album sleeves display a bare, uncontextualized number badge (e.g., `42`) in the top-right corner. Listeners cannot discern what this number measures—individual track scrobbles or full album spins—diminishing the visual storytelling of personal vinyl listening history.
+* **Solution:**  
+  Update album sleeve badges across all views (Library Explorer, Crate Digger, SpinPals) to display clear, tactile play metrics:
+  1. **Visual Badge:** Styled pill with flame icon and contextual label: `🔥 {album_plays} Plays` (or `🔥 1 Play`).
+  2. **Normalized Album Plays Calculation:** Calculate full album spins by dividing total user scrobbles for that album by the album's track count:  
+     $$\text{Album Plays} = \left\lfloor \frac{\text{Total Track Scrobbles}}{\text{Total Tracks in Album}} \right\rfloor$$  
+     *(Fallback: If total tracks is unavailable or zero, use track scrobbles with a clear tooltip).*
+  3. **Tooltip Detail:** Hover tooltip explaining: *"Estimated complete album spins based on {total_track_plays} track plays across {track_count} tracks"*.
+* **Effort & Complexity:** ~2–3 hours (0.5 day) • **Complexity:** **Low**
+
+---
+
+#### `APP-06`: Crate Digger & SpinPals "Top Pick" Time Horizon (Heavy Rotation 30D vs. All Time)
+* **Problem:**  
+  In both Crate Digger (`/recommend`) and SpinPals (`/pals`), "Top Pick" recommendations and borrow candidates currently rank records solely against lifetime aggregate scrobbles. Because all-time play counts are cumulative and slow to change, the spotlight repeatedly surfaces the same static records week after week, failing to reflect what users and their friends are actively obsessing over right now.
+* **Solution:**  
+  Introduce an interactive time horizon toggle for recommendations with an active rotation bias:
+  1. **Time Horizon Controls:** A 2-way segmented pill toggle:
+     - 🔥 **Heavy Rotation (Last 30 Days)** *(Default)*: Evaluates scrobbles within the rolling past 30 days (`played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)`). Surfaces fresh, high-velocity records currently on repeat.
+     - 🏛️ **All Time**: Evaluates lifetime scrobble counts, honoring long-term cornerstone albums.
+  2. **Crate Digger Application:** Ranks spotlight selections (`🥇 Prime Selection`, `🥈 Vibe Match`, `🥉 Hidden Gem`) and candidate crates against the selected horizon.
+  3. **SpinPals Application:** Recalculates friend borrow recommendations (`top_borrow`) using the pal's 30-day heavy rotation, allowing friends to borrow what the other is currently spinning rather than albums listened to years ago.
+  4. **Query & Backend Optimization:** Fetch 30-day play counts alongside all-time counts in BigQuery query aggregation in `fetch_user_album_data` without adding redundant roundtrips.
+* **Effort & Complexity:** ~5–7 hours (1 day) • **Complexity:** **Low–Medium**
+
+---
+
 ### 🎨 Category: Brand Identity, Public Landing & Monetization (`BRAND`)
 
 #### `BRAND-01`: Homepage & Public Login Redesign with Feature Showcase
@@ -284,6 +315,8 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-02`** | Apple Music Library Onboarding (Phase 7) | Core App | 16–24h | MusicKit JS v3, Apple Developer Key (.p8), BigQuery | **Massive:** Bypasses Spotify allowlist limits and expands to Apple Music collectors. |
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
 | **`APP-04`** | Music Legend Illustrated Avatars | Core App | 4–5h | SVG Vector Graphics, Datastore, Tailwind CSS | **Low:** Aesthetic charm and personal flair for users without profile photos. |
+| **`APP-05`** | Album Sleeve Normalized Play Count Badge | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | **Low–Med:** Adds immediate context to album card scrobble metrics with normalized complete spins. |
+| **`APP-06`** | Crate Digger & SpinPals Dynamic Time Horizon | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | **High:** Keeps recommendations vibrant and non-static by defaulting to rolling 30-day heavy rotation. |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |
