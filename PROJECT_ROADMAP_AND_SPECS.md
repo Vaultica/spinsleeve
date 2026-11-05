@@ -68,6 +68,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
  │ [INFRA]  Infrastructure & Cloud Architecture                           │
  │ [OPS]    DevOps, CI/CD, Reliability & Observability                    │
  │ [APP]    Music Digging, 12" Gatefolds & Cross-Platform Streaming       │
+ │ [POLISH] Tactical Polish, UX Streamlining & Quick Fixes               │
  │ [BRAND]  Brand Identity, Public Landing & Monetization                 │
  │ [DOCS]   Architecture Mapping & Documentation                          │
  └────────────────────────────────────────────────────────────────────────┘
@@ -88,8 +89,14 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
 | **`APP-04`** | Music Legend Illustrated Avatar Persona Picker | Core App | 4–5 hours | Low |
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~ | Core App | 2–3 hours | Completed (Revision `00018-c67`) |
-| **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed |
+| **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed (Revision `00019-9ds`) |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
+| **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Simplify Crate Digger | Tactical Polish | 2–3 hours | Low |
+| **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering (Strict 30D Descending) | Tactical Polish | 1–2 hours | Low |
+| **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
+| **`POLISH-04`** | Semantic Build Versioning (Replace "beta v2" with Version) | Tactical Polish | 1–2 hours | Low |
+| **`POLISH-05`** | Clean Header Profile Avatar (Remove Admin Switcher from Header) | Tactical Polish | 1–2 hours | Low |
+| **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2 hours | Low |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
@@ -300,6 +307,50 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+### 🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)
+
+#### `POLISH-01`: Harmonise "Heavy Rotation" Filter Across Tabs & Simplify Crate Digger Selection
+* **Problem:** Terminology, active filter states, and horizon controls differ slightly between the Library Explorer, Crate Digger, and SpinPals, creating cognitive friction. In Crate Digger, the stacked mode and horizon selection deck can be simplified into a cleaner, unified flow.
+* **Solution:** Standardize the "Heavy Rotation" moniker and icon across all tabs. Streamline Crate Digger's control deck into an intuitive, unified filter bar with fewer clicks.
+* **Effort & Complexity:** ~2–3 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-02`: [Fix] Heavy Rotation Filter Sleeve Ordering (Strict 30D Descending Order)
+* **Problem:** When activating the Heavy Rotation filter in Library Explorer, tie-breaker sorting or fallback logic can occasionally prevent the sleeves from strictly ordering by the most-listened-to records in the last 30 days in clear descending order.
+* **Solution:** Enforce deterministic primary ordering strictly by rolling 30-day play counts (`album_track_plays_30d DESC`, then `album_plays_30d DESC`) whenever the Heavy Rotation filter is selected.
+* **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-03`: Play Count Badge Refinement (Decimal Plays / "Newly Added" / "Never Played")
+* **Problem:** Albums with zero scrobbles or partial scrobbles below 1 full spin currently show a bare `🔥 0 Plays` badge, which feels unrewarding and inaccurate for records with partial plays or newly acquired vinyl.
+* **Solution:** Eliminate bare `0 Plays`. For unplayed records, display contextual tags like `Newly Added` or `Never Played`. For records with scrobbles totaling less than 1 full spin or between spins, display a clean decimal play count (e.g. `🔥 0.4 Plays`, `🔥 1.7 Plays`).
+* **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-04`: Semantic Build Version Numbering (Replace "beta v2" with Dynamic Version)
+* **Problem:** The main Library page still displays the generic "beta v2" badge in the header, offering no visibility into which build or deployment revision is currently serving traffic.
+* **Solution:** Remove the static "beta v2" label. Introduce a centralized semantic application version number (e.g. `v2.4.1`) or automated build counter that increments with each deployment build and is visible in the header/footer.
+* **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-05`: Standardize Header Profile Avatar (Remove Admin Impersonation from Global Header)
+* **Problem:** The top-right user profile widget in the global header currently renders dev-switcher links (`👑 Serge`, `👩 Sarah`, `🐹 GuineaPig`) for admins, cluttering the clean navigation bar across every view.
+* **Solution:** Standardize the top-right corner to show only a normal user profile avatar and logout button for all users (including admins). Keep admin user view assumption and impersonation strictly housed inside the dedicated Admin Portal (`/admin`).
+* **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-06`: Admin Portal Table Formatting & Column Alignment
+* **Problem:** The user management table in the Admin control deck (`/admin`) suffers from uneven column widths, misaligned action buttons, and suboptimal text truncation on certain screen sizes.
+* **Solution:** Redesign the Admin table with explicit column widths, consistent typography, aligned status chips (Approved, Whitelisted, Opted-In), and streamlined action buttons.
+* **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
+
+---
+
 ### 🎨 Category: Brand Identity, Public Landing & Monetization (`BRAND`)
 
 #### `BRAND-01`: Homepage & Public Login Redesign with Feature Showcase
@@ -364,6 +415,12 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge~~ | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed** (Revision `00018-c67`): Normalized spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals Dynamic Time Horizon~~ | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | ✅ **Completed:** Rolling 30D play count aggregation in BQ view, 2-way horizon toggles in Crate Digger & SpinPals, and 30D library sort. |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
+| **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Crate Digger UX | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | **Medium:** Unified filtering terminology across all views and streamlined recommender controls. |
+| **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering by 30D Plays | Tactical Polish | 1–2h | JavaScript, Array Sorting | **Medium:** Enforce strict deterministic descending order by 30-day plays. |
+| **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
+| **`POLISH-04`** | Semantic Build Version Numbering (Remove "beta v2") | Tactical Polish | 1–2h | Flask, Jinja2, CI/CD | **Low:** Replaces static beta badge with dynamic semantic release version. |
+| **`POLISH-05`** | Clean Header Profile Avatar (Remove Admin Switcher) | Tactical Polish | 1–2h | Jinja2, HTML5, Flask Session | **Low:** Keeps global header clean and standard; isolates impersonation to Admin Portal. |
+| **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2h | HTML5, Tailwind CSS | **Low:** Eliminates table misalignment, button wrapping, and truncation on admin portal. |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |
