@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import json
+import gzip
 import logging
 import datetime
 import urllib.parse
@@ -227,6 +228,62 @@ _user_album_cache_time = {}
 _user_analytics_cache = {}
 _user_analytics_cache_time = {}
 CACHE_TTL = 60
+DATASTORE_CACHE_TTL = 86400  # 24 hours
+
+
+def get_catalog_from_datastore(user_id):
+    """Retrieves and decompresses user catalog payload from Cloud Datastore (INFRA-03b)."""
+    try:
+        ds_client = get_datastore_client()
+        key = ds_client.key("UserCatalogCache", user_id)
+        entity = ds_client.get(key)
+        if not entity:
+            return None
+
+        updated_at = entity.get("updated_at")
+        if updated_at:
+            if hasattr(updated_at, "timestamp"):
+                age = time.time() - updated_at.timestamp()
+            else:
+                age = 0
+            if age > DATASTORE_CACHE_TTL:
+                logger.info("[%s] Datastore UserCatalogCache expired (age=%.0fs)", user_id, age)
+                return None
+
+        raw_bytes = entity.get("compressed_payload")
+        if not raw_bytes:
+            return None
+
+        decompressed_json = gzip.decompress(raw_bytes).decode("utf-8")
+        data = json.loads(decompressed_json)
+        logger.info("[%s] Loaded catalog from Cloud Datastore cache (albums=%d)", user_id, len(data.get("albums", [])))
+        return data
+    except Exception as e:
+        logger.warning("[%s] Failed to read catalog from Cloud Datastore cache: %s", user_id, e)
+        return None
+
+
+def save_catalog_to_datastore(user_id, data):
+    """Serializes, gzips, and stores user catalog payload into Cloud Datastore (INFRA-03b)."""
+    try:
+        ds_client = get_datastore_client()
+        key = ds_client.key("UserCatalogCache", user_id)
+        entity = datastore.Entity(key=key, exclude_from_indexes=["compressed_payload"])
+
+        raw_json = json.dumps(data)
+        compressed_bytes = gzip.compress(raw_json.encode("utf-8"))
+
+        entity["compressed_payload"] = compressed_bytes
+        entity["album_count"] = len(data.get("albums", []))
+        entity["updated_at"] = datetime.datetime.now(datetime.timezone.utc)
+        entity["uncompressed_kb"] = round(len(raw_json) / 1024, 1)
+        entity["compressed_kb"] = round(len(compressed_bytes) / 1024, 1)
+
+        ds_client.put(entity)
+        logger.info("[%s] Saved catalog to Cloud Datastore (albums=%d, raw=%.1fKB, compressed=%.1fKB)",
+                    user_id, entity["album_count"], entity["uncompressed_kb"], entity["compressed_kb"])
+    except Exception as e:
+        logger.warning("[%s] Failed to save catalog to Cloud Datastore cache: %s", user_id, e)
 
 
 def sync_user_initial_data(user_id, access_token):
@@ -307,9 +364,19 @@ def fetch_user_album_data(user_id, force_refresh=False):
     global _user_album_cache, _user_album_cache_time
     now = time.time()
 
+    # Tier 1: Local process in-memory cache (0ms)
     if not force_refresh and user_id in _user_album_cache and (now - _user_album_cache_time.get(user_id, 0)) < CACHE_TTL:
         return _user_album_cache[user_id]
 
+    # Tier 2: Cloud Datastore Document Store Cache (~50ms - INFRA-03b)
+    if not force_refresh:
+        cached_doc = get_catalog_from_datastore(user_id)
+        if cached_doc:
+            _user_album_cache[user_id] = cached_doc
+            _user_album_cache_time[user_id] = now
+            return cached_doc
+
+    # Tier 3: BigQuery Materialized Table
     client = bigquery.Client(project=PROJECT_ID)
     query = f"""
     SELECT *
@@ -326,8 +393,9 @@ def fetch_user_album_data(user_id, force_refresh=False):
         empty_data = {
             "albums": [],
             "top_genres": [],
-            "kpis": {"total_albums": 0, "played_albums": 0, "unplayed_albums": 0, "pct_explored": 0, "total_plays": 0, "top_album": "None", "top_album_plays": 0}
+            "kpis": {"total_albums": 0, "played_albums": 0, "played_albums_30d": 0, "unplayed_albums": 0, "pct_explored": 0, "total_plays": 0, "total_plays_30d": 0, "top_album": "None", "top_album_plays": 0}
         }
+        save_catalog_to_datastore(user_id, empty_data)
         _user_album_cache[user_id] = empty_data
         _user_album_cache_time[user_id] = now
         return empty_data
@@ -432,6 +500,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
         "kpis": kpis
     }
 
+    save_catalog_to_datastore(user_id, result)
     _user_album_cache[user_id] = result
     _user_album_cache_time[user_id] = now
     return result

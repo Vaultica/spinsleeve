@@ -71,6 +71,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **APP-05** | **Normalized Album Play Count Badges** (`🔥 X Plays` badge, hover tooltips, normalized sorting) | ✅ COMPLETED (Deployed: revision `00018-c67`) |
 | **APP-06** | **Dynamic Time Horizon** (Rolling 30D vs All-Time in Crate Digger & SpinPals, 30D library sort) | ✅ COMPLETED (Deployed: revision `00019-9ds`) |
 | **INFRA-03a** | **Materialized Clustered Analytical Table** (`user_albums_features_table`, 2.3x query speedup) | ✅ COMPLETED (Deployed: revision `00020-vrw`) |
+| **INFRA-03b** | **Cloud Datastore Document Store Cache** (`UserCatalogCache` gzipped document store, ~50ms cold loads) | ✅ COMPLETED (Deployed: revision `00021-42p`) |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (`APP-02`) | ⏳ Backlog |
 
 *See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform, Sub-100ms Caching & Materialization), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle, Played Not Owned), `POLISH` (Harmonised Heavy Rotation, 30D sorting fix, decimal plays, dynamic versioning, clean header, admin table alignment), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*

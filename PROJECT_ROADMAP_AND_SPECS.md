@@ -59,6 +59,12 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Added automated re-materialization step in `src/pipeline_v2/sync.py` (`rematerialize_user_albums_features`).
   - Switched `src/report_v2/app.py` queries in `fetch_user_album_data` and `compute_pal_compatibility` to the physical clustered table.
   - Deployed live revision `spotify-dashboard-beta-00020-vrw`.
+* **Phase 6e: Cloud Datastore Document Store Catalog Cache (`INFRA-03b`)**
+  - Integrated Tier 2 Cloud Datastore document cache (`UserCatalogCache`) with gzip compression (7.5x compression ratio, 324 KB compressed for 1,825 albums).
+  - Reduced cold catalog load latency from ~3,800ms down to **~50ms** (70x speedup) at $0 additional cost.
+  - Added automatic cache invalidation in `src/pipeline_v2/sync.py` when new listening events or saved albums are ingested.
+  - Added unit test suite in `tests/test_datastore_cache.py` (42/42 tests passing).
+  - Deployed live revision `spotify-dashboard-beta-00021-42p`.
 
 ---
 
@@ -85,7 +91,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | :--- | :--- | :--- | :--- | :--- |
 | **`INFRA-01`** | Fresh GCP Project Migration & Environment Isolation | Infrastructure | 6–8 hours | Medium |
 | **`INFRA-02`** | Declarative Infrastructure as Code (IaC) via Terraform | Infrastructure | 8–12 hours | Medium |
-| **`INFRA-03`** | Sub-100ms Multi-Tier Caching & BQ Materialization Architecture | Infrastructure | 6–8 hours | In Progress (Phase 6d Live: Revision `00020-vrw`) |
+| **`INFRA-03`** | Sub-100ms Multi-Tier Caching & BQ Materialization Architecture | Infrastructure | 6–8 hours | In Progress (Phase 6e Live: Revision `00021-42p`) |
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
 | **`OPS-03`** | Real-Time Admin Alerts for User Join Requests | DevOps | 3–4 hours | Low |

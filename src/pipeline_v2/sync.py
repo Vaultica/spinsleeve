@@ -291,6 +291,9 @@ def run_pipeline():
             total_new_tracks += new_tracks
             total_new_albums += new_albums
 
+            if new_tracks > 0 or new_albums > 0:
+                invalidate_user_catalog_cache(user_id, ds_client)
+
             user["last_sync_at"] = datetime.datetime.now(datetime.timezone.utc)
             user["sync_status"] = "idle"
             ds_client.put(user)
@@ -310,6 +313,16 @@ def run_pipeline():
     logger.info("SpinSleeve V2 Ingestion Pipeline Run Finished.")
     logger.info("Summary: %d new tracks, %d new albums synced across %d users.", total_new_tracks, total_new_albums, len(approved_users))
     logger.info("============================================================")
+
+
+def invalidate_user_catalog_cache(user_id, ds_client):
+    """Deletes cached catalog in Datastore when new listening events are synced (INFRA-03b)."""
+    try:
+        key = ds_client.key("UserCatalogCache", user_id)
+        ds_client.delete(key)
+        logger.info("[%s] Invalidated Datastore UserCatalogCache.", user_id)
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate Datastore UserCatalogCache: %s", user_id, e)
 
 
 def rematerialize_user_albums_features(bq_client):
