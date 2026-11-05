@@ -173,7 +173,8 @@ WITH album_plays_by_id AS (
   SELECT 
     user_id,
     album_id,
-    COUNT(*) as track_plays_by_id
+    COUNT(*) as track_plays_by_id,
+    COUNTIF(played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)) as track_plays_by_id_30d
   FROM `secret-compass-181513.spotify_v2.playback_history`
   WHERE album_id IS NOT NULL AND album_id != ""
   GROUP BY user_id, album_id
@@ -182,7 +183,8 @@ album_plays_by_name AS (
   SELECT 
     user_id,
     LOWER(TRIM(album_name)) as norm_album_name,
-    COUNT(*) as track_plays_by_name
+    COUNT(*) as track_plays_by_name,
+    COUNTIF(played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)) as track_plays_by_name_30d
   FROM `secret-compass-181513.spotify_v2.playback_history`
   GROUP BY user_id, norm_album_name
 ),
@@ -216,6 +218,8 @@ SELECT
   d.genres as album_genres,
   GREATEST(COALESCE(pid.track_plays_by_id, 0), COALESCE(pname.track_plays_by_name, 0)) as album_track_plays,
   ROUND(GREATEST(COALESCE(pid.track_plays_by_id, 0), COALESCE(pname.track_plays_by_name, 0)) / NULLIF(d.tracks_total, 0), 1) as album_plays,
+  GREATEST(COALESCE(pid.track_plays_by_id_30d, 0), COALESCE(pname.track_plays_by_name_30d, 0)) as album_track_plays_30d,
+  ROUND(GREATEST(COALESCE(pid.track_plays_by_id_30d, 0), COALESCE(pname.track_plays_by_name_30d, 0)) / NULLIF(d.tracks_total, 0), 1) as album_plays_30d,
   CONCAT("https://open.spotify.com/album/", d.album_id) as album_url,
   e.pitchfork_score,
   e.metacritic_score,

@@ -48,6 +48,12 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Hover tooltips detailing complete breakdown: *"Estimated complete album spins based on {P} track plays across {T} tracks"*.
   - Normalized play count sorting in Library Explorer with raw scrobbles tiebreaker.
   - Deployed live revision `spotify-dashboard-beta-00018-c67`.
+* **Phase 6c: Dynamic Time Horizon (`APP-06`)**
+  - Updated BigQuery view `user_albums_features` with single-pass conditional aggregation (`COUNTIF`) for rolling 30-day metrics (`album_track_plays_30d`, `album_plays_30d`).
+  - Interactive 2-way horizon switcher in Crate Digger (`🔥 Heavy Rotation (Last 30 Days)` vs `🏛️ All-Time Collection`), tuning recommendation weights and candidate pools.
+  - Dynamic time horizon toggle in SpinPals Top 5 to Borrow (`?horizon=30d` vs `?horizon=all_time`), highlighting pal's current obsessions this month.
+  - Added `🔥 Heavy Rotation (Last 30 Days)` sorting in Library Explorer with dynamic 30D badge display.
+  - Deployed live revision `spotify-dashboard-beta-00019-9ds`.
 
 ---
 
@@ -81,7 +87,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
 | **`APP-04`** | Music Legend Illustrated Avatar Persona Picker | Core App | 4–5 hours | Low |
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~ | Core App | 2–3 hours | Completed (Revision `00018-c67`) |
-| **`APP-06`** | Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time) | Core App | 5–7 hours | Low–Med |
+| **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
@@ -247,7 +253,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `APP-06`: Crate Digger & SpinPals "Top Pick" Time Horizon (Heavy Rotation 30D vs. All Time)
+#### `APP-06`: Crate Digger & SpinPals "Top Pick" Time Horizon (Heavy Rotation 30D vs. All Time) [✅ Completed]
 * **Problem:**  
   In both Crate Digger (`/recommend`) and SpinPals (`/pals`), "Top Pick" recommendations and borrow candidates currently rank records solely against lifetime aggregate scrobbles. Because all-time play counts are cumulative and slow to change, the spotlight repeatedly surfaces the same static records week after week, failing to reflect what users and their friends are actively obsessing over right now.
 * **Solution:**  
@@ -337,7 +343,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
 | **`APP-04`** | Music Legend Illustrated Avatars | Core App | 4–5h | SVG Vector Graphics, Datastore, Tailwind CSS | **Low:** Aesthetic charm and personal flair for users without profile photos. |
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge~~ | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed** (Revision `00018-c67`): Normalized spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
-| **`APP-06`** | Crate Digger & SpinPals Dynamic Time Horizon | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | **High:** Keeps recommendations vibrant and non-static by defaulting to rolling 30-day heavy rotation. |
+| **`APP-06`** | ✅ ~~Crate Digger & SpinPals Dynamic Time Horizon~~ | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | ✅ **Completed:** Rolling 30D play count aggregation in BQ view, 2-way horizon toggles in Crate Digger & SpinPals, and 30D library sort. |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |

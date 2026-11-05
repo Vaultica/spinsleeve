@@ -194,23 +194,28 @@ def safe_str(val, default=""):
     return default
 
 
-def compute_normalized_album_plays(track_plays, tracks_total):
+def compute_normalized_album_plays(track_plays, tracks_total, is_30d=False):
     """
-    Computes normalized complete album spins, display badge string, and hover tooltip (APP-05).
+    Computes normalized complete album spins, display badge string, and hover tooltip (APP-05 & APP-06).
     Formula: floor(track_plays / tracks_total) if tracks_total > 0 else track_plays
     Fallback: If tracks_total is unavailable or <= 0, uses track scrobbles.
+    When is_30d=True, adds 30-day context to the label and tooltip.
     """
     track_plays = safe_int(track_plays)
     tracks_total = safe_int(tracks_total)
 
+    period_label = "in last 30 days " if is_30d else ""
+    badge_suffix = " (30D)" if is_30d else ""
+
     if tracks_total > 0:
         norm_plays = track_plays // tracks_total
-        tooltip = f"Estimated complete album spins based on {track_plays} track plays across {tracks_total} tracks"
+        tooltip = f"Estimated complete album spins {period_label}based on {track_plays} track plays across {tracks_total} tracks".strip()
     else:
         norm_plays = track_plays
-        tooltip = f"Total track plays: {track_plays} (track count unavailable)"
+        period_name = "30-day track plays" if is_30d else "Total track plays"
+        tooltip = f"{period_name}: {track_plays} (track count unavailable)"
 
-    display_badge = f"🔥 {norm_plays} Play" if norm_plays == 1 else f"🔥 {norm_plays} Plays"
+    display_badge = f"🔥 {norm_plays} Play{badge_suffix}" if norm_plays == 1 else f"🔥 {norm_plays} Plays{badge_suffix}"
     return norm_plays, display_badge, tooltip
 
 
@@ -351,7 +356,9 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
         tracks_total = safe_int(row.get("album_tracks_total"))
         track_plays = safe_int(row.get("album_track_plays"))
+        track_plays_30d = safe_int(row.get("album_track_plays_30d"))
         norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total)
+        norm_plays_30d, plays_display_30d, plays_tooltip_30d = compute_normalized_album_plays(track_plays_30d, tracks_total, is_30d=True)
 
         item = {
             "album_id": safe_str(row.get("album_id")),
@@ -367,6 +374,11 @@ def fetch_user_album_data(user_id, force_refresh=False):
             "album_normalized_plays": norm_plays,
             "album_plays_display": plays_display,
             "album_plays_tooltip": plays_tooltip,
+            "album_track_plays_30d": track_plays_30d,
+            "album_plays_30d": safe_float(row.get("album_plays_30d")),
+            "album_normalized_plays_30d": norm_plays_30d,
+            "album_plays_display_30d": plays_display_30d,
+            "album_plays_tooltip_30d": plays_tooltip_30d,
             "album_image_url": safe_str(row.get("album_image_url")) or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
             "album_url": safe_str(row.get("album_url")) or f"https://open.spotify.com/album/{safe_str(row.get('album_id'))}",
             "album_genres": safe_str(row.get("album_genres")),
@@ -394,18 +406,22 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
     total_albums = len(processed)
     played_albums = sum(1 for a in processed if a["album_track_plays"] > 0)
+    played_albums_30d = sum(1 for a in processed if (a.get("album_track_plays_30d") or 0) > 0)
     unplayed_albums = total_albums - played_albums
     pct_explored = round((played_albums / total_albums * 100), 1) if total_albums > 0 else 0
     total_plays = sum(a["album_track_plays"] for a in processed)
+    total_plays_30d = sum(a.get("album_track_plays_30d", 0) for a in processed)
     top_album = processed[0]["album_name"] if processed else "None"
     top_album_plays = int(processed[0]["album_plays"]) if processed else 0
 
     kpis = {
         "total_albums": total_albums,
         "played_albums": played_albums,
+        "played_albums_30d": played_albums_30d,
         "unplayed_albums": unplayed_albums,
         "pct_explored": pct_explored,
         "total_plays": total_plays,
+        "total_plays_30d": total_plays_30d,
         "top_album": top_album,
         "top_album_plays": top_album_plays
     }
@@ -700,8 +716,8 @@ def fetch_pals_directory(current_user_id):
     return pals
 
 
-def compute_pal_compatibility(current_user_id, pal_id):
-    """Computes acoustic chemistry, shared vinyl, and top 5 borrow recommendations."""
+def compute_pal_compatibility(current_user_id, pal_id, horizon="30d"):
+    """Computes acoustic chemistry, shared vinyl, and top 5 borrow recommendations (supporting 30D and all-time horizon)."""
     bq_client = bigquery.Client(project=PROJECT_ID)
     ds_client = get_datastore_client()
 
@@ -723,6 +739,8 @@ def compute_pal_compatibility(current_user_id, pal_id):
       f.album_tracks_total,
       f.album_track_plays,
       f.album_plays,
+      f.album_track_plays_30d,
+      f.album_plays_30d,
       f.pitchfork_score,
       f.metacritic_score,
       f.discogs_rating,
@@ -779,7 +797,9 @@ def compute_pal_compatibility(current_user_id, pal_id):
 
         tracks_total = safe_int(row.get("album_tracks_total"))
         track_plays = safe_int(row.get("album_track_plays"))
+        track_plays_30d = safe_int(row.get("album_track_plays_30d"))
         norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total)
+        norm_plays_30d, plays_display_30d, plays_tooltip_30d = compute_normalized_album_plays(track_plays_30d, tracks_total, is_30d=True)
 
         processed_pal_albums.append({
             "album_id": safe_str(row.get("album_id")),
@@ -792,6 +812,11 @@ def compute_pal_compatibility(current_user_id, pal_id):
             "album_normalized_plays": norm_plays,
             "album_plays_display": plays_display,
             "album_plays_tooltip": plays_tooltip,
+            "album_track_plays_30d": track_plays_30d,
+            "album_plays_30d": safe_float(row.get("album_plays_30d")),
+            "album_normalized_plays_30d": norm_plays_30d,
+            "album_plays_display_30d": plays_display_30d,
+            "album_plays_tooltip_30d": plays_tooltip_30d,
             "album_image_url": safe_str(row.get("album_image_url")) or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
             "album_url": f"https://open.spotify.com/album/{safe_str(row.get('album_id'))}",
             "album_genres": safe_str(row.get("album_genres")),
@@ -873,18 +898,22 @@ def compute_pal_compatibility(current_user_id, pal_id):
             "desc": "Completely fresh territory! Their record shelf is an uncharted goldmine of new sounds for your ears."
         }
 
-    # Top 5 Meaningful Recommendations to Borrow
+    # Top 5 Meaningful Recommendations to Borrow (APP-06: 30D vs All-Time horizon)
     def borrow_score(alb):
-        score = alb["album_plays"] * 5
-        if alb["pitchfork_score"]:
+        if horizon == "30d":
+            score = (alb.get("album_plays_30d", 0) * 12) + (alb.get("album_plays", 0) * 2)
+        else:
+            score = alb.get("album_plays", 0) * 5
+
+        if alb.get("pitchfork_score"):
             try:
                 score += float(alb["pitchfork_score"].split("/")[0]) * 2
             except Exception: pass
-        if alb["discogs_rating"]:
+        if alb.get("discogs_rating"):
             try:
                 score += float(alb["discogs_rating"]) * 3
             except Exception: pass
-        if alb["has_gatefold"]:
+        if alb.get("has_gatefold"):
             score += 10
         return score
 
@@ -893,15 +922,26 @@ def compute_pal_compatibility(current_user_id, pal_id):
 
     for item in top_borrow:
         reasons = []
-        if item["album_plays"] > 0:
-            reasons.append(f"{pal_name}'s Heavy Rotation ({int(item['album_plays'])} spins)")
-        if item["pitchfork_score"]:
+        if horizon == "30d" and item.get("album_plays_30d", 0) > 0:
+            reasons.append(f"{pal_name}'s Current Obsession ({int(item['album_plays_30d'])} spins this month)")
+        elif item.get("album_plays", 0) > 0:
+            reasons.append(f"{pal_name}'s Heavy Rotation ({int(item['album_plays'])} lifetime spins)")
+        if item.get("pitchfork_score"):
             reasons.append(f"Pitchfork {item['pitchfork_score']}")
-        elif item["discogs_rating"]:
+        elif item.get("discogs_rating"):
             reasons.append(f"Discogs {item['discogs_rating']}★")
         if not reasons:
             reasons.append(f"From {pal_name}'s Crate")
         item["borrow_reason"] = " • ".join(reasons)
+
+        if horizon == "30d" and item.get("album_track_plays_30d", 0) > 0:
+            item["active_plays_display"] = item["album_plays_display_30d"]
+            item["active_plays_tooltip"] = item["album_plays_tooltip_30d"]
+            item["active_track_plays"] = item["album_track_plays_30d"]
+        else:
+            item["active_plays_display"] = item["album_plays_display"]
+            item["active_plays_tooltip"] = item["album_plays_tooltip"]
+            item["active_track_plays"] = item["album_track_plays"]
 
     return {
         "pal": {
@@ -920,7 +960,8 @@ def compute_pal_compatibility(current_user_id, pal_id):
         },
         "top_borrow": top_borrow,
         "shared_albums": shared_albums[:24],
-        "pal_full_crate": processed_pal_albums
+        "pal_full_crate": processed_pal_albums,
+        "horizon": horizon
     }
 
 
@@ -1668,7 +1709,8 @@ BETA_EXPLORER_HTML = """
                 <div>
                     <select id="sortSelect" onchange="onFilterChange()"
                             class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
-                        <option value="plays_desc">Most Played</option>
+                        <option value="plays_30d_desc">🔥 Heavy Rotation (Last 30 Days)</option>
+                        <option value="plays_desc">Most Played (All Time)</option>
                         <option value="plays_asc">Least Played / Unplayed</option>
                         <option value="added_desc">Recently Added</option>
                         <option value="year_desc">Release Year (Newest)</option>
@@ -1922,24 +1964,35 @@ BETA_EXPLORER_HTML = """
         }
 
         function getAlbumPlayBadge(a) {
-            const trackPlays = Number(a.album_track_plays) || 0;
+            const sortEl = document.getElementById("sortSelect");
+            const is30d = sortEl && sortEl.value === "plays_30d_desc";
+            const trackPlays = is30d ? (Number(a.album_track_plays_30d) || 0) : (Number(a.album_track_plays) || 0);
             const tracksTotal = Number(a.album_tracks_total) || 0;
-            let normPlays = a.album_normalized_plays !== undefined && a.album_normalized_plays !== null ? Number(a.album_normalized_plays) : null;
-            let tooltip = a.album_plays_tooltip || '';
-            let label = a.album_plays_display || '';
 
-            if (normPlays === null || !tooltip || !label) {
-                if (tracksTotal > 0) {
-                    normPlays = Math.floor(trackPlays / tracksTotal);
-                    tooltip = `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
-                } else {
-                    normPlays = trackPlays;
-                    tooltip = `Total track plays: ${trackPlays} (track count unavailable)`;
-                }
-                label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' : 'Plays'}`;
+            if (is30d && a.album_plays_display_30d && a.album_plays_tooltip_30d) {
+                const colorClass = trackPlays > 0 ? 'text-amber-400 font-black' : 'text-gray-400 font-bold';
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip_30d}">${a.album_plays_display_30d}</div>`;
+            } else if (!is30d && a.album_plays_display && a.album_plays_tooltip) {
+                const colorClass = trackPlays > 0 ? 'text-emerald-400 font-black' : 'text-gray-400 font-bold';
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip}">${a.album_plays_display}</div>`;
             }
 
-            const colorClass = trackPlays > 0 ? 'text-emerald-400 font-black' : 'text-gray-400 font-bold';
+            let normPlays = 0;
+            let tooltip = '';
+            if (tracksTotal > 0) {
+                normPlays = Math.floor(trackPlays / tracksTotal);
+                tooltip = is30d
+                    ? `Estimated complete album spins in last 30 days based on ${trackPlays} track plays across ${tracksTotal} tracks`
+                    : `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
+            } else {
+                normPlays = trackPlays;
+                tooltip = is30d
+                    ? `30-day track plays: ${trackPlays} (track count unavailable)`
+                    : `Total track plays: ${trackPlays} (track count unavailable)`;
+            }
+            const suffix = is30d ? ' (30D)' : '';
+            const label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
+            const colorClass = trackPlays > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
             return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
         }
 
@@ -1993,7 +2046,13 @@ BETA_EXPLORER_HTML = """
                 return matchQ && matchG;
             });
 
-            if (sort === "plays_desc") {
+            if (sort === "plays_30d_desc") {
+                filteredAlbums.sort((a,b) => {
+                    const normB = b.album_normalized_plays_30d !== undefined ? Number(b.album_normalized_plays_30d) : (b.album_tracks_total ? Math.floor((b.album_track_plays_30d||0)/b.album_tracks_total) : (b.album_track_plays_30d||0));
+                    const normA = a.album_normalized_plays_30d !== undefined ? Number(a.album_normalized_plays_30d) : (a.album_tracks_total ? Math.floor((a.album_track_plays_30d||0)/a.album_tracks_total) : (a.album_track_plays_30d||0));
+                    return (normB - normA) || ((b.album_track_plays_30d||0) - (a.album_track_plays_30d||0)) || ((b.album_track_plays||0) - (a.album_track_plays||0));
+                });
+            } else if (sort === "plays_desc") {
                 filteredAlbums.sort((a,b) => {
                     const normB = b.album_normalized_plays !== undefined ? Number(b.album_normalized_plays) : (b.album_tracks_total ? Math.floor((b.album_track_plays||0)/b.album_tracks_total) : (b.album_track_plays||0));
                     const normA = a.album_normalized_plays !== undefined ? Number(a.album_normalized_plays) : (a.album_tracks_total ? Math.floor((a.album_track_plays||0)/a.album_tracks_total) : (a.album_track_plays||0));
@@ -2390,7 +2449,19 @@ BETA_RECOMMEND_HTML = """
                 </div>
 
                 <div>
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">2. Mood &amp; Vibe</label>
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">2. Time Horizon (APP-06)</label>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button onclick="setHorizon('30d')" id="horizonBtn-30d" class="pill-active px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
+                            <span>🔥</span> Heavy Rotation (Last 30 Days: {{ kpis.played_albums_30d or 0 }} active)
+                        </button>
+                        <button onclick="setHorizon('all')" id="horizonBtn-all" class="pill-inactive px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
+                            <span>🏛️</span> All-Time Collection ({{ kpis.played_albums or 0 }} played)
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">3. Mood &amp; Vibe</label>
                     <div class="flex flex-wrap gap-2">
                         <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-3.5 py-1.5 rounded-lg text-xs transition">🌌 Any Vibe</button>
                         <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">🌙 Late Night / Chill</button>
@@ -2402,7 +2473,7 @@ BETA_RECOMMEND_HTML = """
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-800/80">
                     <div>
-                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">3. Era Preference</label>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">4. Era Preference</label>
                         <div class="flex flex-wrap gap-2">
                             <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-3 py-1.5 rounded-lg text-xs transition">Any Era</button>
                             <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-3 py-1.5 rounded-lg text-xs transition">✨ Recent (2018+)</button>
@@ -2411,7 +2482,7 @@ BETA_RECOMMEND_HTML = """
                         </div>
                     </div>
                     <div>
-                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">4. Specific Sub-Genre (Optional)</label>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">5. Specific Sub-Genre (Optional)</label>
                         <select id="genreSelect" onchange="onGenreSelect(this.value)" class="w-full bg-[#11151a] border border-gray-700/80 rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
                             <option value="">Any Genre</option>
                             {% for g in top_genres %}
@@ -2688,6 +2759,17 @@ BETA_RECOMMEND_HTML = """
             vintage: ['classic rock', 'soul', 'psychedelic', 'blues', 'funk', 'motown', 'vintage', '60s', '70s', '80s']
         };
 
+        let selectedHorizon = '30d';
+
+        function setHorizon(horizon) {
+            selectedHorizon = horizon;
+            const btn30 = document.getElementById('horizonBtn-30d');
+            const btnAll = document.getElementById('horizonBtn-all');
+            if (btn30) btn30.className = (horizon === '30d' ? 'pill-active' : 'pill-inactive') + ' px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
+            if (btnAll) btnAll.className = (horizon === 'all' ? 'pill-active' : 'pill-inactive') + ' px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
+            runRecommender();
+        }
+
         function setMode(mode) {
             selectedMode = mode;
             document.getElementById('modeBtn-discover').className = (mode === 'discover' ? 'pill-active' : 'pill-inactive') + ' px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
@@ -2738,12 +2820,18 @@ BETA_RECOMMEND_HTML = """
             if (album.has_gatefold) score += 12;
 
             if (selectedMode === 'discover') {
-                const plays = album.album_track_plays || 0;
+                const plays = selectedHorizon === '30d' ? (album.album_track_plays_30d || 0) : (album.album_track_plays || 0);
                 if (plays === 0) score += 30;
                 else score -= plays * 2;
             } else {
-                const plays = album.album_track_plays || 0;
-                score += Math.min(plays * 2.5, 35);
+                if (selectedHorizon === '30d') {
+                    const plays30 = album.album_track_plays_30d || 0;
+                    score += Math.min(plays30 * 4.0, 40);
+                    score += Math.min((album.album_track_plays || 0) * 0.5, 10);
+                } else {
+                    const plays = album.album_track_plays || 0;
+                    score += Math.min(plays * 2.5, 35);
+                }
             }
 
             return score;
@@ -2751,8 +2839,20 @@ BETA_RECOMMEND_HTML = """
 
         function runRecommender() {
             let pool = ALL_ALBUMS.filter(a => {
-                if (selectedMode === 'discover' && (a.album_track_plays || 0) > 0) return false;
-                if (selectedMode === 'favorites' && (a.album_track_plays || 0) === 0) return false;
+                if (selectedMode === 'discover') {
+                    if (selectedHorizon === '30d') {
+                        if ((a.album_track_plays_30d || 0) > 0) return false;
+                    } else {
+                        if ((a.album_track_plays || 0) > 0) return false;
+                    }
+                }
+                if (selectedMode === 'favorites') {
+                    if (selectedHorizon === '30d') {
+                        if ((a.album_track_plays_30d || 0) === 0) return false;
+                    } else {
+                        if ((a.album_track_plays || 0) === 0) return false;
+                    }
+                }
 
                 const year = parseInt(a.release_year) || 0;
                 if (selectedEra === 'recent' && year < 2018) return false;
@@ -2773,6 +2873,11 @@ BETA_RECOMMEND_HTML = """
                 return true;
             });
 
+            // If 30-day favorites filter produced no results, gracefully fall back to all-time favorites
+            if (pool.length === 0 && selectedMode === 'favorites' && selectedHorizon === '30d') {
+                pool = ALL_ALBUMS.filter(a => (a.album_track_plays || 0) > 0);
+            }
+
             document.getElementById('poolCountText').innerText = `${pool.length.toLocaleString()} matching records in your library`;
 
             const scored = pool.map((album, idx) => ({
@@ -2788,24 +2893,34 @@ BETA_RECOMMEND_HTML = """
         }
 
         function getAlbumPlayBadge(a) {
-            const trackPlays = Number(a.album_track_plays) || 0;
+            const is30d = (typeof selectedHorizon !== 'undefined') && selectedHorizon === '30d';
+            const trackPlays = is30d ? (Number(a.album_track_plays_30d) || 0) : (Number(a.album_track_plays) || 0);
             const tracksTotal = Number(a.album_tracks_total) || 0;
-            let normPlays = a.album_normalized_plays !== undefined && a.album_normalized_plays !== null ? Number(a.album_normalized_plays) : null;
-            let tooltip = a.album_plays_tooltip || '';
-            let label = a.album_plays_display || '';
 
-            if (normPlays === null || !tooltip || !label) {
-                if (tracksTotal > 0) {
-                    normPlays = Math.floor(trackPlays / tracksTotal);
-                    tooltip = `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
-                } else {
-                    normPlays = trackPlays;
-                    tooltip = `Total track plays: ${trackPlays} (track count unavailable)`;
-                }
-                label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' : 'Plays'}`;
+            if (is30d && a.album_plays_display_30d && a.album_plays_tooltip_30d) {
+                const colorClass = trackPlays > 0 ? 'text-amber-400 font-black' : 'text-gray-400 font-bold';
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip_30d}">${a.album_plays_display_30d}</div>`;
+            } else if (!is30d && a.album_plays_display && a.album_plays_tooltip) {
+                const colorClass = trackPlays > 0 ? 'text-emerald-400 font-black' : 'text-gray-400 font-bold';
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip}">${a.album_plays_display}</div>`;
             }
 
-            const colorClass = trackPlays > 0 ? 'text-emerald-400 font-black' : 'text-gray-400 font-bold';
+            let normPlays = 0;
+            let tooltip = '';
+            if (tracksTotal > 0) {
+                normPlays = Math.floor(trackPlays / tracksTotal);
+                tooltip = is30d
+                    ? `Estimated complete album spins in last 30 days based on ${trackPlays} track plays across ${tracksTotal} tracks`
+                    : `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
+            } else {
+                normPlays = trackPlays;
+                tooltip = is30d
+                    ? `30-day track plays: ${trackPlays} (track count unavailable)`
+                    : `Total track plays: ${trackPlays} (track count unavailable)`;
+            }
+            const suffix = is30d ? ' (30D)' : '';
+            const label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
+            const colorClass = trackPlays > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
             return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
         }
 
@@ -3938,7 +4053,11 @@ def beta_pals(pal_id=None):
     if not target_pal:
         target_pal = other_pals[0]
 
-    pal_data = compute_pal_compatibility(current_user_id, target_pal["spotify_id"])
+    horizon = request.args.get("horizon", "30d").lower()
+    if horizon not in ("30d", "all_time"):
+        horizon = "30d"
+
+    pal_data = compute_pal_compatibility(current_user_id, target_pal["spotify_id"], horizon=horizon)
 
     return render_template_string(
         BETA_PALS_HTML,
@@ -3949,6 +4068,7 @@ def beta_pals(pal_id=None):
         top_borrow=pal_data["top_borrow"],
         shared_albums=pal_data["shared_albums"],
         pal_crate=pal_data["pal_full_crate"],
+        horizon=horizon,
         brand_icon=ICON_A_SVG,
         gatefold_icon=ICON_GATEFOLD_SVG
     )
@@ -4142,12 +4262,24 @@ BETA_PALS_HTML = """
 
         <!-- 3. TOP 5 RECORDS TO BORROW FROM PAL -->
         <div class="mb-10">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-                    <h2 class="text-xl font-black text-white tracking-tight">Top 5 Records to Borrow from {{ selected_pal.display_name }}</h2>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        <h2 class="text-xl font-black text-white tracking-tight">Top 5 Records to Borrow from {{ selected_pal.display_name }}</h2>
+                    </div>
+                    <span class="text-xs text-gray-400">Curated gems on their shelf you haven't saved yet</span>
                 </div>
-                <span class="text-xs text-gray-400">Curated gems on their shelf you haven't saved yet</span>
+
+                <!-- 2-way Horizon Switcher (APP-06) -->
+                <div class="flex items-center gap-1.5 bg-black/40 border border-gray-800 rounded-xl p-1 shrink-0">
+                    <a href="?horizon=30d" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 {% if horizon != 'all_time' %}bg-amber-500 text-black shadow-md{% else %}text-gray-400 hover:text-white{% endif %}">
+                        <span>🔥</span> Heavy Rotation (30D)
+                    </a>
+                    <a href="?horizon=all_time" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 {% if horizon == 'all_time' %}bg-amber-500 text-black shadow-md{% else %}text-gray-400 hover:text-white{% endif %}">
+                        <span>🏛️</span> All-Time
+                    </a>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -4165,9 +4297,9 @@ BETA_PALS_HTML = """
                                 {{ gatefold_icon | safe }}
                             </div>
                             {% endif %}
-                            <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] font-black {% if (a.album_track_plays or 0) > 0 %}text-amber-400{% else %}text-gray-400 font-bold{% endif %} select-none"
-                                 title="{{ a.album_plays_tooltip or ('Total track plays: ' ~ (a.album_track_plays | default(0))) }}">
-                                {{ a.album_plays_display or ('🔥 ' ~ (a.album_normalized_plays | default(0)) ~ ' Plays') }}
+                            <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] font-black {% if (a.active_track_plays or a.album_track_plays or 0) > 0 %}text-amber-400{% else %}text-gray-400 font-bold{% endif %} select-none"
+                                 title="{{ a.active_plays_tooltip or a.album_plays_tooltip or ('Total track plays: ' ~ (a.album_track_plays | default(0))) }}">
+                                {{ a.active_plays_display or a.album_plays_display or ('🔥 ' ~ (a.album_normalized_plays | default(0)) ~ ' Plays') }}
                             </div>
                             <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
                                 <span class="w-0.5 bg-emerald-400 wave-bar"></span>
