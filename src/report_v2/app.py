@@ -62,6 +62,14 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
+# Application Version (POLISH-04)
+APP_VERSION = "v2.2.0"
+
+
+@app.context_processor
+def inject_globals():
+    return {"app_version": APP_VERSION}
+
 
 def get_datastore_client():
     return datastore.Client(project=PROJECT_ID)
@@ -1693,7 +1701,7 @@ BETA_EXPLORER_HTML = """
                     </div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
-                        <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">BETA v2</span>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-500/30" title="SpinSleeve {{ app_version }}">{{ app_version }}</span>
                     </div>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Multi-tenant edition • Personal vinyl crate &amp; gatefold archive</p>
@@ -1712,26 +1720,13 @@ BETA_EXPLORER_HTML = """
                 {% endif %}
                 <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
                     <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
-                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
+                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    {% if is_admin or is_impersonating %}
+                    {% if is_impersonating %}
                     <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
-                        {% if is_impersonating %}
                         <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
-                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
-                        {% else %}
-                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
-                        {% if user.user_id != 'sergebou' %}
-                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded transition">👑 Serge</a>
-                        {% endif %}
-                        {% if user.user_id != 'sarahboosch' %}
-                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded transition">👩 Sarah</a>
-                        {% endif %}
-                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
-                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded transition">🐹 GuineaPig</a>
-                        {% endif %}
-                        {% endif %}
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
@@ -2459,26 +2454,13 @@ BETA_RECOMMEND_HTML = """
                 {% endif %}
                 <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
                     <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
-                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
+                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    {% if is_admin or is_impersonating %}
+                    {% if is_impersonating %}
                     <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
-                        {% if is_impersonating %}
                         <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
-                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
-                        {% else %}
-                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
-                        {% if user.user_id != 'sergebou' %}
-                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded transition">👑 Serge</a>
-                        {% endif %}
-                        {% if user.user_id != 'sarahboosch' %}
-                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded transition">👩 Sarah</a>
-                        {% endif %}
-                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
-                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded transition">🐹 GuineaPig</a>
-                        {% endif %}
-                        {% endif %}
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
@@ -3391,26 +3373,13 @@ BETA_ANALYTICS_HTML = """
                 {% endif %}
                 <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
                     <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
-                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
+                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    {% if is_admin or is_impersonating %}
+                    {% if is_impersonating %}
                     <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
-                        {% if is_impersonating %}
                         <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
-                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
-                        {% else %}
-                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
-                        {% if user.user_id != 'sergebou' %}
-                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded transition">👑 Serge</a>
-                        {% endif %}
-                        {% if user.user_id != 'sarahboosch' %}
-                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded transition">👩 Sarah</a>
-                        {% endif %}
-                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
-                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded transition">🐹 GuineaPig</a>
-                        {% endif %}
-                        {% endif %}
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
@@ -4193,26 +4162,13 @@ BETA_PALS_HTML = """
                 {% endif %}
                 <div class="flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5">
                     <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 shrink-0">
-                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" class="w-full h-full object-cover">
+                        <img src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}" class="w-full h-full object-cover">
                     </div>
                     <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
-                    {% if is_admin or is_impersonating %}
+                    {% if is_impersonating %}
                     <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
-                        {% if is_impersonating %}
                         <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
-                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition">↩ Revert</a>
-                        {% else %}
-                        <span class="text-[10px] text-gray-500 font-bold">Switch:</span>
-                        {% if user.user_id != 'sergebou' %}
-                        <a href="/beta/dev-switch/sergebou" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold ml-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded transition">👑 Serge</a>
-                        {% endif %}
-                        {% if user.user_id != 'sarahboosch' %}
-                        <a href="/beta/dev-switch/sarahboosch" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded transition">👩 Sarah</a>
-                        {% endif %}
-                        {% if user.user_id != '31sevhztrcbajfcowsahl7z2p26q' %}
-                        <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold ml-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded transition">🐹 GuineaPig</a>
-                        {% endif %}
-                        {% endif %}
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
                     <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>

@@ -13,7 +13,8 @@ from report_v2.app import (
     BETA_PALS_HTML,
     ADMIN_HTML_TEMPLATE,
     PALS_LOCKED_HTML,
-    ICON_A_SVG
+    ICON_A_SVG,
+    APP_VERSION
 )
 
 
@@ -77,9 +78,9 @@ class TestAdminAndPalsFeatures(unittest.TestCase):
                 self.assertNotIn("🐹 GuineaPig", rendered, f"Dev switcher leaked to normal user in {name}")
                 self.assertNotIn("⚙️ Admin", rendered, f"Admin deck link leaked to normal user in {name}")
 
-    def test_admin_sees_switcher(self):
+    def test_admin_sees_admin_link_and_clean_header(self):
         """When rendered for an administrator (is_admin=True, is_impersonating=False),
-        the admin link and switchers must be visible."""
+        the admin link must be visible, but header switchers must be absent (POLISH-05)."""
         context = {
             **self.dummy_context,
             "user": {"display_name": "Serge", "user_id": "sergebou", "avatar_url": "", "pals_opt_in": True},
@@ -91,7 +92,21 @@ class TestAdminAndPalsFeatures(unittest.TestCase):
                 t = jinja2.Template(html)
                 rendered = t.render(**context)
                 self.assertIn("⚙️ Admin", rendered, f"Admin link missing for admin in {name}")
-                self.assertIn("👩 Sarah", rendered, f"Switcher missing for admin in {name}")
+                self.assertNotIn("👑 Serge", rendered, f"Dev switcher should be removed from header in {name}")
+                self.assertNotIn("👩 Sarah", rendered, f"Dev switcher should be removed from header in {name}")
+                self.assertNotIn("🐹 GuineaPig", rendered, f"Dev switcher should be removed from header in {name}")
+
+    def test_semantic_versioning_polish_04(self):
+        """BETA v2 must be removed from the explorer header and replaced with dynamic APP_VERSION (POLISH-04)."""
+        self.assertNotIn("BETA v2", BETA_EXPLORER_HTML)
+        t = jinja2.Template(BETA_EXPLORER_HTML)
+        context = {
+            **self.dummy_context,
+            "user": {"display_name": "Serge", "user_id": "sergebou", "avatar_url": "", "pals_opt_in": True},
+            "app_version": APP_VERSION
+        }
+        rendered = t.render(**context)
+        self.assertIn(APP_VERSION, rendered)
 
     def test_admin_impersonating_sees_revert(self):
         """When an admin is impersonating another user, the revert button must be visible."""

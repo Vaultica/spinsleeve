@@ -65,6 +65,11 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Added automatic cache invalidation in `src/pipeline_v2/sync.py` when new listening events or saved albums are ingested.
   - Added unit test suite in `tests/test_datastore_cache.py` (42/42 tests passing).
   - Deployed live revision `spotify-dashboard-beta-00021-42p`.
+* **Phase 6f: Header Polish & Semantic Release Versioning (`POLISH-04`, `POLISH-05`)**
+  - Removed static "beta v2" badge, replaced with dynamic `APP_VERSION = "v2.2.0"` globally injected via Flask context processor.
+  - Standardized user profile widget in global navigation header with normal user avatar and display name across all views.
+  - Removed admin user-switcher clutter (`👑 Serge`, `👩 Sarah`, `🐹 GuineaPig`) from header, keeping impersonation strictly housed inside `/admin` with clear `↩ Revert` escape button.
+  - Deployed live revision `spotify-dashboard-beta-00022-z5t`.
 
 ---
 
@@ -105,8 +110,8 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Simplify Crate Digger | Tactical Polish | 2–3 hours | Low |
 | **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering (Strict 30D Descending) | Tactical Polish | 1–2 hours | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
-| **`POLISH-04`** | Semantic Build Versioning (Replace "beta v2" with Version) | Tactical Polish | 1–2 hours | Low |
-| **`POLISH-05`** | Clean Header Profile Avatar (Remove Admin Switcher from Header) | Tactical Polish | 1–2 hours | Low |
+| **`POLISH-04`** | ✅ ~~Semantic Build Versioning (Replace "beta v2" with Version)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.0`: Revision `00022-z5t`) |
+| **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher from Header)~~ | Tactical Polish | 1–2 hours | Completed (Revision `00022-z5t`) |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2 hours | Low |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
@@ -341,14 +346,14 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `POLISH-04`: Semantic Build Version Numbering (Replace "beta v2" with Dynamic Version)
+#### `POLISH-04`: Semantic Build Version Numbering (Replace "beta v2" with Dynamic Version) [✅ Completed]
 * **Problem:** The main Library page still displays the generic "beta v2" badge in the header, offering no visibility into which build or deployment revision is currently serving traffic.
-* **Solution:** Remove the static "beta v2" label. Introduce a centralized semantic application version number (e.g. `v2.4.1`) or automated build counter that increments with each deployment build and is visible in the header/footer.
+* **Solution:** Remove the static "beta v2" label. Introduce a centralized semantic application version number (`APP_VERSION = "v2.2.0"`) globally injected via Flask context processor and visible in the header badge.
 * **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
 
 ---
 
-#### `POLISH-05`: Standardize Header Profile Avatar (Remove Admin Impersonation from Global Header)
+#### `POLISH-05`: Standardize Header Profile Avatar (Remove Admin Impersonation from Global Header) [✅ Completed]
 * **Problem:** The top-right user profile widget in the global header currently renders dev-switcher links (`👑 Serge`, `👩 Sarah`, `🐹 GuineaPig`) for admins, cluttering the clean navigation bar across every view.
 * **Solution:** Standardize the top-right corner to show only a normal user profile avatar and logout button for all users (including admins). Keep admin user view assumption and impersonation strictly housed inside the dedicated Admin Portal (`/admin`).
 * **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
@@ -429,8 +434,8 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Crate Digger UX | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | **Medium:** Unified filtering terminology across all views and streamlined recommender controls. |
 | **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering by 30D Plays | Tactical Polish | 1–2h | JavaScript, Array Sorting | **Medium:** Enforce strict deterministic descending order by 30-day plays. |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
-| **`POLISH-04`** | Semantic Build Version Numbering (Remove "beta v2") | Tactical Polish | 1–2h | Flask, Jinja2, CI/CD | **Low:** Replaces static beta badge with dynamic semantic release version. |
-| **`POLISH-05`** | Clean Header Profile Avatar (Remove Admin Switcher) | Tactical Polish | 1–2h | Jinja2, HTML5, Flask Session | **Low:** Keeps global header clean and standard; isolates impersonation to Admin Portal. |
+| **`POLISH-04`** | ✅ ~~Semantic Build Version Numbering (Remove "beta v2")~~ | Tactical Polish | 1–2h | Flask, Jinja2, CI/CD | ✅ **Completed** (`v2.2.0`: Revision `00022-z5t`): Replaced static beta badge with dynamic semantic release version. |
+| **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher)~~ | Tactical Polish | 1–2h | Jinja2, HTML5, Flask Session | ✅ **Completed** (Revision `00022-z5t`): Clean standard user avatar for all users; impersonation housed in Admin Portal. |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2h | HTML5, Tailwind CSS | **Low:** Eliminates table misalignment, button wrapping, and truncation on admin portal. |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
