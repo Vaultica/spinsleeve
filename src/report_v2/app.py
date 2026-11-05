@@ -194,6 +194,26 @@ def safe_str(val, default=""):
     return default
 
 
+def compute_normalized_album_plays(track_plays, tracks_total):
+    """
+    Computes normalized complete album spins, display badge string, and hover tooltip (APP-05).
+    Formula: floor(track_plays / tracks_total) if tracks_total > 0 else track_plays
+    Fallback: If tracks_total is unavailable or <= 0, uses track scrobbles.
+    """
+    track_plays = safe_int(track_plays)
+    tracks_total = safe_int(tracks_total)
+
+    if tracks_total > 0:
+        norm_plays = track_plays // tracks_total
+        tooltip = f"Estimated complete album spins based on {track_plays} track plays across {tracks_total} tracks"
+    else:
+        norm_plays = track_plays
+        tooltip = f"Total track plays: {track_plays} (track count unavailable)"
+
+    display_badge = f"🔥 {norm_plays} Play" if norm_plays == 1 else f"🔥 {norm_plays} Plays"
+    return norm_plays, display_badge, tooltip
+
+
 # ==============================================================================
 # MULTI-TENANT BIGQUERY ENGINE & INITIAL SYNC
 # ==============================================================================
@@ -329,6 +349,10 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
         has_gatefold = bool(desc_str or pf_str or meta_str or am_str or disc_str or personnel_list)
 
+        tracks_total = safe_int(row.get("album_tracks_total"))
+        track_plays = safe_int(row.get("album_track_plays"))
+        norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total)
+
         item = {
             "album_id": safe_str(row.get("album_id")),
             "album_name": safe_str(row.get("album_name"), "Unknown Album"),
@@ -337,9 +361,12 @@ def fetch_user_album_data(user_id, force_refresh=False):
             "release_year": safe_str(row.get("release_year")),
             "album_type": safe_str(row.get("album_type"), "album"),
             "album_label": safe_str(row.get("album_label")),
-            "album_tracks_total": safe_int(row.get("album_tracks_total")),
-            "album_track_plays": safe_int(row.get("album_track_plays")),
+            "album_tracks_total": tracks_total,
+            "album_track_plays": track_plays,
             "album_plays": safe_float(row.get("album_plays")),
+            "album_normalized_plays": norm_plays,
+            "album_plays_display": plays_display,
+            "album_plays_tooltip": plays_tooltip,
             "album_image_url": safe_str(row.get("album_image_url")) or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
             "album_url": safe_str(row.get("album_url")) or f"https://open.spotify.com/album/{safe_str(row.get('album_id'))}",
             "album_genres": safe_str(row.get("album_genres")),
@@ -693,6 +720,7 @@ def compute_pal_compatibility(current_user_id, pal_id):
       f.album_image_url,
       f.release_year,
       f.album_genres,
+      f.album_tracks_total,
       f.album_track_plays,
       f.album_plays,
       f.pitchfork_score,
@@ -749,18 +777,25 @@ def compute_pal_compatibility(current_user_id, pal_id):
         disc_str = safe_str(row.get("discogs_rating"))
         has_gatefold = bool(desc_str or pf_str or meta_str or am_str or disc_str or personnel_list)
 
+        tracks_total = safe_int(row.get("album_tracks_total"))
+        track_plays = safe_int(row.get("album_track_plays"))
+        norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total)
+
         processed_pal_albums.append({
             "album_id": safe_str(row.get("album_id")),
             "album_name": safe_str(row.get("album_name"), "Unknown Album"),
             "album_artist_name": safe_str(row.get("album_artist_name"), "Unknown Artist"),
             "release_year": safe_str(row.get("release_year")),
-            "album_track_plays": safe_int(row.get("album_track_plays")),
+            "album_tracks_total": tracks_total,
+            "album_track_plays": track_plays,
             "album_plays": safe_float(row.get("album_plays")),
+            "album_normalized_plays": norm_plays,
+            "album_plays_display": plays_display,
+            "album_plays_tooltip": plays_tooltip,
             "album_image_url": safe_str(row.get("album_image_url")) or "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
             "album_url": f"https://open.spotify.com/album/{safe_str(row.get('album_id'))}",
             "album_genres": safe_str(row.get("album_genres")),
             "has_gatefold": has_gatefold,
-            "album_description": desc_str,
             "pitchfork_score": pf_str,
             "metacritic_score": meta_str,
             "allmusic_score": am_str,
@@ -1886,6 +1921,28 @@ BETA_EXPLORER_HTML = """
             toast.classList.remove('translate-y-0', 'opacity-100');
         }
 
+        function getAlbumPlayBadge(a) {
+            const trackPlays = Number(a.album_track_plays) || 0;
+            const tracksTotal = Number(a.album_tracks_total) || 0;
+            let normPlays = a.album_normalized_plays !== undefined && a.album_normalized_plays !== null ? Number(a.album_normalized_plays) : null;
+            let tooltip = a.album_plays_tooltip || '';
+            let label = a.album_plays_display || '';
+
+            if (normPlays === null || !tooltip || !label) {
+                if (tracksTotal > 0) {
+                    normPlays = Math.floor(trackPlays / tracksTotal);
+                    tooltip = `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
+                } else {
+                    normPlays = trackPlays;
+                    tooltip = `Total track plays: ${trackPlays} (track count unavailable)`;
+                }
+                label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' : 'Plays'}`;
+            }
+
+            const colorClass = trackPlays > 0 ? 'text-emerald-400 font-black' : 'text-gray-400 font-bold';
+            return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
+        }
+
         function renderGrid() {
             const grid = document.getElementById("albumGrid");
             const toShow = filteredAlbums.slice(0, displayLimit);
@@ -1909,9 +1966,7 @@ BETA_EXPLORER_HTML = """
                                 {{ gatefold_icon | safe }}
                             </div>
                         ` : ''}
-                        <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] font-black text-emerald-400">
-                            ${a.album_track_plays || 0}
-                        </div>
+                        ${getAlbumPlayBadge(a)}
                         <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
                             <span class="w-0.5 bg-emerald-400 wave-bar"></span>
                             <span class="w-0.5 bg-emerald-400 wave-bar"></span>
@@ -1938,8 +1993,19 @@ BETA_EXPLORER_HTML = """
                 return matchQ && matchG;
             });
 
-            if (sort === "plays_desc") filteredAlbums.sort((a,b) => (b.album_track_plays||0) - (a.album_track_plays||0));
-            else if (sort === "plays_asc") filteredAlbums.sort((a,b) => (a.album_track_plays||0) - (b.album_track_plays||0));
+            if (sort === "plays_desc") {
+                filteredAlbums.sort((a,b) => {
+                    const normB = b.album_normalized_plays !== undefined ? Number(b.album_normalized_plays) : (b.album_tracks_total ? Math.floor((b.album_track_plays||0)/b.album_tracks_total) : (b.album_track_plays||0));
+                    const normA = a.album_normalized_plays !== undefined ? Number(a.album_normalized_plays) : (a.album_tracks_total ? Math.floor((a.album_track_plays||0)/a.album_tracks_total) : (a.album_track_plays||0));
+                    return (normB - normA) || ((b.album_track_plays||0) - (a.album_track_plays||0));
+                });
+            } else if (sort === "plays_asc") {
+                filteredAlbums.sort((a,b) => {
+                    const normB = b.album_normalized_plays !== undefined ? Number(b.album_normalized_plays) : (b.album_tracks_total ? Math.floor((b.album_track_plays||0)/b.album_tracks_total) : (b.album_track_plays||0));
+                    const normA = a.album_normalized_plays !== undefined ? Number(a.album_normalized_plays) : (a.album_tracks_total ? Math.floor((a.album_track_plays||0)/a.album_tracks_total) : (a.album_track_plays||0));
+                    return (normA - normB) || ((a.album_track_plays||0) - (b.album_track_plays||0));
+                });
+            }
             else if (sort === "added_desc") filteredAlbums.sort((a,b) => (b.added_at||"").localeCompare(a.added_at||""));
             else if (sort === "year_desc") filteredAlbums.sort((a,b) => (b.release_year||0) - (a.release_year||0));
             else if (sort === "artist_asc") filteredAlbums.sort((a,b) => (a.album_artist_name||"").localeCompare(b.album_artist_name||""));
@@ -2721,6 +2787,28 @@ BETA_RECOMMEND_HTML = """
             renderCandidatePool(remainingPool);
         }
 
+        function getAlbumPlayBadge(a) {
+            const trackPlays = Number(a.album_track_plays) || 0;
+            const tracksTotal = Number(a.album_tracks_total) || 0;
+            let normPlays = a.album_normalized_plays !== undefined && a.album_normalized_plays !== null ? Number(a.album_normalized_plays) : null;
+            let tooltip = a.album_plays_tooltip || '';
+            let label = a.album_plays_display || '';
+
+            if (normPlays === null || !tooltip || !label) {
+                if (tracksTotal > 0) {
+                    normPlays = Math.floor(trackPlays / tracksTotal);
+                    tooltip = `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
+                } else {
+                    normPlays = trackPlays;
+                    tooltip = `Total track plays: ${trackPlays} (track count unavailable)`;
+                }
+                label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' : 'Plays'}`;
+            }
+
+            const colorClass = trackPlays > 0 ? 'text-emerald-400 font-black' : 'text-gray-400 font-bold';
+            return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
+        }
+
         function renderSpotlight(albums) {
             const container = document.getElementById('spotlightContainer');
             if (albums.length === 0) {
@@ -2756,6 +2844,7 @@ BETA_RECOMMEND_HTML = """
 
                         <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-800/80 mb-4 sleeve-shadow relative">
                             <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            ${getAlbumPlayBadge(a)}
                             <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
                                 <span class="w-0.5 bg-emerald-400 wave-bar"></span>
                                 <span class="w-0.5 bg-emerald-400 wave-bar"></span>
@@ -2794,9 +2883,7 @@ BETA_RECOMMEND_HTML = """
                                 {{ gatefold_icon | safe }}
                             </div>
                         ` : ''}
-                        <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] font-black text-emerald-400">
-                            ${a.album_track_plays || 0}
-                        </div>
+                        ${getAlbumPlayBadge(a)}
                         <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
                             <span class="w-0.5 bg-emerald-400 wave-bar"></span>
                             <span class="w-0.5 bg-emerald-400 wave-bar"></span>
@@ -4078,6 +4165,10 @@ BETA_PALS_HTML = """
                                 {{ gatefold_icon | safe }}
                             </div>
                             {% endif %}
+                            <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] font-black {% if (a.album_track_plays or 0) > 0 %}text-amber-400{% else %}text-gray-400 font-bold{% endif %} select-none"
+                                 title="{{ a.album_plays_tooltip or ('Total track plays: ' ~ (a.album_track_plays | default(0))) }}">
+                                {{ a.album_plays_display or ('🔥 ' ~ (a.album_normalized_plays | default(0)) ~ ' Plays') }}
+                            </div>
                             <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
                                 <span class="w-0.5 bg-emerald-400 wave-bar"></span>
                                 <span class="w-0.5 bg-emerald-400 wave-bar"></span>
@@ -4129,6 +4220,15 @@ BETA_PALS_HTML = """
                         {% if a.current_user_owns %}
                         <div class="absolute top-2 right-2 bg-emerald-500/80 backdrop-blur-md rounded-lg px-2 py-0.5 border border-emerald-400 text-[10px] font-black text-black" title="You both own this record!">
                             🤝 Both Own
+                        </div>
+                        <div class="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] font-black {% if (a.album_track_plays or 0) > 0 %}text-emerald-400{% else %}text-gray-400 font-bold{% endif %} select-none"
+                             title="{{ a.album_plays_tooltip or ('Total track plays: ' ~ (a.album_track_plays | default(0))) }}">
+                            {{ a.album_plays_display or ('🔥 ' ~ (a.album_normalized_plays | default(0)) ~ ' Plays') }}
+                        </div>
+                        {% else %}
+                        <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] font-black {% if (a.album_track_plays or 0) > 0 %}text-emerald-400{% else %}text-gray-400 font-bold{% endif %} select-none"
+                             title="{{ a.album_plays_tooltip or ('Total track plays: ' ~ (a.album_track_plays | default(0))) }}">
+                            {{ a.album_plays_display or ('🔥 ' ~ (a.album_normalized_plays | default(0)) ~ ' Plays') }}
                         </div>
                         {% endif %}
                         <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">

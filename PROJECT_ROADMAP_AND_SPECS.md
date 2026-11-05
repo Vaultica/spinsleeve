@@ -74,8 +74,9 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-02`** | Cross-Platform Apple Music Library Onboarding (Phase 7) | Core App | 16–24 hours | Medium |
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
 | **`APP-04`** | Music Legend Illustrated Avatar Persona Picker | Core App | 4–5 hours | Low |
-| **`APP-05`** | Album Sleeve Normalized Play Count Badge ("🔥 X Plays") | Core App | 2–3 hours | Low |
+| **`APP-05`** | Album Sleeve Normalized Play Count Badge ("🔥 X Plays") | Core App | 2–3 hours | Low (✅ Completed) |
 | **`APP-06`** | Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time) | Core App | 5–7 hours | Low–Med |
+| **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
@@ -226,7 +227,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `APP-05`: Album Sleeve Normalized Play Count Badge ("🔥 X Plays")
+#### `APP-05`: Album Sleeve Normalized Play Count Badge ("🔥 X Plays") [✅ Completed]
 * **Problem:**  
   Currently, virtual vinyl album sleeves display a bare, uncontextualized number badge (e.g., `42`) in the top-right corner. Listeners cannot discern what this number measures—individual track scrobbles or full album spins—diminishing the visual storytelling of personal vinyl listening history.
 * **Solution:**  
@@ -252,6 +253,20 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   3. **SpinPals Application:** Recalculates friend borrow recommendations (`top_borrow`) using the pal's 30-day heavy rotation, allowing friends to borrow what the other is currently spinning rather than albums listened to years ago.
   4. **Query & Backend Optimization:** Fetch 30-day play counts alongside all-time counts in BigQuery query aggregation in `fetch_user_album_data` without adding redundant roundtrips.
 * **Effort & Complexity:** ~5–7 hours (1 day) • **Complexity:** **Low–Medium**
+
+---
+
+#### `APP-07`: Played But Not Owned ("You Should Save These") Library Crate
+* **Problem:**  
+  Listeners frequently stream albums or tracks they love, but haven't formally clicked "Save Album" in Spotify. Because SpinSleeve's primary Library Explorer defaults strictly to `user_saved_albums`, high-affinity played albums remain hidden unless searched or discovered through Analytics scrobble history.
+* **Solution:**  
+  Introduce an unowned crate view / filter inside the Library Explorer ("You Should Save These"):
+  1. **BigQuery Query Aggregation:** Identify albums present in `playback_history` for `user_id` with significant listening activity (e.g., $\ge 3$ scrobbles or $\ge 1$ full normalized play) that do NOT exist in `user_saved_albums`.
+  2. **Library View Switcher:** Add a segmented toggle to the crate header:
+     - 📦 **My Saved Vinyl** *(Default)*: Current saved collection.
+     - ✨ **You Should Save These** *(Played But Unsaved)*: Surfaces unowned albums ordered by play count / recency.
+  3. **Tactile Badge & Action:** Sleeves display an unowned indicator badge with a 1-click `➕ Save to Spotify` action (calling Spotify Web API `PUT /v1/me/albums?ids=...`).
+* **Effort & Complexity:** ~4–6 hours (0.5 to 1 day) • **Complexity:** **Low–Medium**
 
 ---
 
@@ -315,8 +330,9 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-02`** | Apple Music Library Onboarding (Phase 7) | Core App | 16–24h | MusicKit JS v3, Apple Developer Key (.p8), BigQuery | **Massive:** Bypasses Spotify allowlist limits and expands to Apple Music collectors. |
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
 | **`APP-04`** | Music Legend Illustrated Avatars | Core App | 4–5h | SVG Vector Graphics, Datastore, Tailwind CSS | **Low:** Aesthetic charm and personal flair for users without profile photos. |
-| **`APP-05`** | Album Sleeve Normalized Play Count Badge | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | **Low–Med:** Adds immediate context to album card scrobble metrics with normalized complete spins. |
+| **`APP-05`** | Album Sleeve Normalized Play Count Badge | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed:** Normalized album spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
 | **`APP-06`** | Crate Digger & SpinPals Dynamic Time Horizon | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | **High:** Keeps recommendations vibrant and non-static by defaulting to rolling 30-day heavy rotation. |
+| **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |

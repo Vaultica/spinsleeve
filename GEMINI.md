@@ -68,9 +68,10 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **Phase 5a** | Multi-User Social: **SpinPals (CrateMates Edition)** | ✅ COMPLETED (Deployed: revision `00012-rz4`) |
 | **Phase 5b** | **Pre-Production Gatefold & Admin Polish** (Mobile <110px header, audio scrubber, SpinPals default-off with Admin opt-in, Admin 'assume view', 33 RPM spinning logo) | ✅ COMPLETED (Deployed: revision `00015-ql8`) |
 | **Phase 6** | **Production Cutover** (Zero-downtime Firebase rewrite flip to `spinsleeve.cc`) | ✅ COMPLETED (Deployed: revision `00017-749`) |
+| **APP-05** | **Normalized Album Play Count Badges** (`🔥 X Plays` badge, hover tooltips, normalized sorting) | ✅ COMPLETED (Deployed: revision `00018-c67`) |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (`APP-02`) | ⏳ Backlog |
 
-*See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*
+*See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle, Played Not Owned), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*
 
 ## 5. Quick Commands
 
