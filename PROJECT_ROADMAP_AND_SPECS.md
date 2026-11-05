@@ -79,6 +79,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | :--- | :--- | :--- | :--- | :--- |
 | **`INFRA-01`** | Fresh GCP Project Migration & Environment Isolation | Infrastructure | 6–8 hours | Medium |
 | **`INFRA-02`** | Declarative Infrastructure as Code (IaC) via Terraform | Infrastructure | 8–12 hours | Medium |
+| **`INFRA-03`** | Sub-100ms Multi-Tier Caching & BQ Materialization Architecture | Infrastructure | 6–8 hours | Medium |
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
 | **`OPS-03`** | Real-Time Admin Alerts for User Join Requests | DevOps | 3–4 hours | Low |
@@ -126,6 +127,23 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   - `modules/iam`: Least-privilege service accounts (`spinsleeve-app-sa`, `spinsleeve-pipeline-sa`).
   - `backend.tf`: Remote state storage in a locked GCS bucket with state locking.
 * **Effort & Complexity:** ~8–12 hours (1.5 days) • **Complexity:** **Medium**
+
+---
+
+#### `INFRA-03`: Sub-100ms Multi-Tier Caching & BigQuery Materialization Architecture
+* **Problem:**  
+  Navigating between tabs (`/`, `/recommend`, `/analytics`, `/pals`) incurs 2–4s latency on cache misses because:
+  - Cloud Run instances scale to zero when idle, discarding in-memory cache (`CACHE_TTL = 60s`).
+  - BigQuery has an inherent analytical query latency floor (~1.2s to 2.5s) and dynamically executes complex CTEs, window functions (`ROW_NUMBER`), and joins on every uncached evaluation of `user_albums_features`.
+  - Every tab navigation is a full multi-page application (MPA) reload that re-transfers ~1.5 MB of embedded HTML/JSON.
+  - SpinPals (`/pals`) executes three separate BigQuery queries sequentially on cache misses.
+* **Solution (Zero Added Monthly Cloud Cost):**  
+  Implement a four-tier caching and storage hierarchy bypassing BigQuery query-time compilation without requiring expensive managed Redis ($50–70/mo) or Cloud SQL ($25–40/mo):
+  1. **BigQuery Table Materialization:** In `sync.py` and enrichment jobs, write the output of `user_albums_features` into a clustered physical table (`user_albums_features_table` clustered by `user_id`), cutting BigQuery scan latency from ~2.5s down to ~600ms.
+  2. **Cloud Datastore Document Store (`UserCatalogCache`):** Store pre-serialized user album catalogs and KPIs directly in Google Cloud Datastore entities (`UserCatalogCache`) with a 24-hour TTL, invalidated automatically upon pipeline sync completion. Document fetch latency drops from 2,500ms to **~15–25ms** at $0 additional cost (within Datastore's 50,000 free daily reads).
+  3. **SpinPals Multi-Query Consolidation & Pal Caching:** Consolidate the 3 sequential BigQuery queries in `compute_pal_compatibility` into a single query and cache pal compatibility payloads in Datastore.
+  4. **Browser Session Storage & Client-Side Navigation:** Cache user catalog payloads in browser `sessionStorage` and introduce `/api/user/catalog`. Cross-tab switches between Library Explorer and Crate Digger render instantaneously (<10ms) without re-transferring full HTML documents.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
 
 ---
 
@@ -335,6 +353,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`INFRA-01`** | Fresh GCP Project Migration | Infrastructure | 6–8h | GCP IAM, Cloud Run, BigQuery, Datastore, Firebase | **High:** Clean security boundary, zero pet project clutter, dedicated billing. |
 | **`INFRA-02`** | Infrastructure as Code (Terraform) | Infrastructure | 8–12h | Terraform, HCL, Google Cloud Provider, GCS Backend | **High:** Reproducible disaster recovery and automated cloud provisioning. |
+| **`INFRA-03`** | Sub-100ms Multi-Tier Caching & Materialization | Infrastructure | 6–8h | Cloud Datastore, BigQuery, sessionStorage, Flask | **High:** Eliminates 2–4s tab-switching latency; drops catalog response times to <25ms with $0 new cloud costs. |
 | **`OPS-01`** | CI/CD GitHub Actions & Protected Master | DevOps | 6–8h | GitHub Actions, Workload Identity Federation, Pytest | **High:** Eliminates manual terminal deployments and prevents untested regressions. |
 | **`OPS-02`** | Observability, Alerting & Health Monitoring | DevOps | 4–6h | Cloud Monitoring, Alert Policies, `/healthz` | **Medium:** Automated 5xx failure detection and resource saturation alerts. |
 | **`OPS-03`** | Real-Time Admin Alerts for Join Requests | DevOps | 3–4h | Telegram Bot API / Discord Webhook, Cloud Run | **Medium:** Instant 1-click mobile approvals for new friends. |
