@@ -83,6 +83,12 @@ class TestCrateDiggerPolish(unittest.TestCase):
         """Verify that vintage vibe considers albums released prior to 1985 as vintage."""
         self.assertIn("y < 1985", BETA_RECOMMEND_HTML)
 
+    def test_spin_again_button_deduplication(self):
+        """Verify POLISH-07: exactly one Spin Again button exists on the Control Deck console."""
+        spin_count = BETA_RECOMMEND_HTML.count('onclick="spinAgain()"')
+        self.assertEqual(spin_count, 1, "Should have exactly one Spin Again button (de-duplicated from header)")
+        self.assertIn('<span>🎲</span> Spin Again', BETA_RECOMMEND_HTML)
+
 
 if __name__ == "__main__":
     unittest.main()

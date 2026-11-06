@@ -114,7 +114,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-04`** | ✅ ~~Semantic Build Versioning (Replace "beta v2" with Version)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.0`: Revision `00022-z5t`) |
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher from Header)~~ | Tactical Polish | 1–2 hours | Completed (Revision `00022-z5t`) |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2 hours | Low |
-| **`POLISH-07`** | De-duplicate Crate Digger "Spin Again" Header Button | Tactical Polish | 0.5 hours | Very Low |
+| **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5 hours | Completed (`v2.2.1`) |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
@@ -392,12 +392,12 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `POLISH-07`: De-duplicate Crate Digger "Spin Again" Header Button
-* **Problem:** In Crate Digger (`/recommend` & `/beta/recommend`), there are currently two identical buttons that invoke `spinAgain()`: one in the global navigation header next to "Hover Audio: ON", and one on the right side of Row 1 in the new Control Deck console labeled "Shuffle Picks". Having both creates visual clutter and redundant controls.
-* **Solution:**
-  1. Remove the redundant `<span>🎲</span> Spin Again` button from the global navigation header.
-  2. Retain the button located on the Control Deck console (which is in the optimal ergonomic location next to Crate Target filters) and rename its label from "Shuffle Picks" to `🎲 Spin Again`.
-* **Effort & Complexity:** ~0.5 hours (30 min) • **Complexity:** **Very Low**
+#### `POLISH-07`: ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~
+* **Problem:** In Crate Digger (`/recommend` & `/beta/recommend`), there were two identical buttons that invoked `spinAgain()`: one in the global navigation header next to "Hover Audio: ON", and one on the right side of Row 1 in the new Control Deck console labeled "Shuffle Picks". Having both created visual clutter and redundant controls.
+* **Solution Implemented (`v2.2.1`):**
+  1. Removed the redundant `<span>🎲</span> Spin Again` button from the global navigation header.
+  2. Retained the button located on the Control Deck console (which is in the optimal ergonomic location next to Crate Target filters) and renamed its label to `🎲 Spin Again`.
+* **Effort & Complexity:** ~0.5 hours (30 min) • **Status:** **Completed (`v2.2.1`)**
 
 ---
 
@@ -472,7 +472,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-04`** | ✅ ~~Semantic Build Version Numbering (Remove "beta v2")~~ | Tactical Polish | 1–2h | Flask, Jinja2, CI/CD | ✅ **Completed** (`v2.2.0`: Revision `00022-z5t`): Replaced static beta badge with dynamic semantic release version. |
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher)~~ | Tactical Polish | 1–2h | Jinja2, HTML5, Flask Session | ✅ **Completed** (Revision `00022-z5t`): Clean standard user avatar for all users; impersonation housed in Admin Portal. |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2h | HTML5, Tailwind CSS | **Low:** Eliminates table misalignment, button wrapping, and truncation on admin portal. |
-| **`POLISH-07`** | De-duplicate Crate Digger "Spin Again" Header Button | Tactical Polish | 0.5h | Jinja2, HTML5 | **Low:** Remove redundant header button and harmonize Control Deck button to "Spin Again". |
+| **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5h | Jinja2, HTML5 | ✅ **Completed** (`v2.2.1`): Removed header duplicate; harmonized Control Deck button to "Spin Again". |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |

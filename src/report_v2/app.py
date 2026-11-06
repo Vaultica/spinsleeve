@@ -2457,9 +2457,6 @@ BETA_RECOMMEND_HTML = """
                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
                     <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
                 </button>
-                <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-lg transition shadow-md flex items-center gap-1.5">
-                    <span>🎲</span> Spin Again
-                </button>
                 {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
                     ⚙️ Admin
@@ -2521,9 +2518,9 @@ BETA_RECOMMEND_HTML = """
                         </button>
                     </div>
                 </div>
-                <div class="hidden lg:flex items-center gap-2 shrink-0">
-                    <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-3.5 py-1.5 rounded-xl transition shadow flex items-center gap-1.5">
-                        <span>🎲</span> Shuffle Picks
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-3.5 py-1.5 rounded-xl transition shadow flex items-center gap-1.5" title="Reshuffle spotlight picks and candidate records">
+                        <span>🎲</span> Spin Again
                     </button>
                 </div>
             </div>
