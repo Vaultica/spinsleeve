@@ -154,6 +154,33 @@ def favicon():
 # ==============================================================================
 # AUTHENTICATION & ACCESS CONTROL HELPERS
 # ==============================================================================
+@app.before_request
+def local_dev_auth_bypass():
+    """Bypasses Spotify OAuth when testing locally on localhost or 127.0.0.1."""
+    host = request.headers.get("X-Forwarded-Host") or request.host or ""
+    if host.startswith("localhost") or host.startswith("127.0.0.1"):
+        if "user_id" not in session:
+            session["user_id"] = "sergebou"
+            session["display_name"] = "Serge"
+            session["role"] = "admin"
+            session["is_admin"] = True
+
+
+@app.route("/dev/login")
+def dev_login():
+    """Local development helper to switch or initialize test sessions without Spotify OAuth."""
+    host = request.headers.get("X-Forwarded-Host") or request.host or ""
+    if not (host.startswith("localhost") or host.startswith("127.0.0.1")):
+        return redirect("/login")
+    user = request.args.get("user", "sergebou")
+    name = "Serge" if user == "sergebou" else ("Sarah" if user == "sarahboosch" else user)
+    session["user_id"] = user
+    session["display_name"] = name
+    session["role"] = "admin" if user in ADMIN_USER_IDS else "user"
+    session["is_admin"] = (user in ADMIN_USER_IDS)
+    return redirect("/")
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -1397,6 +1424,13 @@ ADMIN_HTML_TEMPLATE = """
 @app.route("/login")
 @app.route("/beta/login")
 def login():
+    host = request.headers.get("X-Forwarded-Host") or request.host or ""
+    if (host.startswith("localhost") or host.startswith("127.0.0.1")) and "user_id" not in session:
+        session["user_id"] = "sergebou"
+        session["display_name"] = "Serge"
+        session["role"] = "admin"
+        session["is_admin"] = True
+        return redirect("/")
     if "user_id" in session:
         return redirect("/")
     return render_template_string(LOGIN_HTML_TEMPLATE, brand_icon=ICON_A_SVG)
