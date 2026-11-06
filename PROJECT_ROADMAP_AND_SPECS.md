@@ -109,11 +109,12 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
 | **`APP-08`** | Full-Length Virtual Turntable Player (Spotify Web Playback SDK) | Core App | 8–12 hours | Medium |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
-| **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering (Strict 30D Descending) | Tactical Polish | 1–2 hours | Low |
+| **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1 hour | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
 | **`POLISH-04`** | ✅ ~~Semantic Build Versioning (Replace "beta v2" with Version)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.0`: Revision `00022-z5t`) |
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher from Header)~~ | Tactical Polish | 1–2 hours | Completed (Revision `00022-z5t`) |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2 hours | Low |
+| **`POLISH-07`** | De-duplicate Crate Digger "Spin Again" Header Button | Tactical Polish | 0.5 hours | Very Low |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
@@ -354,10 +355,12 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `POLISH-02`: [Fix] Heavy Rotation Filter Sleeve Ordering (Strict 30D Descending Order)
-* **Problem:** When activating the Heavy Rotation filter in Library Explorer, tie-breaker sorting or fallback logic can occasionally prevent the sleeves from strictly ordering by the most-listened-to records in the last 30 days in clear descending order.
-* **Solution:** Enforce deterministic primary ordering strictly by rolling 30-day play counts (`album_track_plays_30d DESC`, then `album_plays_30d DESC`) whenever the Heavy Rotation filter is selected.
-* **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
+#### `POLISH-02`: [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Initial Load)
+* **Problem:** In Library Explorer (`/` and `/beta/`), the sort dropdown displays `🔥 Heavy Rotation (Last 30 Days)` selected by default, which is intended. However, on initial page load, `document.addEventListener("DOMContentLoaded")` directly invokes `renderGrid()` without running `onFilterChange()`. Because the underlying SQL query sorts by `ORDER BY album_plays DESC` (All-Time Most Played), the albums initially rendered on screen are ordered by all-time plays rather than 30-day plays until the user manually changes the dropdown.
+* **Solution:**
+  1. Trigger `onFilterChange()` instead of raw `renderGrid()` inside `DOMContentLoaded` so `plays_30d_desc` sorting is applied immediately on first load.
+  2. Enforce deterministic primary ordering strictly by rolling 30-day play counts (`album_track_plays_30d DESC`, then `album_plays_30d DESC`, then raw plays tiebreaker).
+* **Effort & Complexity:** ~1 hour • **Complexity:** **Low**
 
 ---
 
@@ -386,6 +389,15 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 * **Problem:** The user management table in the Admin control deck (`/admin`) suffers from uneven column widths, misaligned action buttons, and suboptimal text truncation on certain screen sizes.
 * **Solution:** Redesign the Admin table with explicit column widths, consistent typography, aligned status chips (Approved, Whitelisted, Opted-In), and streamlined action buttons.
 * **Effort & Complexity:** ~1–2 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-07`: De-duplicate Crate Digger "Spin Again" Header Button
+* **Problem:** In Crate Digger (`/recommend` & `/beta/recommend`), there are currently two identical buttons that invoke `spinAgain()`: one in the global navigation header next to "Hover Audio: ON", and one on the right side of Row 1 in the new Control Deck console labeled "Shuffle Picks". Having both creates visual clutter and redundant controls.
+* **Solution:**
+  1. Remove the redundant `<span>🎲</span> Spin Again` button from the global navigation header.
+  2. Retain the button located on the Control Deck console (which is in the optimal ergonomic location next to Crate Target filters) and rename its label from "Shuffle Picks" to `🎲 Spin Again`.
+* **Effort & Complexity:** ~0.5 hours (30 min) • **Complexity:** **Very Low**
 
 ---
 
@@ -455,11 +467,12 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
 | **`APP-08`** | Full-Length Virtual Turntable Web Player | Core App | 8–12h | Spotify Web Playback SDK, CSS Keyframes, Web Audio | **High:** Immersive full-length streaming with vinyl disc sliding from sleeve onto rotating 33⅓ platter. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
-| **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering by 30D Plays | Tactical Polish | 1–2h | JavaScript, Array Sorting | **Medium:** Enforce strict deterministic descending order by 30-day plays. |
+| **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1h | JavaScript, DOM Lifecycle | **Medium:** Ensure DOMContentLoaded triggers `onFilterChange()` so 30D sort applies immediately on first load. |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
 | **`POLISH-04`** | ✅ ~~Semantic Build Version Numbering (Remove "beta v2")~~ | Tactical Polish | 1–2h | Flask, Jinja2, CI/CD | ✅ **Completed** (`v2.2.0`: Revision `00022-z5t`): Replaced static beta badge with dynamic semantic release version. |
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher)~~ | Tactical Polish | 1–2h | Jinja2, HTML5, Flask Session | ✅ **Completed** (Revision `00022-z5t`): Clean standard user avatar for all users; impersonation housed in Admin Portal. |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2h | HTML5, Tailwind CSS | **Low:** Eliminates table misalignment, button wrapping, and truncation on admin portal. |
+| **`POLISH-07`** | De-duplicate Crate Digger "Spin Again" Header Button | Tactical Polish | 0.5h | Jinja2, HTML5 | **Low:** Remove redundant header button and harmonize Control Deck button to "Spin Again". |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |
