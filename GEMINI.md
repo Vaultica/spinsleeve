@@ -53,7 +53,8 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 * **`src/pipeline_v2/enrich.py`:** V2 album metadata enrichment pipeline. Scrapes Wikipedia and Discogs for 12" gatefold archival liner notes, ratings, and personnel into shared table `spotify_v2.album_enriched_metadata`.
 * **`manage_users.py`:** Standalone CLI tool to list, approve, and revoke users in Datastore.
 * **`INFRASTRUCTURE_RUNBOOK.md`:** Comprehensive disaster recovery guide with DDL, Cloud Run deploy commands, and Cloud Scheduler setups.
-* **`PROJECT_ROADMAP_AND_SPECS.md`:** Product specification covering completed phases and the categorized feature backlog (`INFRA`, `OPS`, `APP`, `BRAND`, `DOCS`).
+* **`PROJECT_ROADMAP_AND_SPECS.md`:** Product roadmap articulating the "WHAT" and "WHY" across all phases and categorized backlog (`INFRA`, `OPS`, `APP`, `POLISH`, `BRAND`, `DOCS`).
+* **`TECHNICAL_SPECS.md`:** Comprehensive technical specifications detailing the "HOW" (schemas, API contracts, caching tiers, algorithms, and security boundaries).
 * **`CHANGELOG.md`:** Reverse-engineered release journal documenting every deployed version, technical rationale, and benchmark.
 
 ---

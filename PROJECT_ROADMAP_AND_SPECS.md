@@ -123,6 +123,10 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ## 3. Detailed Feature Specifications
 
+> 💡 **Architectural Decoupling Notice:**  
+> This roadmap articulates the **WHAT** and **WHY** (user stories, feature scope, product rationale, and effort).  
+> For the comprehensive, deep-dive system architecture, database schemas, API contracts, and implementation blueprints (**HOW**), refer to [**`TECHNICAL_SPECS.md`**](./TECHNICAL_SPECS.md).
+
 ### 🏛️ Category: Infrastructure & Cloud Architecture (`INFRA`)
 
 #### `INFRA-01`: Fresh GCP Project Migration & Clean Isolation
