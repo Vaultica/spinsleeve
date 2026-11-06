@@ -360,6 +360,20 @@ gcloud scheduler jobs create http spotify-v2-sync-scheduler \
     --description="Automated 2-hour multi-tenant sync for all approved SpinSleeve friends"
 ```
 
+### Scheduler 3: `spotify-v2-enrichment-scheduler` (Active Daily V2 Enrichment Scheduler)
+Triggers daily 12" gatefold archival metadata enrichment (Wikipedia narratives, Pitchfork reviews, Discogs personnel) at 04:00 UTC:
+```bash
+gcloud scheduler jobs create http spotify-v2-enrichment-scheduler \
+    --location=europe-west2 \
+    --schedule="0 4 * * *" \
+    --time-zone="UTC" \
+    --uri="https://europe-west2-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/secret-compass-181513/jobs/spotify-v2-enrichment-job:run" \
+    --http-method=POST \
+    --oauth-service-account-email="spotify-data@secret-compass-181513.iam.gserviceaccount.com" \
+    --oauth-token-scope="https://www.googleapis.com/auth/cloud-platform" \
+    --description="Daily automated 12-inch gatefold archival metadata enrichment for SpinSleeve"
+```
+
 ---
 
 ## 9. Custom Domain & Firebase Reverse Proxy (`spinsleeve.cc`)

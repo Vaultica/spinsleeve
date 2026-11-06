@@ -82,10 +82,10 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 ## 5. Quick Commands
 
 ```bash
-# Execute multi-tenant pipeline on-demand
+# Execute multi-tenant pipeline on-demand (scheduled: every 2h via spotify-v2-sync-scheduler)
 gcloud run jobs execute spotify-v2-pipeline-job --region=europe-west2
 
-# Execute V2 album metadata enrichment on-demand (e.g. 50 or 100 albums)
+# Execute V2 album metadata enrichment on-demand (scheduled: daily at 04:00 UTC via spotify-v2-enrichment-scheduler)
 gcloud run jobs execute spotify-v2-enrichment-job --region=europe-west2 --args="enrich.py,100"
 
 # Deploy updated beta app
