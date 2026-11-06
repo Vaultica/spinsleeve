@@ -7,8 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [v2.2.1] — 2026-11-06
-### 🎯 Crate Digger UX Streamlining, Balanced Vibes (`POLISH-01`) & Album Artist Isolation
-* **Cloud Run Revision:** `spotify-dashboard-beta-00023-tr2`
+### 🎯 Crate Digger UX Streamlining, Balanced Vibes (`POLISH-01`), Album Artist Isolation & Spin Again Deduplication (`POLISH-07`)
+* **Cloud Run Revision:** `spotify-dashboard-beta-00024-mdp`
 * **What:**
   - Replaced the two stacked, conflicting multi-button rows (*Listening Mode* and *Time Horizon*) with a single-dimension **Crate Target Focus** selector (`🔥 Heavy Rotation (30D)`, `🔍 Unplayed Gems`, `❄️ Cold Shelf (30D+)`, `⭐ All-Time Favorites`, and `🌌 Full Crate`).
   - Redesigned the bulky filter frame into a compact, space-efficient 2-tier digging console, saving over 240px of vertical height and pulling spotlight vinyl picks and album art above the fold on all screens.
