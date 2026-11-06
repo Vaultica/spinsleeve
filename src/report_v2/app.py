@@ -62,8 +62,8 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Application Version (POLISH-04)
-APP_VERSION = "v2.2.0"
+# Application Version (POLISH-04, POLISH-01)
+APP_VERSION = "v2.2.1"
 
 
 @app.context_processor
@@ -552,10 +552,13 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
 
     query = f"""
     WITH first_plays AS (
-      SELECT album_name, MIN(played_at) as first_played_at
+      SELECT 
+        LOWER(TRIM(album_name)) as norm_album_name,
+        LOWER(TRIM(artist_name)) as norm_artist_name,
+        MIN(played_at) as first_played_at
       FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
       WHERE user_id = @user_id
-      GROUP BY album_name
+      GROUP BY norm_album_name, norm_artist_name
     ),
     filtered_plays AS (
       SELECT 
@@ -573,19 +576,29 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         fp.first_played_at
       FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
       LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` a
-        ON p.user_id = a.user_id AND (p.album_id = a.album_id OR LOWER(TRIM(p.album_name)) = LOWER(TRIM(a.album_name)))
+        ON p.user_id = a.user_id 
+        AND (
+          p.album_id = a.album_id 
+          OR (
+            LOWER(TRIM(p.album_name)) = LOWER(TRIM(a.album_name))
+            AND LOWER(TRIM(p.artist_name)) = LOWER(TRIM(a.artist_name))
+          )
+        )
       LEFT JOIN (
         SELECT 
-          LOWER(TRIM(album_name)) as norm_name, 
+          LOWER(TRIM(album_name)) as norm_name,
+          LOWER(TRIM(artist_name)) as norm_artist,
           MAX(image_url) as image_url, 
           MAX(release_date) as release_date, 
           MAX(genres) as genres
         FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-        GROUP BY norm_name
+        GROUP BY norm_name, norm_artist
       ) g
         ON LOWER(TRIM(p.album_name)) = g.norm_name
+        AND LOWER(TRIM(p.artist_name)) = g.norm_artist
       LEFT JOIN first_plays fp
-        ON p.album_name = fp.album_name
+        ON LOWER(TRIM(p.album_name)) = fp.norm_album_name
+        AND LOWER(TRIM(p.artist_name)) = fp.norm_artist_name
       {where_str}
     )
     SELECT * FROM filtered_plays
@@ -610,7 +623,6 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         return empty_payload
 
     total_tracks = len(df)
-    total_albums = int(df["album"].nunique())
     total_artists = int(df["artist"].nunique())
     total_seconds = total_tracks * 210
     hours = total_seconds // 3600
@@ -621,6 +633,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         plays=("ts", "count"),
         album_image_url=("album_image_url", "first")
     ).reset_index().sort_values("plays", ascending=False)
+    total_albums = len(album_counts)
 
     if not album_counts.empty:
         top_row = album_counts.iloc[0]
@@ -640,7 +653,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     time_series = [{"date": str(r["play_date"]), "plays": int(r["plays"])} for _, r in daily.iterrows()]
 
     min_window = df["ts"].min()
-    album_window = df.groupby(["album", "first_played_at"]).size().reset_index(name="plays")
+    album_window = df.groupby(["album", "artist", "first_played_at"]).size().reset_index(name="plays")
     fresh_mask = album_window["first_played_at"] >= min_window
     fresh_albums = int(fresh_mask.sum())
     repeat_albums = int((~fresh_mask).sum())
@@ -2484,63 +2497,71 @@ BETA_RECOMMEND_HTML = """
             </a>
         </nav>
 
-        <!-- Control Deck -->
-        <div class="card-bg p-5 rounded-2xl border border-gray-800 mb-8 shadow-lg">
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">1. Listening Mode</label>
-                    <div class="flex flex-wrap gap-2.5">
-                        <button onclick="setMode('discover')" id="modeBtn-discover" class="pill-active px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
-                            <span>🔍</span> Discover (Never Played: {{ kpis.unplayed_albums }} albums)
+        <!-- Control Deck (Streamlined 2-Tier Digging Console - POLISH-01) -->
+        <div class="card-bg p-4 rounded-2xl border border-gray-800/90 mb-6 shadow-xl backdrop-blur-sm">
+            <!-- Row 1: Crate Target Focus (Single Dimension) & Shuffle -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-gray-800/70">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">1. Crate Target:</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="setTarget('heavy_30d')" id="horizonBtn-30d" class="pill-active px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Albums actively spun in the last 30 days">
+                            <span>🔥</span> Heavy Rotation (30D: {{ kpis.played_albums_30d or 0 }})
                         </button>
-                        <button onclick="setMode('favorites')" id="modeBtn-favorites" class="pill-inactive px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
-                            <span>⭐</span> Favorites (Heavy Rotation: {{ kpis.played_albums }} albums)
+                        <button onclick="setTarget('unplayed')" id="modeBtn-discover" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Albums in your library with zero recorded plays">
+                            <span>🔍</span> Unplayed Gems ({{ kpis.unplayed_albums or 0 }})
                         </button>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">2. Time Horizon (APP-06)</label>
-                    <div class="flex flex-wrap gap-2.5">
-                        <button onclick="setHorizon('30d')" id="horizonBtn-30d" class="pill-active px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
-                            <span>🔥</span> Heavy Rotation (Last 30 Days: {{ kpis.played_albums_30d or 0 }} active)
+                        <button onclick="setTarget('cold')" id="targetBtn-cold" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Played before, but not spun in the last 30 days">
+                            <span>❄️</span> Cold Shelf ({{ (kpis.played_albums - (kpis.played_albums_30d or 0)) if kpis.played_albums >= (kpis.played_albums_30d or 0) else 0 }})
                         </button>
-                        <button onclick="setHorizon('all')" id="horizonBtn-all" class="pill-inactive px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
-                            <span>🏛️</span> All-Time Collection ({{ kpis.played_albums or 0 }} played)
+                        <button onclick="setTarget('classics')" id="horizonBtn-all" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="All-time most-played favorite records">
+                            <span>⭐</span> All-Time Favorites ({{ kpis.played_albums or 0 }})
+                        </button>
+                        <button onclick="setTarget('all')" id="targetBtn-all" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Entire library collection">
+                            <span>🌌</span> Full Crate ({{ kpis.total_albums or 0 }})
                         </button>
                     </div>
                 </div>
+                <div class="hidden lg:flex items-center gap-2 shrink-0">
+                    <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-3.5 py-1.5 rounded-xl transition shadow flex items-center gap-1.5">
+                        <span>🎲</span> Shuffle Picks
+                    </button>
+                </div>
+            </div>
 
-                <div>
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">3. Mood &amp; Vibe</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-3.5 py-1.5 rounded-lg text-xs transition">🌌 Any Vibe</button>
-                        <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">🌙 Late Night / Chill</button>
-                        <button onclick="setVibe('energetic')" id="vibeBtn-energetic" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">⚡ Energetic / Focus</button>
-                        <button onclick="setVibe('mellow')" id="vibeBtn-mellow" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">☕ Mellow / Acoustic</button>
-                        <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-3.5 py-1.5 rounded-lg text-xs transition">📻 Vintage Classics</button>
+            <!-- Row 2: Vibe, Era & Sub-Genre (Horizontal Flow) -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-3 items-center">
+                <!-- Mood & Vibe (Col 1-6) -->
+                <div class="md:col-span-6 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">2. Vibe:</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-2.5 py-1 rounded-lg text-xs transition">🌌 Any</button>
+                        <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Ambient, Dream Pop, Shoegaze, Downtempo, Trip Hop">🌙 Chill</button>
+                        <button onclick="setVibe('energetic')" id="vibeBtn-energetic" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Punk, Alt Rock, Electronic, Dance, Techno, Hip Hop">⚡ Energetic</button>
+                        <button onclick="setVibe('mellow')" id="vibeBtn-mellow" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Acoustic, Folk, Singer-Songwriter, Jazz, Bossa Nova">☕ Mellow</button>
+                        <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Classic Soul, Motown, Blues, 60s/70s Psychedelic">📻 Vintage</button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-800/80">
-                    <div>
-                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">4. Era Preference</label>
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-3 py-1.5 rounded-lg text-xs transition">Any Era</button>
-                            <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-3 py-1.5 rounded-lg text-xs transition">✨ Recent (2018+)</button>
-                            <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-3 py-1.5 rounded-lg text-xs transition">💿 2000s &amp; 2010s</button>
-                            <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-3 py-1.5 rounded-lg text-xs transition">📼 Vintage (&lt; 2000)</button>
-                        </div>
+                <!-- Era Preference (Col 7-9) -->
+                <div class="md:col-span-3 flex items-center gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">3. Era:</span>
+                    <div class="flex flex-wrap gap-1">
+                        <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-2 py-1 rounded-lg text-xs transition">All</button>
+                        <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-2 py-1 rounded-lg text-xs transition" title="2018 to Present">✨ 2018+</button>
+                        <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-2 py-1 rounded-lg text-xs transition" title="2000 - 2017">💿 00s-10s</button>
+                        <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-2 py-1 rounded-lg text-xs transition" title="Before 2000">📼 &lt;2000</button>
                     </div>
-                    <div>
-                        <label class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">5. Specific Sub-Genre (Optional)</label>
-                        <select id="genreSelect" onchange="onGenreSelect(this.value)" class="w-full bg-[#11151a] border border-gray-700/80 rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
-                            <option value="">Any Genre</option>
-                            {% for g in top_genres %}
-                            <option value="{{ g }}">{{ g|title }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                </div>
+
+                <!-- Sub-Genre Dropdown (Col 10-12) -->
+                <div class="md:col-span-3 flex items-center gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">4. Genre:</span>
+                    <select id="genreSelect" onchange="onGenreSelect(this.value)" class="w-full bg-[#11151a] border border-gray-700/80 rounded-lg py-1 px-2 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
+                        <option value="">Any Genre</option>
+                        {% for g in top_genres %}
+                        <option value="{{ g }}">{{ g|title }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
         </div>
@@ -2702,7 +2723,9 @@ BETA_RECOMMEND_HTML = """
 
     <script>
         const ALL_ALBUMS = {{ albums | tojson }};
-        let selectedMode = 'discover';
+        let selectedTarget = 'heavy_30d';
+        let selectedHorizon = '30d';
+        let selectedMode = 'favorites';
         let selectedVibe = 'all';
         let selectedEra = 'all';
         let selectedGenre = '';
@@ -2804,35 +2827,71 @@ BETA_RECOMMEND_HTML = """
         }
 
         const VIBES = {
-            chill: ['ambient', 'chill', 'downtempo', 'lo-fi', 'dream pop', 'slowcore', 'post-rock', 'minimalism'],
-            energetic: ['punk', 'electronic', 'rock', 'dance', 'techno', 'house', 'hip hop', 'funk', 'post-punk'],
-            mellow: ['folk', 'acoustic', 'singer-songwriter', 'indie folk', 'jazz', 'soul', 'bossa nova'],
-            vintage: ['classic rock', 'soul', 'psychedelic', 'blues', 'funk', 'motown', 'vintage', '60s', '70s', '80s']
+            chill: [
+                'ambient', 'chill', 'downtempo', 'lo-fi', 'dream pop', 'slowcore',
+                'shoegaze', 'trip hop', 'ethereal', 'ambient pop', 'minimalism',
+                'idm', 'post-rock', 'bedroom pop', 'chillwave', 'drone'
+            ],
+            energetic: [
+                'punk', 'hard rock', 'garage rock', 'alternative rock', 'grunge',
+                'noise rock', 'post-punk', 'electronic', 'dance', 'techno',
+                'house', 'hip hop', 'rap', 'club', 'breakbeat', 'big beat',
+                'drum and bass', 'edm', 'synthpop', 'indietronica'
+            ],
+            mellow: [
+                'folk', 'acoustic', 'singer-songwriter', 'indie folk', 'chamber pop',
+                'chamber folk', 'jazz', 'bossa nova', 'quiet storm', 'americana',
+                'bluegrass', 'soft rock', 'chanson', 'soul'
+            ],
+            vintage: [
+                'classic rock', 'psychedelic rock', 'blues', 'motown', 'classic soul',
+                'brill building', 'roots rock', 'funk', 'hard bop', 'soul jazz',
+                'traditional pop', 'rockabilly', 'doo-wop', 'vintage'
+            ]
         };
 
-        let selectedHorizon = '30d';
+        function setTarget(target) {
+            selectedTarget = target;
+            selectedHorizon = (target === 'heavy_30d') ? '30d' : 'all';
+            selectedMode = (target === 'unplayed') ? 'discover' : 'favorites';
+
+            const targets = ['heavy_30d', 'unplayed', 'cold', 'classics', 'all'];
+            targets.forEach(t => {
+                const btnId = (t === 'heavy_30d') ? 'horizonBtn-30d' :
+                              (t === 'unplayed') ? 'modeBtn-discover' :
+                              (t === 'classics') ? 'horizonBtn-all' :
+                              `targetBtn-${t}`;
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.className = (t === target ? 'pill-active' : 'pill-inactive') + ' px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0';
+                }
+            });
+            runRecommender();
+        }
 
         function setHorizon(horizon) {
             selectedHorizon = horizon;
-            const btn30 = document.getElementById('horizonBtn-30d');
-            const btnAll = document.getElementById('horizonBtn-all');
-            if (btn30) btn30.className = (horizon === '30d' ? 'pill-active' : 'pill-inactive') + ' px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
-            if (btnAll) btnAll.className = (horizon === 'all' ? 'pill-active' : 'pill-inactive') + ' px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
-            runRecommender();
+            if (horizon === '30d') {
+                setTarget('heavy_30d');
+            } else {
+                setTarget('classics');
+            }
         }
 
         function setMode(mode) {
             selectedMode = mode;
-            document.getElementById('modeBtn-discover').className = (mode === 'discover' ? 'pill-active' : 'pill-inactive') + ' px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
-            document.getElementById('modeBtn-favorites').className = (mode === 'favorites' ? 'pill-active' : 'pill-inactive') + ' px-4 py-2 rounded-xl text-xs transition flex items-center gap-2';
-            runRecommender();
+            if (mode === 'discover') {
+                setTarget('unplayed');
+            } else {
+                setTarget(selectedHorizon === '30d' ? 'heavy_30d' : 'classics');
+            }
         }
 
         function setVibe(vibe) {
             selectedVibe = vibe;
             ['all', 'chill', 'energetic', 'mellow', 'vintage'].forEach(v => {
                 const btn = document.getElementById(`vibeBtn-${v}`);
-                if (btn) btn.className = (v === vibe ? 'pill-active' : 'pill-inactive') + ' px-3.5 py-1.5 rounded-lg text-xs transition';
+                if (btn) btn.className = (v === vibe ? 'pill-active' : 'pill-inactive') + ' px-2.5 py-1 rounded-lg text-xs transition';
             });
             runRecommender();
         }
@@ -2841,7 +2900,7 @@ BETA_RECOMMEND_HTML = """
             selectedEra = era;
             ['all', 'recent', 'modern', 'classic'].forEach(e => {
                 const btn = document.getElementById(`eraBtn-${e}`);
-                if (btn) btn.className = (e === era ? 'pill-active' : 'pill-inactive') + ' px-3 py-1.5 rounded-lg text-xs transition';
+                if (btn) btn.className = (e === era ? 'pill-active' : 'pill-inactive') + ' px-2 py-1 rounded-lg text-xs transition';
             });
             runRecommender();
         }
@@ -2866,23 +2925,30 @@ BETA_RECOMMEND_HTML = """
                 const gStr = (album.album_genres || '').toLowerCase();
                 const matched = keywords.filter(k => gStr.includes(k)).length;
                 score += matched * 18;
+                if (selectedVibe === 'vintage') {
+                    const y = parseInt(album.release_year) || 0;
+                    if (y > 0 && y < 1985) score += 20;
+                }
             }
 
             if (album.has_gatefold) score += 12;
 
-            if (selectedMode === 'discover') {
-                const plays = selectedHorizon === '30d' ? (album.album_track_plays_30d || 0) : (album.album_track_plays || 0);
-                if (plays === 0) score += 30;
+            if (selectedTarget === 'unplayed') {
+                const plays = (album.album_track_plays || 0);
+                if (plays === 0) score += 35;
                 else score -= plays * 2;
+            } else if (selectedTarget === 'cold') {
+                const playsAll = album.album_track_plays || 0;
+                score += Math.min(playsAll * 2.0, 35);
+            } else if (selectedTarget === 'heavy_30d') {
+                const plays30 = album.album_track_plays_30d || 0;
+                score += Math.min(plays30 * 4.0, 40);
+                score += Math.min((album.album_track_plays || 0) * 0.5, 10);
+            } else if (selectedTarget === 'classics') {
+                const plays = album.album_track_plays || 0;
+                score += Math.min(plays * 2.5, 35);
             } else {
-                if (selectedHorizon === '30d') {
-                    const plays30 = album.album_track_plays_30d || 0;
-                    score += Math.min(plays30 * 4.0, 40);
-                    score += Math.min((album.album_track_plays || 0) * 0.5, 10);
-                } else {
-                    const plays = album.album_track_plays || 0;
-                    score += Math.min(plays * 2.5, 35);
-                }
+                score += (album.album_track_plays || 0) > 0 ? 10 : 0;
             }
 
             return score;
@@ -2890,19 +2956,15 @@ BETA_RECOMMEND_HTML = """
 
         function runRecommender() {
             let pool = ALL_ALBUMS.filter(a => {
-                if (selectedMode === 'discover') {
-                    if (selectedHorizon === '30d') {
-                        if ((a.album_track_plays_30d || 0) > 0) return false;
-                    } else {
-                        if ((a.album_track_plays || 0) > 0) return false;
-                    }
-                }
-                if (selectedMode === 'favorites') {
-                    if (selectedHorizon === '30d') {
-                        if ((a.album_track_plays_30d || 0) === 0) return false;
-                    } else {
-                        if ((a.album_track_plays || 0) === 0) return false;
-                    }
+                if (selectedTarget === 'unplayed') {
+                    if ((a.album_track_plays || 0) > 0) return false;
+                } else if (selectedTarget === 'cold') {
+                    if ((a.album_track_plays || 0) === 0) return false;
+                    if ((a.album_track_plays_30d || 0) > 0) return false;
+                } else if (selectedTarget === 'heavy_30d') {
+                    if ((a.album_track_plays_30d || 0) === 0) return false;
+                } else if (selectedTarget === 'classics') {
+                    if ((a.album_track_plays || 0) === 0) return false;
                 }
 
                 const year = parseInt(a.release_year) || 0;
@@ -2917,16 +2979,21 @@ BETA_RECOMMEND_HTML = """
                 if (selectedVibe !== 'all') {
                     const keywords = VIBES[selectedVibe] || [];
                     const gStr = (a.album_genres || '').toLowerCase();
-                    const hasVibe = keywords.some(k => gStr.includes(k));
+                    let hasVibe = keywords.some(k => gStr.includes(k));
+                    if (!hasVibe && selectedVibe === 'vintage') {
+                        const y = parseInt(a.release_year) || 0;
+                        if (y > 0 && y < 1985) hasVibe = true;
+                    }
                     if (!hasVibe) return false;
                 }
 
                 return true;
             });
 
-            // If 30-day favorites filter produced no results, gracefully fall back to all-time favorites
-            if (pool.length === 0 && selectedMode === 'favorites' && selectedHorizon === '30d') {
+            // If 30-day heavy rotation filter produced no results, gracefully fall back to all-time favorites
+            if (pool.length === 0 && selectedTarget === 'heavy_30d') {
                 pool = ALL_ALBUMS.filter(a => (a.album_track_plays || 0) > 0);
+                if (pool.length === 0) pool = ALL_ALBUMS;
             }
 
             document.getElementById('poolCountText').innerText = `${pool.length.toLocaleString()} matching records in your library`;

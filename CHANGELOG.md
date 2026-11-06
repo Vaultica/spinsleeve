@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.2.1] — 2026-11-06
+### 🎯 Crate Digger UX Streamlining, Balanced Vibes (`POLISH-01`) & Album Artist Isolation
+* **Cloud Run Revision:** `spotify-dashboard-beta-00023-tr2`
+* **What:**
+  - Replaced the two stacked, conflicting multi-button rows (*Listening Mode* and *Time Horizon*) with a single-dimension **Crate Target Focus** selector (`🔥 Heavy Rotation (30D)`, `🔍 Unplayed Gems`, `❄️ Cold Shelf (30D+)`, `⭐ All-Time Favorites`, and `🌌 Full Crate`).
+  - Redesigned the bulky filter frame into a compact, space-efficient 2-tier digging console, saving over 240px of vertical height and pulling spotlight vinyl picks and album art above the fold on all screens.
+  - Balanced the mood vibe genre classification dictionary by eliminating overly broad substring matches on `'rock'` from `energetic`, while enriching `chill` with realistic streaming tags (`shoegaze`, `trip hop`, `ambient pop`, `idm`), `mellow` (`chamber pop`, `americana`, `bluegrass`), and `vintage` (`classic soul`, `motown`, `psychedelic rock`, and pre-1985 release years).
+* **Bug Fix (Homonymous Album Collision - Neil Young vs. CARRTOONS *Homegrown*):**
+  - **Issue:** Scrobbles and artwork were conflated between albums sharing the same title by different artists (e.g. Neil Young and CARRTOONS both released albums titled *Homegrown*). In Analytics, CARRTOONS scrobbles displayed Neil Young's cover art, while in Library Explorer, Neil Young's play count was inflated to 229 plays (the combined sum of 184 CARRTOONS plays + 45 Neil Young plays).
+  - **Fix:** Refactored SQL queries in `fetch_user_analytics_data` and BigQuery view `spotify_v2.user_albums_features` to group and join on composite key `(norm_album_name, norm_artist_name)`.
+  - **Verification:** Re-materialized `user_albums_features_table` in BigQuery and cleared Datastore document cache; confirmed Neil Young strictly has 45 plays (3.8 album spins) and CARRTOONS has 184 plays (13.1 album spins) with authentic individual album sleeves. Added regression test suite `tests/test_album_artist_collision.py`.
+* **How:**
+  - Updated `BETA_RECOMMEND_HTML` in `src/report_v2/app.py` with responsive flex/grid horizontal layouts.
+  - Added `setTarget(target)` function while maintaining backward compatibility bridges for `setHorizon` and `setMode`.
+  - Added comprehensive test suites `tests/test_crate_digger_polish.py` and `tests/test_album_artist_collision.py` (50/50 tests passing).
+
+---
+
 ## [[v2.2.0]](https://github.com/Vaultica/spinsleeve/commit/00ace34) — 2026-11-05
 ### 🛠️ Header Polish & Semantic Release Versioning (`POLISH-04`, `POLISH-05`)
 * **Cloud Run Revision:** `spotify-dashboard-beta-00022-z5t`

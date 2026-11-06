@@ -183,10 +183,11 @@ album_plays_by_name AS (
   SELECT 
     user_id,
     LOWER(TRIM(album_name)) as norm_album_name,
+    LOWER(TRIM(artist_name)) as norm_artist_name,
     COUNT(*) as track_plays_by_name,
     COUNTIF(played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)) as track_plays_by_name_30d
   FROM `secret-compass-181513.spotify_v2.playback_history`
-  GROUP BY user_id, norm_album_name
+  GROUP BY user_id, norm_album_name, norm_artist_name
 ),
 raw_albums AS (
   SELECT 
@@ -235,7 +236,9 @@ FROM deduped d
 LEFT JOIN album_plays_by_id pid
   ON d.user_id = pid.user_id AND d.album_id = pid.album_id
 LEFT JOIN album_plays_by_name pname
-  ON d.user_id = pname.user_id AND LOWER(TRIM(d.album_name)) = pname.norm_album_name
+  ON d.user_id = pname.user_id 
+  AND LOWER(TRIM(d.album_name)) = pname.norm_album_name
+  AND LOWER(TRIM(d.artist_name)) = pname.norm_artist_name
 LEFT JOIN `secret-compass-181513.spotify_v2.album_enriched_metadata` e
   ON d.album_id = e.album_id;
 ```

@@ -74,6 +74,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **INFRA-03a** | **Materialized Clustered Analytical Table** (`user_albums_features_table`, 2.3x query speedup) | ✅ COMPLETED (Deployed: revision `00020-vrw`) |
 | **INFRA-03b** | **Cloud Datastore Document Store Cache** (`UserCatalogCache` gzipped document store, ~50ms cold loads) | ✅ COMPLETED (Deployed: revision `00021-42p`) |
 | **Phase 6f** | **Header Polish & Semantic Versioning** (`POLISH-04`, `POLISH-05`) (v2.2.0 release badge, clean profile avatar) | ✅ COMPLETED (Deployed: revision `00022-z5t`) |
+| **POLISH-01** | **Crate Digger UX Streamlining & Balanced Vibes** (Single-dimension targets, 2-tier compact console, balanced VIBES, album artist isolation) | ✅ COMPLETED (Deployed: revision `00023-tr2`, `v2.2.1`) |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (`APP-02`) | ⏳ Backlog |
 
 *See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform, Sub-100ms Caching & Materialization), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle, Played Not Owned, Turntable Web Player), `POLISH` (Harmonised Heavy Rotation, 30D sorting fix, decimal plays, dynamic versioning, clean header, admin table alignment), `BRAND` (Landing redesign, Buy Me a Coffee), and `DOCS` (Technical architecture map).*

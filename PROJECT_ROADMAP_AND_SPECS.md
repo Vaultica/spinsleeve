@@ -108,7 +108,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed (Revision `00019-9ds`) |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
 | **`APP-08`** | Full-Length Virtual Turntable Player (Spotify Web Playback SDK) | Core App | 8–12 hours | Medium |
-| **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Simplify Crate Digger | Tactical Polish | 2–3 hours | Low |
+| **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering (Strict 30D Descending) | Tactical Polish | 1–2 hours | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
 | **`POLISH-04`** | ✅ ~~Semantic Build Versioning (Replace "beta v2" with Version)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.0`: Revision `00022-z5t`) |
@@ -229,13 +229,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 #### `APP-01`: 12" Gatefold Tracklisting & Side A / Side B Disc Breakdown
 * **Problem:**  
   The gatefold modal provides rich narrative liner notes and personnel rosters, but lacks the tracklist—the core structural element of a vinyl record sleeve.
-* **Solution:**  
-  Integrate complete tracklists into the 12" gatefold modal:
-  1. **Data Ingestion:** Fetch album tracklisting (track number, title, duration in mm:ss, explicit flag) via Spotify Web API or iTunes Search API.
-  2. **Physical Vinyl Layout:** Format tracks split into virtual vinyl sides:
-     - Side A: Tracks 1 to N/2
-     - Side B: Tracks N/2+1 to N
-  3. **Inline Needle-Drop:** Clicking any track name instantly swaps the audio preview player to audition that specific track's 30-second snippet.
+* **Agreed Architectural Design (Hybrid Model & Option A):**
+  1. **Primary Structural Source (Spotify Web API `sp.album_tracks(album_id)`):**
+     - Fetch exact track sequence, titles, durations (`duration_ms`), explicit flags, and Spotify track URIs (`spotify:track:...`) using existing `album_id`.
+     - Direct technical alignment with upcoming turntable player (`APP-08`).
+  2. **Storage & Caching (Option A - On-Demand Datastore Cache):**
+     - Dedicated endpoint: `/api/album/<album_id>/tracks`
+     - On first open of an album's gatefold modal, fetch from Spotify API, compute vinyl sides, and cache in Cloud Datastore (`AlbumTracksCache`, shared across all tenants) with a 30-day TTL. Sub-50ms subsequent loads with zero BQ migrations.
+  3. **Physical Vinyl Splitting Algorithm:**
+     - **Single Disc (`disc_count == 1`):** Split $N$ tracks into Side A ($1 \dots \lceil N/2 \rceil$) and Side B ($\lceil N/2 \rceil + 1 \dots N$).
+     - **Multi-Disc (`disc_count >= 2`):** Map Disc 1 to Side A / Side B, Disc 2 to Side C / Side D.
+  4. **Inline Needle-Drop Auditioning:**
+     - Clicking any track name audits that track's 30s snippet using Spotify `preview_url` or falling back to `/api/preview?artist=...&track=...` via iTunes.
 * **Effort & Complexity:** ~4–6 hours (0.5 to 1 day) • **Complexity:** **Low–Medium**
 
 ---
@@ -339,10 +344,13 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ### 🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)
 
-#### `POLISH-01`: Harmonise "Heavy Rotation" Filter Across Tabs & Simplify Crate Digger Selection
-* **Problem:** Terminology, active filter states, and horizon controls differ slightly between the Library Explorer, Crate Digger, and SpinPals, creating cognitive friction. In Crate Digger, the stacked mode and horizon selection deck can be simplified into a cleaner, unified flow.
-* **Solution:** Standardize the "Heavy Rotation" moniker and icon across all tabs. Streamline Crate Digger's control deck into an intuitive, unified filter bar with fewer clicks.
-* **Effort & Complexity:** ~2–3 hours • **Complexity:** **Low**
+#### `POLISH-01`: ✅ ~~Harmonise "Heavy Rotation" Filter Across Tabs & Simplify Crate Digger Selection~~
+* **Problem:** Terminology, active filter states, and horizon controls differed or clashed between Listening Mode and Time Horizon, causing cognitive friction and consuming ~340px of vertical space with empty black padding. Mood vibes were heavily skewed towards energetic due to broad substring matching on `'rock'`.
+* **Solution Implemented (`v2.2.1`):**
+  1. **Single-Dimension Crate Target:** Replaced conflicting Listening Mode and Time Horizon rows with a clean 5-target selector (`🔥 Heavy Rotation (30D)`, `🔍 Unplayed Gems`, `❄️ Cold Shelf (30D+)`, `⭐ All-Time Favorites`, `🌌 Full Crate`).
+  2. **Compact 2-Tier Console:** Compacted the filter box from ~340px down to ~95px, saving >240px of vertical height and pulling spotlight vinyl picks above the fold.
+  3. **Balanced Vibe Classification:** Removed broad `'rock'` from energetic; enriched chill (`shoegaze`, `trip hop`, `ambient pop`, `idm`), mellow (`chamber pop`, `americana`, `bluegrass`), and vintage (`classic soul`, `motown`, `psychedelic rock`, and pre-1985 release years).
+* **Effort & Complexity:** ~2–3 hours • **Status:** **Completed (`v2.2.1`)**
 
 ---
 
@@ -446,7 +454,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals Dynamic Time Horizon~~ | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | ✅ **Completed:** Rolling 30D play count aggregation in BQ view, 2-way horizon toggles in Crate Digger & SpinPals, and 30D library sort. |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
 | **`APP-08`** | Full-Length Virtual Turntable Web Player | Core App | 8–12h | Spotify Web Playback SDK, CSS Keyframes, Web Audio | **High:** Immersive full-length streaming with vinyl disc sliding from sleeve onto rotating 33⅓ platter. |
-| **`POLISH-01`** | Harmonise "Heavy Rotation" Filter & Crate Digger UX | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | **Medium:** Unified filtering terminology across all views and streamlined recommender controls. |
+| **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | [Fix] Heavy Rotation Sleeve Ordering by 30D Plays | Tactical Polish | 1–2h | JavaScript, Array Sorting | **Medium:** Enforce strict deterministic descending order by 30-day plays. |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
 | **`POLISH-04`** | ✅ ~~Semantic Build Version Numbering (Remove "beta v2")~~ | Tactical Polish | 1–2h | Flask, Jinja2, CI/CD | ✅ **Completed** (`v2.2.0`: Revision `00022-z5t`): Replaced static beta badge with dynamic semantic release version. |
