@@ -1,21 +1,24 @@
-MIT License
+PolyForm Noncommercial License 1.0.0
 
-Copyright (c) 2017 Serge Bouschet
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+You may use, copy, modify, and distribute this software for noncommercial purposes, free of charge.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Definitions
+"Software" refers to the source code, object code, documentation, and other files provided under this License.
+"You" refers to the individual or entity exercising rights under this License.
+"Commercial Purposes" means any use for monetary reward, commercial advantage, or business operations.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+2. Noncommercial Grant
+Subject to the terms and conditions of this License, you are granted a nonexclusive, worldwide, royalty-free license to use, copy, modify, and distribute the Software solely for Noncommercial Purposes.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+3. Restrictions
+You must not use, copy, modify, or distribute the Software for any Commercial Purposes. 
+You must not remove or alter any copyright, trademark, or attribution notices contained within the Software.
+
+4. Termination
+If you breach any term of this License, your rights under this License terminate immediately.
+
+5. Disclaimer of Warranty
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+Copyright (c) 2017-2026 Serge Bouschet. All rights reserved.

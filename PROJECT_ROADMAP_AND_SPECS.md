@@ -121,7 +121,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4 hours | Low |
-| **`BRAND-04`** | Software License & IP Protection Review (AGPLv3 / PolyForm Noncommercial) | Legal & Brand | 2–4 hours | Low |
+| **`BRAND-04`** | ✅ ~~Software License & IP Protection Review (PolyForm Noncommercial 1.0.0)~~ | Legal & Brand | 2–4 hours | Completed (`v2.2.2`) |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
 
 ---
@@ -587,5 +587,5 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, corporate firewall compliance, and visual showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | **Low:** Public release transparency, active milestone visibility, and open roadmap portal for club supporters. |
-| **`BRAND-04`** | Software License & IP Protection Review | Legal & Brand | 2–4h | AGPLv3, PolyForm Noncommercial, License Auditing | **High:** Eliminates SaaS loophole and protects project from unauthorized commercial exploitation. |
+| **`BRAND-04`** | ✅ ~~Software License & IP Protection Review~~ | Legal & Brand | 2–4h | PolyForm Noncommercial 1.0.0 | ✅ **Completed** (`v2.2.2`): Migrated repository to PolyForm Noncommercial 1.0.0 to prevent unauthorized commercial exploitation while keeping non-commercial use & contributions free. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |

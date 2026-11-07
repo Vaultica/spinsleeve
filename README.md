@@ -229,4 +229,4 @@ LIMIT 50;
 ---
 
 ## License
-Apache License 2.0 - See [LICENSE](LICENSE) for details.
+PolyForm Noncommercial License 1.0.0 - See [LICENSE](LICENSE) for details.
