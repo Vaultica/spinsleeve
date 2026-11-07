@@ -1,0 +1,70 @@
+# ==============================================================================
+# Gemini CLI Ignore Patterns (.geminiignore)
+# Optimized for SpinSleeve (Python, Flask, BigQuery, dbt, Cloud Run)
+# ==============================================================================
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test & Coverage Reports
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type Checking & Linters
+.mypy_cache/
+.ruff_cache/
+
+# Local Secrets & Credentials (NEVER index or load into LLM context)
+.env
+.env.*
+config.py
+*service-account*.json
+*credentials*.json
+*.key
+*.pem
+
+# Git & IDE Internal Files
+.git/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build & Packaging Artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+eggs/
+.eggs/
+
+# dbt Artifacts & Packages
+src/dbt/**/target/
+src/dbt/**/dbt_packages/
+src/dbt/**/logs/
+
+# Logs & Temporary Files
+*.log
+*.tmp
+tmp/
+instance/
+.webassets-cache

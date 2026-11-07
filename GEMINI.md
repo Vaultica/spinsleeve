@@ -52,6 +52,11 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 * **`src/pipeline_v2/sync.py`:** Automated multi-tenant sync engine. Iterates approved Datastore users, refreshes individual tokens, and loads new plays/albums into `spotify_v2`.
 * **`src/pipeline_v2/enrich.py`:** V2 album metadata enrichment pipeline. Scrapes Wikipedia and Discogs for 12" gatefold archival liner notes, ratings, and personnel into shared table `spotify_v2.album_enriched_metadata`.
 * **`manage_users.py`:** Standalone CLI tool to list, approve, and revoke users in Datastore.
+* **`VIBE_CODING_MANUAL.md`:** Developer guide for vibe coding with Gemini CLI, dynamic model switching, subagent orchestration (`@scribe`, `@tester`), and token cost optimization.
+* **`.gemini/agents/`:** Custom project subagents operating on budget-friendly models:
+  - `scribe` (`gemini-3.1-flash-lite`): Documentation (`CHANGELOG.md`, `ROADMAP`, `SPECS`) and Git staging/commit messages.
+  - `tester` (`gemini-3.1-flash-lite`): Unit test runner (`.venv/bin/python3 -m unittest discover tests`) and regression diagnostic reports.
+* **`.geminiignore`:** Ignores `.venv/`, Python bytecode caches, pytest/coverage artifacts, and credentials to optimize context size.
 * **`INFRASTRUCTURE_RUNBOOK.md`:** Comprehensive disaster recovery guide with DDL, Cloud Run deploy commands, and Cloud Scheduler setups.
 * **`PROJECT_ROADMAP_AND_SPECS.md`:** Product roadmap articulating the "WHAT" and "WHY" across all phases and categorized backlog (`INFRA`, `OPS`, `APP`, `POLISH`, `BRAND`, `DOCS`).
 * **`TECHNICAL_SPECS.md`:** Comprehensive technical specifications detailing the "HOW" (schemas, API contracts, caching tiers, algorithms, and security boundaries).
