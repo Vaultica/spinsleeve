@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - **POLISH-03 (Play Count Badge Refinement):** Eliminated bare `0 Plays` badges across all views. Unplayed records now display contextual tags (`✨ Newly Added` if added within the last 14 days, `💤 Never Played` otherwise). Records with partial/fractional scrobbles display clean decimal play counts (e.g. `🔥 0.6 Plays`, `🔥 1.7 Plays`), while whole spins format as clean integers (`🔥 2 Plays`, `🔥 1 Play`).
   - **Crate Digger Era Filter Layout:** Adjusted Crate Digger Row 2 grid spans (`5/4/3` allocation for Vibe, Era, and Genre) and enforced horizontal single-line alignment with `flex flex-nowrap` and `whitespace-nowrap`, bringing the Era filter closer to Vibe and preventing any unwanted wrapping.
   - **BRAND-04 (License Migration):** Migrated repository from MIT License to **PolyForm Noncommercial License 1.0.0** (`LICENSE`, `README.md`, `PROJECT_ROADMAP_AND_SPECS.md`), closing the SaaS commercial hosting loophole while keeping non-commercial usage and contributions free.
+  - **APP-12 (Roadmap Update):** Specified Header Profile Dropdown, User Settings & Community Action Center in `PROJECT_ROADMAP_AND_SPECS.md`, incorporating SpinPals opt-in/out toggle, nickname editing, scrobble pause, feedback, and Buy Me a Coffee integration.
 * **How:**
   - Updated `compute_normalized_album_plays` in Python and `getAlbumPlayBadge` in JavaScript within `src/report_v2/app.py`.
   - Added `added_at` parameter checking to compute newly added status.

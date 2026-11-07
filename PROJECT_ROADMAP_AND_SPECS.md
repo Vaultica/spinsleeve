@@ -111,6 +111,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8 hours | Medium |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City (Bandsintown API) | Core App | 6–8 hours | Medium |
 | **`APP-11`** | Collector’s Inscriptions: Personal Album Ratings & Archival Notes | Core App | 5–7 hours | Low–Med |
+| **`APP-12`** | Header Profile Dropdown, User Settings & Community Action Center | Core App | 3–4 hours | Low |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1 hour | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
@@ -265,6 +266,26 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   3. **Library Sync:** Ingest user saved albums via `GET /v1/me/library/albums` into BigQuery `spotify_v2.user_saved_albums`.
   4. **Cross-Platform Crate Digging:** Enable shared vinyl comparison and acoustic kinship calculation between Spotify and Apple Music users.
 * **Effort & Complexity:** ~16–24 hours (2–3 days) • **Complexity:** **Medium**
+
+---
+
+#### `APP-12`: Header Profile Dropdown, User Settings & Community Action Center
+* **Problem:**  
+  Because SpinSleeve features endless scrolling catalogs, traditional bottom footers are rarely seen. Important user controls (SpinPals opt-in/out, nickname editing, scrobble collection pause) and community touchpoints (Roadmap, GitHub, Feedback, Buy Me a Coffee) need to be accessible instantly from anywhere in the app.
+* **Solution:**  
+  Redesign the top-right user profile avatar into an interactive, sleek dropdown menu (`bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl`):
+  1. **User Identity & Status:** Displays avatar, display name, and admin badge if applicable.
+  2. **User Settings & Privacy Toggles:**
+     - 🤝 **SpinPals Opt-In / Opt-Out:** Toggle presence in the Listening Lounge directory (`pals_opt_in`).
+     - ✏️ **Custom Display Name / Nickname:** Edit how your name appears to CrateMates.
+     - ⏸️ **Pause Scrobble Sync:** Temporarily opt-out of automated playback history ingestion.
+  3. **Community & Support Center:**
+     - 🗺️ Link to `/roadmap`.
+     - 🐙 Link to GitHub repository.
+     - 💬 In-app Feedback drawer trigger.
+     - ☕ **"Buy Me a Coffee"** Supporter integration modal/link (`BRAND-02`).
+  4. **Session Controls:** 1-click Logout (and Admin Revert if impersonating).
+* **Effort & Complexity:** ~3–4 hours (0.5 day) • **Complexity:** **Low**
 
 ---
 
