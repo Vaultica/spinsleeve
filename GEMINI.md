@@ -80,7 +80,8 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **INFRA-03a** | **Materialized Clustered Analytical Table** (`user_albums_features_table`, 2.3x query speedup) | ✅ COMPLETED (Deployed: revision `00020-vrw`) |
 | **INFRA-03b** | **Cloud Datastore Document Store Cache** (`UserCatalogCache` gzipped document store, ~50ms cold loads) | ✅ COMPLETED (Deployed: revision `00021-42p`) |
 | **Phase 6f** | **Header Polish & Semantic Versioning** (`POLISH-04`, `POLISH-05`) (v2.2.0 release badge, clean profile avatar) | ✅ COMPLETED (Deployed: revision `00022-z5t`) |
-| **POLISH-01 & 07** | **Crate Digger UX & Controls Harmonisation** (Single-dimension targets, 2-tier console, balanced VIBES, album artist isolation, de-duplicated Spin Again) | ✅ COMPLETED (Deployed: revision `00024-mdp`, `v2.2.1`) |
+| **POLISH-01 & 07** | **Crate Digger UX & Controls Harmonisation** (Single-dimension targets, 2-tier console, balanced VIBES, album artist isolation, de-duplicated Spin Again) | ✅ COMPLETED (`v2.2.1`) |
+| **POLISH-02, 03 & Era** | **Library Initial Sort, Decimal Play Badges & Era Filter Alignment** (Strict 30D load sort, decimal scrobble badges, never-played/newly-added tags, single-line Crate Digger Era filter) | ✅ COMPLETED (`v2.2.2`) |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (`APP-02`) | ⏳ Backlog |
 
 *See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform, Sub-100ms Caching & Materialization), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle, Played Not Owned, Turntable Web Player, Granular Track Telemetry, Local Gig Radar, Collector's Inscriptions & Ratings), `POLISH` (Harmonised Heavy Rotation, 30D sorting fix, decimal plays, dynamic versioning, clean header, admin table alignment), `BRAND` (Landing redesign, Buy Me a Coffee, Public Roadmap Portal, License & IP Protection Review), and `DOCS` (Technical architecture map).*
@@ -104,3 +105,8 @@ gcloud run deploy spotify-dashboard-beta \
 # Fast test accounts in header
 # 👑 Serge: sergebou (Admin) | 👩 Sarah: sarahboosch | 🐹 GuineaPig: 31sevhztrcbajfcowsahl7z2p26q
 ```
+
+---
+
+## 6. Mandatory Workflow Rule: Session Closure
+* **"Close the Build Session":** Whenever the user issues the instruction or phrase **"close the build session"**, it is a mandatory requirement to update `CHANGELOG.md` with all completed features, bug fixes, and version bumps before concluding.

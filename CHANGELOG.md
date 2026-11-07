@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [v2.2.1] — 2026-11-06
+## [v2.2.2] — 2026-11-07
+### ✨ Library Initial Sort (`POLISH-02`), Decimal Play Badges (`POLISH-03`) & Crate Digger Era Filter Layout Fix
+* **What:**
+  - **POLISH-02 (Strict 30D Initial Sort):** Updated Library Explorer initialization (`DOMContentLoaded`) to trigger `onFilterChange()` instead of raw `renderGrid()`, ensuring the default `plays_30d_desc` (Heavy Rotation Last 30 Days) sorting applies immediately on initial page load rather than all-time plays.
+  - **POLISH-03 (Play Count Badge Refinement):** Eliminated bare `0 Plays` badges across all views. Unplayed records now display contextual tags (`✨ Newly Added` if added within the last 14 days, `💤 Never Played` otherwise). Records with partial/fractional scrobbles display clean decimal play counts (e.g. `🔥 0.6 Plays`, `🔥 1.7 Plays`), while whole spins format as clean integers (`🔥 2 Plays`, `🔥 1 Play`).
+  - **Crate Digger Era Filter Layout:** Adjusted Crate Digger Row 2 grid spans (`5/4/3` allocation for Vibe, Era, and Genre) and enforced horizontal single-line alignment with `flex flex-nowrap` and `whitespace-nowrap`, bringing the Era filter closer to Vibe and preventing any unwanted wrapping.
+* **How:**
+  - Updated `compute_normalized_album_plays` in Python and `getAlbumPlayBadge` in JavaScript within `src/report_v2/app.py`.
+  - Added `added_at` parameter checking to compute newly added status.
+  - Updated unit test suite (`tests/test_normalized_plays.py`) and verified all 51 tests pass successfully.
+
+---
 ### 🎯 Crate Digger UX Streamlining, Balanced Vibes (`POLISH-01`), Album Artist Isolation & Spin Again Deduplication (`POLISH-07`)
 * **Cloud Run Revision:** `spotify-dashboard-beta-00024-mdp`
 * **What:**
