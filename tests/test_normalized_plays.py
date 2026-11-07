@@ -38,8 +38,8 @@ class TestNormalizedAlbumPlays(unittest.TestCase):
 
     def test_partial_spin_less_than_one_album(self):
         norm_plays, display_badge, tooltip = compute_normalized_album_plays(track_plays=7, tracks_total=12)
-        self.assertEqual(norm_plays, 0)
-        self.assertEqual(display_badge, "🔥 0 Plays")
+        self.assertEqual(norm_plays, 0.6)
+        self.assertEqual(display_badge, "🔥 0.6 Plays")
         self.assertEqual(
             tooltip,
             "Estimated complete album spins based on 7 track plays across 12 tracks"
@@ -47,30 +47,30 @@ class TestNormalizedAlbumPlays(unittest.TestCase):
 
     def test_zero_track_plays(self):
         norm_plays, display_badge, tooltip = compute_normalized_album_plays(track_plays=0, tracks_total=10)
-        self.assertEqual(norm_plays, 0)
-        self.assertEqual(display_badge, "🔥 0 Plays")
+        self.assertEqual(norm_plays, 0.0)
+        self.assertEqual(display_badge, "💤 Never Played")
         self.assertEqual(
             tooltip,
-            "Estimated complete album spins based on 0 track plays across 10 tracks"
+            "Never played (0 plays)"
         )
 
     def test_fallback_zero_tracks_total(self):
         norm_plays, display_badge, tooltip = compute_normalized_album_plays(track_plays=5, tracks_total=0)
-        self.assertEqual(norm_plays, 5)
+        self.assertEqual(norm_plays, 5.0)
         self.assertEqual(display_badge, "🔥 5 Plays")
         self.assertEqual(tooltip, "Total track plays: 5 (track count unavailable)")
 
     def test_fallback_singular_track_total_zero(self):
         norm_plays, display_badge, tooltip = compute_normalized_album_plays(track_plays=1, tracks_total=0)
-        self.assertEqual(norm_plays, 1)
+        self.assertEqual(norm_plays, 1.0)
         self.assertEqual(display_badge, "🔥 1 Play")
         self.assertEqual(tooltip, "Total track plays: 1 (track count unavailable)")
 
     def test_none_and_nan_resilience(self):
         norm_plays, display_badge, tooltip = compute_normalized_album_plays(track_plays=None, tracks_total=None)
-        self.assertEqual(norm_plays, 0)
-        self.assertEqual(display_badge, "🔥 0 Plays")
-        self.assertEqual(tooltip, "Total track plays: 0 (track count unavailable)")
+        self.assertEqual(norm_plays, 0.0)
+        self.assertEqual(display_badge, "💤 Never Played")
+        self.assertEqual(tooltip, "Never played (0 plays)")
 
     def test_explorer_template_script_tokens(self):
         self.assertIn("function getAlbumPlayBadge(a)", BETA_EXPLORER_HTML)

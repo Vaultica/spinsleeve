@@ -63,7 +63,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 # Application Version (POLISH-04, POLISH-01)
-APP_VERSION = "v2.2.1"
+APP_VERSION = "v2.2.2"
 
 
 @app.context_processor
@@ -230,11 +230,12 @@ def safe_str(val, default=""):
     return default
 
 
-def compute_normalized_album_plays(track_plays, tracks_total, is_30d=False):
+def compute_normalized_album_plays(track_plays, tracks_total, is_30d=False, added_at=None):
     """
-    Computes normalized complete album spins, display badge string, and hover tooltip (APP-05 & APP-06).
-    Formula: floor(track_plays / tracks_total) if tracks_total > 0 else track_plays
+    Computes normalized complete album spins, display badge string, and hover tooltip (APP-05, APP-06, POLISH-03).
+    Formula: round(track_plays / tracks_total, 1) if tracks_total > 0 else track_plays
     Fallback: If tracks_total is unavailable or <= 0, uses track scrobbles.
+    When track_plays == 0, checks if newly added (within 14 days) or never played.
     When is_30d=True, adds 30-day context to the label and tooltip.
     """
     track_plays = safe_int(track_plays)
@@ -243,16 +244,34 @@ def compute_normalized_album_plays(track_plays, tracks_total, is_30d=False):
     period_label = "in last 30 days " if is_30d else ""
     badge_suffix = " (30D)" if is_30d else ""
 
+    if track_plays == 0:
+        is_new = False
+        if added_at:
+            try:
+                from datetime import datetime, timezone
+                dt = datetime.fromisoformat(str(added_at).replace('Z', '+00:00'))
+                delta = datetime.now(timezone.utc) - dt
+                if delta.days <= 14:
+                    is_new = True
+            except Exception:
+                pass
+        display_badge = "✨ Newly Added" if is_new else "💤 Never Played"
+        tooltip = "Newly added album (0 plays)" if is_new else "Never played (0 plays)"
+        return 0.0, display_badge, tooltip
+
     if tracks_total > 0:
-        norm_plays = track_plays // tracks_total
+        decimal_plays = round(track_plays / tracks_total, 1)
+        disp_val = int(decimal_plays) if decimal_plays.is_integer() else decimal_plays
         tooltip = f"Estimated complete album spins {period_label}based on {track_plays} track plays across {tracks_total} tracks".strip()
+        display_badge = f"🔥 {disp_val} Play{badge_suffix}" if disp_val == 1 else f"🔥 {disp_val} Plays{badge_suffix}"
+        return decimal_plays, display_badge, tooltip
     else:
-        norm_plays = track_plays
+        decimal_plays = float(track_plays)
+        disp_val = int(decimal_plays) if decimal_plays.is_integer() else decimal_plays
         period_name = "30-day track plays" if is_30d else "Total track plays"
         tooltip = f"{period_name}: {track_plays} (track count unavailable)"
-
-    display_badge = f"🔥 {norm_plays} Play{badge_suffix}" if norm_plays == 1 else f"🔥 {norm_plays} Plays{badge_suffix}"
-    return norm_plays, display_badge, tooltip
+        display_badge = f"🔥 {disp_val} Play{badge_suffix}" if disp_val == 1 else f"🔥 {disp_val} Plays{badge_suffix}"
+        return decimal_plays, display_badge, tooltip
 
 
 # ==============================================================================
@@ -460,8 +479,9 @@ def fetch_user_album_data(user_id, force_refresh=False):
         tracks_total = safe_int(row.get("album_tracks_total"))
         track_plays = safe_int(row.get("album_track_plays"))
         track_plays_30d = safe_int(row.get("album_track_plays_30d"))
-        norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total)
-        norm_plays_30d, plays_display_30d, plays_tooltip_30d = compute_normalized_album_plays(track_plays_30d, tracks_total, is_30d=True)
+        added_at_val = row.get("added_at")
+        norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total, added_at=added_at_val)
+        norm_plays_30d, plays_display_30d, plays_tooltip_30d = compute_normalized_album_plays(track_plays_30d, tracks_total, is_30d=True, added_at=added_at_val)
 
         item = {
             "album_id": safe_str(row.get("album_id")),
@@ -915,8 +935,9 @@ def compute_pal_compatibility(current_user_id, pal_id, horizon="30d"):
         tracks_total = safe_int(row.get("album_tracks_total"))
         track_plays = safe_int(row.get("album_track_plays"))
         track_plays_30d = safe_int(row.get("album_track_plays_30d"))
-        norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total)
-        norm_plays_30d, plays_display_30d, plays_tooltip_30d = compute_normalized_album_plays(track_plays_30d, tracks_total, is_30d=True)
+        added_at_val = row.get("added_at")
+        norm_plays, plays_display, plays_tooltip = compute_normalized_album_plays(track_plays, tracks_total, added_at=added_at_val)
+        norm_plays_30d, plays_display_30d, plays_tooltip_30d = compute_normalized_album_plays(track_plays_30d, tracks_total, is_30d=True, added_at=added_at_val)
 
         processed_pal_albums.append({
             "album_id": safe_str(row.get("album_id")),
@@ -2088,21 +2109,36 @@ BETA_EXPLORER_HTML = """
                 return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip}">${a.album_plays_display}</div>`;
             }
 
-            let normPlays = 0;
+            if (trackPlays === 0) {
+                let isNew = false;
+                if (a.added_at) {
+                    try {
+                        const dt = new Date(a.added_at);
+                        const now = new Date();
+                        const diffDays = (now - dt) / (1000 * 60 * 60 * 24);
+                        if (diffDays <= 14) isNew = true;
+                    } catch(e) {}
+                }
+                const label = isNew ? "✨ Newly Added" : "💤 Never Played";
+                const tooltip = isNew ? "Newly added album (0 plays)" : "Never played (0 plays)";
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] text-gray-400 font-bold select-none" title="${tooltip}">${label}</div>`;
+            }
+
+            let decimalPlays = trackPlays;
             let tooltip = '';
             if (tracksTotal > 0) {
-                normPlays = Math.floor(trackPlays / tracksTotal);
+                decimalPlays = Math.round((trackPlays / tracksTotal) * 10) / 10;
                 tooltip = is30d
                     ? `Estimated complete album spins in last 30 days based on ${trackPlays} track plays across ${tracksTotal} tracks`
                     : `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
             } else {
-                normPlays = trackPlays;
                 tooltip = is30d
                     ? `30-day track plays: ${trackPlays} (track count unavailable)`
                     : `Total track plays: ${trackPlays} (track count unavailable)`;
             }
+            const dispVal = Number.isInteger(decimalPlays) ? decimalPlays : decimalPlays;
             const suffix = is30d ? ' (30D)' : '';
-            const label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
+            const label = `🔥 ${dispVal} ${dispVal === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
             const colorClass = trackPlays > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
             return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
         }
@@ -2412,7 +2448,7 @@ BETA_EXPLORER_HTML = """
         });
 
         document.addEventListener("DOMContentLoaded", () => {
-            renderGrid();
+            onFilterChange();
         });
     </script>
 </body>
@@ -2560,9 +2596,9 @@ BETA_RECOMMEND_HTML = """
             </div>
 
             <!-- Row 2: Vibe, Era & Sub-Genre (Horizontal Flow) -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-3 items-center">
-                <!-- Mood & Vibe (Col 1-6) -->
-                <div class="md:col-span-6 flex flex-col sm:flex-row sm:items-center gap-2">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 pt-3 items-center">
+                <!-- Mood & Vibe (Col 1-5) -->
+                <div class="md:col-span-5 flex flex-col sm:flex-row sm:items-center gap-2">
                     <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">2. Vibe:</span>
                     <div class="flex flex-wrap gap-1.5">
                         <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-2.5 py-1 rounded-lg text-xs transition">🌌 Any</button>
@@ -2573,14 +2609,14 @@ BETA_RECOMMEND_HTML = """
                     </div>
                 </div>
 
-                <!-- Era Preference (Col 7-9) -->
-                <div class="md:col-span-3 flex items-center gap-2">
+                <!-- Era Preference (Col 6-9) -->
+                <div class="md:col-span-4 flex items-center gap-1.5">
                     <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">3. Era:</span>
-                    <div class="flex flex-wrap gap-1">
-                        <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-2 py-1 rounded-lg text-xs transition">All</button>
-                        <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-2 py-1 rounded-lg text-xs transition" title="2018 to Present">✨ 2018+</button>
-                        <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-2 py-1 rounded-lg text-xs transition" title="2000 - 2017">💿 00s-10s</button>
-                        <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-2 py-1 rounded-lg text-xs transition" title="Before 2000">📼 &lt;2000</button>
+                    <div class="flex flex-nowrap gap-1">
+                        <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-2 py-1 rounded-lg text-xs transition whitespace-nowrap">All</button>
+                        <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-2 py-1 rounded-lg text-xs transition whitespace-nowrap" title="2018 to Present">✨ 2018+</button>
+                        <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-2 py-1 rounded-lg text-xs transition whitespace-nowrap" title="2000 - 2017">💿 00s-10s</button>
+                        <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-2 py-1 rounded-lg text-xs transition whitespace-nowrap" title="Before 2000">📼 &lt;2000</button>
                     </div>
                 </div>
 
