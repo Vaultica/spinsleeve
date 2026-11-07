@@ -23,6 +23,7 @@
    - [`APP-04`: Music Legend Illustrated Avatar Persona Engine](#app-04-music-legend-illustrated-avatar-persona-engine)
    - [`APP-07`: "Played But Not Owned" Discovery Crate](#app-07-played-but-not-owned-discovery-crate)
    - [`APP-08`: Full-Length Virtual Turntable Player (Spotify Web Playback SDK)](#app-08-full-length-virtual-turntable-player-spotify-web-playback-sdk)
+   - [`APP-11`: Collector’s Inscriptions: Personal Album Ratings & Archival Notes](#app-11-collectors-inscriptions-personal-album-ratings--archival-notes)
 5. [Category: Tactical Polish & UX Streamlining (`POLISH`)](#5-category-tactical-polish--ux-streamlining-polish)
    - [`POLISH-02`: Library Explorer 30-Day Sort Initialization Fix](#polish-02-library-explorer-30-day-sort-initialization-fix)
    - [`POLISH-03`: Normalized Decimal Play Count & Contextual Badges](#polish-03-normalized-decimal-play-count--contextual-badges)
@@ -30,6 +31,7 @@
 6. [Category: Brand Identity, Public Landing & Monetization (`BRAND`)](#6-category-brand-identity-public-landing--monetization-brand)
    - [`BRAND-01`: Public Landing Page & Feature Showcase Architecture](#brand-01-public-landing-page--feature-showcase-architecture)
    - [`BRAND-02`: Buy Me a Coffee Supporter Integration](#brand-02-buy-me-a-coffee-supporter-integration)
+   - [`BRAND-04`: Software License & IP Protection Architecture (AGPLv3 vs. PolyForm)](#brand-04-software-license--ip-protection-architecture-agplv3-vs-polyform)
 7. [Category: Technical Documentation (`DOCS`)](#7-category-technical-documentation-docs)
    - [`DOCS-01`: Comprehensive Architecture Blueprint (Mermaid Topology)](#docs-01-comprehensive-architecture-blueprint-mermaid-topology)
 
@@ -303,6 +305,97 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
+### `APP-11`: Collector’s Inscriptions: Personal Album Ratings & Archival Notes
+* **Technical Objective:** Implement a dual-storage rating and qualitative annotation engine providing sub-15ms client writes/reads via Cloud Datastore while asynchronously syncing records to BigQuery for future deep listening analytics, correlation analysis, and friend compatibility modeling.
+* **Architecture & Storage Hierarchy:**
+  ```text
+  ┌────────────────────────────────────────────────────────┐
+  │ CLIENT BROWSER (Gatefold Modal / Library / SpinPals)   │
+  └───────────────────────────┬────────────────────────────┘
+                              │ POST /api/album/<id>/review (<15ms)
+                              ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ FLASK RUNTIME (`src/report_v2/app.py`)                 │
+  └───────────────────────────┬────────────────────────────┘
+                              │
+                              ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ TIER 1: CLOUD DATASTORE (OLTP Vault)                   │
+  │ • Kind: AlbumReview                                    │
+  │ • Key:  {user_id}::{album_id}                          │
+  └───────────────────────────┬────────────────────────────┘
+                              │
+                              ▼ (Every 2h via Cloud Run Job: spotify-v2-pipeline-job)
+  ┌────────────────────────────────────────────────────────┐
+  │ TIER 2: BIGQUERY DATASET `spotify_v2`                  │
+  │ • Table: `user_album_reviews`                          │
+  │   (Partitioned by DATE(created_at), Clustered by user) │
+  │ • View/Materialization: Merged into                    │
+  │   `user_albums_features_table`                         │
+  └────────────────────────────────────────────────────────┘
+  ```
+* **Data Models & Schemas:**
+  1. **Cloud Datastore Kind `AlbumReview`:**
+     - **Key:** String `{user_id}::{album_id}` (e.g., `sergebou::1PjhWoE62908FlVv7L42Pt`)
+     - **Properties:**
+       - `user_id` (STRING, indexed)
+       - `album_id` (STRING, indexed)
+       - `album_name` (STRING)
+       - `artist_name` (STRING)
+       - `rating` (FLOAT, range: `1.0` to `5.0`, step `0.5`, nullable)
+       - `notes` (STRING, max 1,000 characters, markdown sanitized)
+       - `is_private` (BOOLEAN, default: `False`)
+       - `created_at` (TIMESTAMP)
+       - `updated_at` (TIMESTAMP)
+  2. **BigQuery Table DDL (`spotify_v2.user_album_reviews`):**
+     ```sql
+     CREATE TABLE IF NOT EXISTS `secret-compass-181513.spotify_v2.user_album_reviews` (
+       user_id STRING NOT NULL,
+       album_id STRING NOT NULL,
+       album_name STRING,
+       artist_name STRING,
+       rating FLOAT64,
+       notes STRING,
+       is_private BOOL,
+       created_at TIMESTAMP,
+       updated_at TIMESTAMP
+     )
+     PARTITION BY DATE(created_at)
+     CLUSTER BY user_id, album_id;
+     ```
+* **Pipeline Synchronization (`src/pipeline_v2/sync.py`):**
+  - **Function `sync_user_reviews_to_bigquery(ds_client, bq_client)`:**
+    - Queries Datastore for `AlbumReview` entities modified since the last pipeline run (or full active scan).
+    - Executes a batch `MERGE` statement into `spotify_v2.user_album_reviews`:
+      ```sql
+      MERGE `spotify_v2.user_album_reviews` T
+      USING staging_reviews S
+      ON T.user_id = S.user_id AND T.album_id = S.album_id
+      WHEN MATCHED THEN
+        UPDATE SET rating = S.rating, notes = S.notes, is_private = S.is_private, updated_at = S.updated_at
+      WHEN NOT MATCHED THEN
+        INSERT ROW;
+      ```
+  - **Materialization Integration:** Update `rematerialize_user_albums_features(bq_client)` to left-join `user_album_reviews` so that `user_rating`, `user_notes`, and `has_user_review` are pre-compiled into `user_albums_features_table`.
+* **REST API Endpoints:**
+  1. **`POST /beta/api/album/<album_id>/review`** (and `/api/album/<album_id>/review`):
+     - **Auth:** Requires active `__session` (`user_id`).
+     - **Payload:** `{"rating": 4.5, "notes": "Deep autumn spin.", "is_private": false}`
+     - **Validation:** Rating in `[None, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]`, notes length $\le 1000$ chars, HTML sanitized.
+     - **Response:** `200 OK` with updated entity payload.
+  2. **`GET /beta/api/album/<album_id>/review?pal_id=<optional>`**:
+     - Returns `{ "my_review": {...}, "pal_review": {...} }`.
+     - Privacy Gate: If `pal_id` is supplied, `pal_review` is only returned if the target user has `pals_opt_in == True` and the review has `is_private == False`.
+  3. **`DELETE /beta/api/album/<album_id>/review`**:
+     - Deletes the `AlbumReview` entity in Datastore.
+* **Sparse UX & Non-Biased Frontend Logic:**
+  - **No Empty Star Clutter:** If `!album.user_rating && !album.user_notes`, no rating elements or empty placeholders are rendered on sleeve cards. Default sleeve badge remains normalized plays (`🔥 X Plays`).
+  - **Earned Gold Seal:** If `album.user_rating` exists, render a compact gold badge: `★ ${album.user_rating.toFixed(1)}${album.user_notes ? ' 📝' : ''}`.
+  - **Gatefold Inscription Card:** Placed in the back sleeve of `openGatefold(album)`. Displays rating stars and collapsible note area with smooth AJAX save (`💾 Inscribe Sleeve`).
+  - **SpinPals Social Reflections:** If viewing a pal's record in `/pals/<pal_id>`, displays pal's star rating and their personal note in an archival quote block.
+
+---
+
 ## 5. Category: Tactical Polish & UX Streamlining (`POLISH`)
 
 ### `POLISH-02`: Library Explorer 30-Day Sort Initialization Fix
@@ -338,11 +431,37 @@ All new features and architectural changes must strictly adhere to these verifie
 ## 6. Category: Brand Identity, Public Landing & Monetization (`BRAND`)
 
 ### `BRAND-01`: Public Landing Page & Feature Showcase Architecture
-* **Technical Objective:** Editorial public landing page at `/login` showcasing the virtual vinyl ritual before sign-in.
-* **Structure:**
-  - Unauthenticated visitors hitting `/` or `/login` receive `PUBLIC_LANDING_HTML`.
-  - Live interactive demo component: Clickable mini-gatefold showing high-resolution sleeve opening and needle-drop audio preview.
-  - Manifest narrative and feature grid (Library, Crate Digger, Analytics, SpinPals).
+* **Technical Objective:** Build an editorial, high-converting public landing page at unauthenticated root `/` and `/login` that showcases the physical vinyl ritual while fulfilling corporate firewall and enterprise security crawler classification criteria to prevent workplace domain blocking.
+* **Component Architecture & Routing:**
+  - **Route Handling:** Unauthenticated requests to `/` or `/login` render `PUBLIC_LANDING_HTML` instead of an abrupt Spotify OAuth redirect. Authenticated sessions continue directly to `/` (Library Explorer).
+  - **Interactive Gatefold Showcase:** In-browser mini-gatefold component with CSS 3D transforms, demonstrating sleeve opening, archival liner notes, and 30-second needle-drop preview snippets.
+  - **Feature Grid:** Editorial interactive panels for Library Crate, Crate Digger, Listening Telemetry, and SpinPals.
+* **Corporate Firewall & Web Crawler Compliance:**
+  - **Structured Metadata & Schema.org:**
+    ```html
+    <meta name="description" content="SpinSleeve - Virtual 12-inch vinyl crate, archival gatefold liner notes, and listening telemetry platform.">
+    <meta property="og:title" content="SpinSleeve: The Virtual Vinyl Crate & Liner Notes Archive">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://spinsleeve.cc">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "SpinSleeve",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Web",
+      "author": { "@type": "Person", "name": "Serge Bouschet" }
+    }
+    </script>
+    ```
+  - **Compliance Endpoints:**
+    - `/privacy`: Static route rendering zero-tracking privacy disclosure (read-only Spotify API scopes, encrypted Datastore token isolation, no tracking/advertising cookies, strictly functional `__session` cookie).
+    - `/terms`: Standard terms of service and acceptable use declaration.
+    - `/about`: Platform mission, developer contact (`contact@spinsleeve.cc`), and technical stack summary.
+  - **Security Vendor Recategorization Runbook:**
+    - Submit domain review to Palo Alto Networks (PAN-DB), Fortinet FortiGuard, Zscaler SiteReview, and Cisco Talos.
+    - Target Category: *"Information Technology / Software & Web Applications"* (reclassifying away from *"Personal Sites"*, *"Streaming Media"*, or *"Uncategorized"*).
+  - **Dual Domain Aliasing:** Configure Firebase Hosting `firebase.json` rewrites to support secondary commercial TLD aliases (e.g., `spinsleeve.com` or `spinsleeve.app`) alongside `spinsleeve.cc` to bypass corporate country-code TLD heuristics.
 
 ---
 
@@ -351,6 +470,24 @@ All new features and architectural changes must strictly adhere to these verifie
 * **Integration Points:**
   - Floating footer widget: `https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js`.
   - Subtle graphic badge embedded in the 12" gatefold archival liner notes reader footer.
+
+---
+
+### `BRAND-04`: Software License & IP Protection Architecture (AGPLv3 vs. PolyForm)
+* **Technical Objective:** Conduct an intellectual property audit and migrate the project from permissive MIT to a license that eliminates the "Hosted Web Service / SaaS Loophole" and protects the author's work from unauthorized commercial cloning.
+* **Licensing Model Comparison:**
+  1. **Option A: AGPLv3 (GNU Affero General Public License v3.0):**
+     - **Mechanism:** Section 13 triggers copyleft obligations when software is operated over a computer network. Anyone hosting SpinSleeve as a web service MUST make the complete corresponding source code available to all network users under AGPLv3.
+     - **Strengths:** Fully Open Source Initiative (OSI) approved; prevents proprietary hosted forks; guarantees reciprocal community improvements.
+  2. **Option B: PolyForm Noncommercial 1.0.0:**
+     - **Mechanism:** Source-available license granting unrestricted rights for personal, educational, and testing use, but explicitly prohibiting any commercial use without an express commercial license from Serge.
+     - **Strengths:** 100% legal bar against third parties hosting SpinSleeve for commercial gain, subscriptions, or advertising.
+* **Transitive Dependency Audit:**
+  - All existing dependencies (`Flask` [BSD-3], `spotipy` [MIT], `google-cloud-bigquery` [Apache-2.0], `google-cloud-datastore` [Apache-2.0], `gunicorn` [MIT], `pandas` [BSD-3]) use permissive open-source licenses compatible with both AGPLv3 and PolyForm Noncommercial downstream distribution.
+* **Migration Deliverables:**
+  - Update root `LICENSE` file with updated copyright (`Copyright (c) 2017–2026 Serge Bouschet`) and chosen license grant.
+  - Add standardized SPDX headers to source files (`SPDX-License-Identifier: AGPL-3.0-or-later` or `PolyForm-Noncommercial-1.0.0`).
+  - Introduce `CONTRIBUTING.md` outlining IP ownership, contributor licensing, and Developer Certificate of Origin (DCO).
 
 ---
 

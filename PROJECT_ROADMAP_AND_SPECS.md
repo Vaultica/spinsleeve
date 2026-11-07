@@ -110,6 +110,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-08`** | Full-Length Virtual Turntable Player (Spotify Web Playback SDK) | Core App | 8–12 hours | Medium |
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8 hours | Medium |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City (Bandsintown API) | Core App | 6–8 hours | Medium |
+| **`APP-11`** | Collector’s Inscriptions: Personal Album Ratings & Archival Notes | Core App | 5–7 hours | Low–Med |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1 hour | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
@@ -120,6 +121,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4 hours | Low |
+| **`BRAND-04`** | Software License & IP Protection Review (AGPLv3 / PolyForm Noncommercial) | Legal & Brand | 2–4 hours | Low |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
 
 ---
@@ -379,6 +381,35 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `APP-11`: Collector’s Inscriptions: Personal Album Ratings & Archival Notes
+* **Problem:**  
+  1. **The Pre-Tracking Blindspot:** High-fidelity vinyl collectors and music enthusiasts have foundational cornerstone records they spun hundreds of times on physical vinyl, cassette, or CD before digital scrobble tracking began. Because these albums show low or zero Spotify scrobbles, SpinSleeve’s "Heavy Rotation" and play-count badges inadvertently relegate these masterpieces to the "Cold Shelf."
+  2. **Frequency vs. Emotional Affinity:** Raw play frequency measures convenience, background utility, or recent loops, but not deep artistic resonance. An album listened to once a year with full emotional reverence may be a personal 10/10, yet telemetry alone cannot capture this.
+  3. **Social Storytelling in SpinPals:** When crate digging through a friend's collection, the most meaningful experience isn't just seeing what they own—it’s hearing *why* they love it (*"Got this on our road trip to Big Sur in 2019"*, *"Listen with headphones in the dark—Side B will change your life"*).
+* **Solution:**  
+  Build a tactile rating and personal liner notes inscription system designed specifically for collectors, ensuring an unforced, sparse user experience and future-proof analytics:
+  1. **Sparse UX & Non-Biased Visual Design:**
+     - **Zero Visual Penalty for Unrated Albums:** Unrated albums never display empty gray stars (`☆☆☆☆☆`), `Unrated` tags, or dashed placeholders. Unrated sleeves remain 100% clean, focusing on artwork and primary normalized play metrics (`🔥 X Plays`).
+     - **Earned Collector’s Seal Badge:** Only albums with an explicit rating or note display an unobtrusive gold badge (e.g., `★ 5.0` or `★ 4.5 📝` in the upper corner), acting like an earned "Staff Pick" or "Signature Record" seal rather than a missing checkbox.
+     - **Subordinate Sorting & Filtering:** The default sort remains `🔥 Heavy Rotation (Last 30 Days)`. `⭐ Highest Rated` and `📝 Inscribed Sleeves` are placed as secondary, deliberate options in the sort dropdown and filter bar.
+  2. **12" Gatefold Modal Inscription Card:**
+     - Styled like an authentic archival index card or liner card insert tucked into the gatefold sleeve.
+     - Tactile 5-star rating selector (0.5 increments, 1.0 to 5.0 stars) with smooth hover and click feedback.
+     - Handwritten note textarea (up to 1,000 characters) with conversational placeholder prompts (*"Why is this record in your collection? Share a memory or why it spins..."*).
+     - Instant AJAX save (`💾 Inscribe Sleeve`) with optimistic UI feedback and a privacy toggle (`🔒 Keep private / visible only to me`).
+  3. **SpinPals Social Crate Digging (`/pals` & `/pals/<pal_id>`):**
+     - When crate digging a friend's collection, sleeves display the pal's star rating seal.
+     - Opening the pal's record in the gatefold displays their handwritten inscription in a distinct, warm quote card (*"Sarah's Inscription (★ 5.0): Spun this every Sunday morning in autumn..."*).
+     - **Mutual Reflections:** If both you and your pal own and have inscribed the same album, display both notes side-by-side (*"Your Inscription"* vs *"Sarah's Inscription"*).
+  4. **Dual-Storage & Asynchronous BigQuery Analytics Sync:**
+     - **OLTP Tier (Cloud Datastore `AlbumReview`):** Delivers sub-15ms reads and writes when browsing or updating inscriptions in the web app, completely within GCP free-tier quotas.
+     - **Analytical Tier (BigQuery `spotify_v2.user_album_reviews`):** Automated 2-hour Cloud Run Job (`src/pipeline_v2/sync.py`) syncs Datastore inscriptions into BigQuery (partitioned by date, clustered by `user_id, album_id`).
+     - **Materialized Feature Join:** During pipeline rematerialization, merges user ratings into `user_albums_features_table` (`user_rating`, `user_notes`, `has_user_review`) for zero-latency queries.
+     - **Future Analytics Unlocked:** Enables deep correlation analysis ("Reverence vs. Rotation / The Guilty Pleasure Index", "Collector vs. Critics: Pitchfork vs. Personal Rating", and friend taste agreement in SpinPals).
+* **Effort & Complexity:** ~5–7 hours (1 day) • **Complexity:** **Low–Medium**
+
+---
+
 ### 🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)
 
 #### `POLISH-01`: ✅ ~~Harmonise "Heavy Rotation" Filter Across Tabs & Simplify Crate Digger Selection~~
@@ -441,9 +472,10 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 #### `BRAND-01`: Homepage & Public Login Redesign with Feature Showcase
 * **Problem:**  
-  The current public landing page (`/login`) is a minimal auth modal. Prospective users and friends don't get a visual tour of what SpinSleeve offers before connecting their streaming account.
+  1. The current public landing page (`/login`) is a minimal auth modal. Prospective users and friends don't get a visual tour of what SpinSleeve offers before connecting their streaming account.
+  2. **Corporate Firewall & Web Filter Blocking:** When accessed from enterprise or workplace networks, the site is frequently blocked by security proxies (Zscaler, Palo Alto Networks PAN-DB, Fortinet FortiGuard, Cisco Umbrella). Because the domain (`spinsleeve.cc`) has a non-commercial TLD and root traffic redirects to Spotify OAuth without public corporate metadata, automated web crawlers categorize it under restrictive categories (*"Non-Commercial / Personal Sites"*, *"Streaming Media & Audio"*, or *"Uncategorized / Newly Seen Domains"*), preventing users from accessing their collection at work.
 * **Solution:**  
-  An editorial, highly aesthetic public landing page:
+  An editorial, highly aesthetic public landing page engineered for high user conversion and corporate security compliance:
   1. **Hero Section:** Rotating 33⅓ RPM turntable branding, bold typography, and 1-click Spotify / Apple Music login buttons.
   2. **"Why SpinSleeve Exists" Narrative:** A short manifesto explaining the mission—rescuing the physical ritual of vinyl, sleeve artwork, and liner notes from algorithmic streaming feeds.
   3. **Interactive Feature Showcase:**
@@ -451,7 +483,13 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
      - *Smart Crate Digger:* Highlighting discovery by vibe, era, and subgenre.
      - *Listening Telemetry:* Visualizing listening clock heatmaps and taste velocity.
      - *SpinPals (CrateMates):* Demonstrating acoustic kinship gauges and friend shelf borrowing.
-  4. **Invite Guidance:** Clear instructions on requesting private access from Serge.
+  4. **Enterprise Firewall & Security Crawler Compliance:**
+     - **Public Unauthenticated Root (`/` & `/login`):** Deliver an indexed public showcase rather than an abrupt OAuth redirect or bare login card.
+     - **Standard Corporate Footers:** Dedicated `/about`, `/privacy` (Privacy Policy explaining zero user data tracking, read-only Spotify scopes, and session isolation), and `/terms` (Terms of Service).
+     - **Developer Identity & Verified Ownership:** Explicit copyright notice (`Copyright © 2017–2026 Serge Bouschet`), developer contact info (`contact@spinsleeve.cc` / GitHub link), and structured OpenGraph/Twitter card metadata (`og:title`, `og:description`, `application-name="SpinSleeve"`, `category="Technology/Software & Web Applications"`).
+     - **Security Recategorization Runbook:** Step-by-step submission guide to request categorization updates on Palo Alto Networks Test-A-Site, FortiGuard, Zscaler, and Cisco Talos (requesting *"Information Technology / Software & Web Applications"*).
+     - **Commercial TLD Alias Ready:** Structure Firebase Hosting rewrites to support seamless aliasing to a secondary `.com` or `.app` domain (e.g., `spinsleeve.com` or `spinsleeve.app`) to bypass country-code TLD heuristics.
+  5. **Invite Guidance:** Clear instructions on requesting private access from Serge.
 * **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Low–Medium**
 
 ---
@@ -478,6 +516,27 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   3. **Visual Lane Kanban:** Categorized lane presentation across *Shipped*, *In Progress*, and *Up Next*, filterable by category (`INFRA`, `OPS`, `APP`, `POLISH`, `BRAND`, `DOCS`).
   4. **Release Notes Linkage:** Injects dynamic version (`v2.2.0`) linked directly to detailed release notes and changelog entries.
 * **Effort & Complexity:** ~3–4 hours (0.5 day) • **Complexity:** **Low**
+
+---
+
+#### `BRAND-04`: Software License & IP Protection Review (AGPLv3 / PolyForm Noncommercial Migration)
+* **Problem:**  
+  1. The repository currently uses the permissive **MIT License** (`Copyright (c) 2017 Serge Bouschet`).
+  2. Under MIT, while source code distributions must retain the copyright header, the license contains the well-known **"Hosted Web Service / SaaS Loophole"**: third parties or commercial entities can take the entire codebase, host it privately on Cloud Run or AWS as a paid service or clone, rebrand it, and monetize it without contributing code back, requesting permission, or giving public frontend attribution to Serge.
+  3. Furthermore, MIT provides zero legal restrictions against third parties commercially exploiting SpinSleeve without revenue sharing.
+* **Solution:**  
+  Conduct a comprehensive legal and architectural review of the repository's licensing structure, evaluating and executing migration to stronger intellectual property protections:
+  1. **Option A: AGPLv3 (GNU Affero General Public License v3):**
+     - Closes the SaaS loophole: Any entity running SpinSleeve over a network (as a web application) is legally obligated to release their full modified source code to network users under AGPLv3, and retain prominent public copyright attribution.
+     - Preserves true open-source status while preventing proprietary cloud freeloading.
+  2. **Option B: PolyForm Noncommercial 1.0.0 (or PolyForm Free Trial):**
+     - Grants free rights to students, hobbyists, and developers to inspect, run, modify, and test the software for noncommercial purposes.
+     - Strictly forbids any commercial hosting, monetization, or proprietary commercial derivatives without a separately negotiated commercial license from Serge.
+  3. **Dependency & Transitive License Audit:**
+     - Verify compatibility of all dependencies in `src/report_v2/requirements.txt` and `src/pipeline_v2/requirements.txt` (Flask, spotipy, google-cloud-bigquery, google-cloud-datastore) with AGPLv3 and PolyForm.
+  4. **License Migration Execution:**
+     - Update `LICENSE`, file headers, `README.md`, and add a `CONTRIBUTING.md` defining contributor license agreements (CLA) or Developer Certificate of Origin (DCO).
+* **Effort & Complexity:** ~2–4 hours (0.5 day) • **Complexity:** **Low**
 
 ---
 
@@ -517,6 +576,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-08`** | Full-Length Virtual Turntable Web Player | Core App | 8–12h | Spotify Web Playback SDK, CSS Keyframes, Web Audio | **High:** Immersive full-length streaming with vinyl disc sliding from sleeve onto rotating 33⅓ platter. |
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8h | BigQuery SQL, Spotify Web API, Tailwind CSS, JavaScript | **Medium:** Granular track-level playback history, dynamic genre filtering, 30s needle-drop previews, and relative timestamps. |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City | Core App | 6–8h | Bandsintown API, DICE Deep-Links, BigQuery SQL, Flask, Tailwind CSS | **High:** Connects vinyl listening telemetry to live concerts in the user's city with 1-click DICE checkout. |
+| **`APP-11`** | Collector’s Inscriptions & Ratings | Core App | 5–7h | Cloud Datastore, BigQuery, Jinja2, Tailwind CSS | **High:** Personal 5-star ratings, handwritten liner notes, and dual OLTP/BigQuery storage for taste analysis. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1h | JavaScript, DOM Lifecycle | **Medium:** Ensure DOMContentLoaded triggers `onFilterChange()` so 30D sort applies immediately on first load. |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
@@ -524,7 +584,8 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher)~~ | Tactical Polish | 1–2h | Jinja2, HTML5, Flask Session | ✅ **Completed** (Revision `00022-z5t`): Clean standard user avatar for all users; impersonation housed in Admin Portal. |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2h | HTML5, Tailwind CSS | **Low:** Eliminates table misalignment, button wrapping, and truncation on admin portal. |
 | **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5h | Jinja2, HTML5 | ✅ **Completed** (`v2.2.1`): Removed header duplicate; harmonized Control Deck button to "Spin Again". |
-| **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
+| **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, corporate firewall compliance, and visual showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | **Low:** Public release transparency, active milestone visibility, and open roadmap portal for club supporters. |
+| **`BRAND-04`** | Software License & IP Protection Review | Legal & Brand | 2–4h | AGPLv3, PolyForm Noncommercial, License Auditing | **High:** Eliminates SaaS loophole and protects project from unauthorized commercial exploitation. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |
