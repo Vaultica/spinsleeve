@@ -109,6 +109,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
 | **`APP-08`** | Full-Length Virtual Turntable Player (Spotify Web Playback SDK) | Core App | 8–12 hours | Medium |
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8 hours | Medium |
+| **`APP-10`** | Local Gig Radar: Top Artists Live in Your City (Bandsintown API) | Core App | 6–8 hours | Medium |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1 hour | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
@@ -363,6 +364,21 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `APP-10`: Local Gig Radar: Top Artists Live in Your City (Bandsintown API & DICE Deep-Links)
+* **Problem:**  
+  Listeners frequently spin records by artists they love without realizing those same artists are touring or performing nearby in their home city. Mainstream ticketing platforms don't connect a collector's deep vinyl listening telemetry and rolling heavy rotation directly to local gig calendars.
+* **Solution:**  
+  Build a dedicated "Local Gig Radar" view (`/gigs`) connecting vinyl telemetry to live concert discovery:
+  1. **Telemetry Artist Ingestion:** Aggregate the listener's top 25–50 artists from `playback_history` (supporting both rolling 30-day Heavy Rotation and All-Time favorites).
+  2. **Bandsintown Event Ingestion:** Query Bandsintown REST API (`GET /artists/{artist}/events`) to fetch upcoming tour dates, venue details, coordinates, lineups, and ticket URLs.
+  3. **City & Distance Filtering:** Localized city selector (defaulting to the listener's configured city, e.g., London, UK) with radius filtering to spotlight upcoming concerts in their immediate area.
+  4. **Gig Flier Interface:** Chronological concert timeline styled like an authentic live gig flier / poster, displaying date, venue, city, and listener spin count badges (*"🔥 42 Plays"*).
+  5. **Direct DICE & Box Office Links:** Each gig card pairs official ticket links with a 1-click `🎲 Check on DICE` deep link (`https://dice.fm/search?query=...`) for rapid mobile checkout on fans' preferred ticketing platform.
+  6. **Tiered Event Caching:** Cache artist tour responses in Datastore / memory (24h TTL) to ensure instant page loads and protect against external rate limits.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
+
+---
+
 ### 🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)
 
 #### `POLISH-01`: ✅ ~~Harmonise "Heavy Rotation" Filter Across Tabs & Simplify Crate Digger Selection~~
@@ -500,6 +516,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
 | **`APP-08`** | Full-Length Virtual Turntable Web Player | Core App | 8–12h | Spotify Web Playback SDK, CSS Keyframes, Web Audio | **High:** Immersive full-length streaming with vinyl disc sliding from sleeve onto rotating 33⅓ platter. |
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8h | BigQuery SQL, Spotify Web API, Tailwind CSS, JavaScript | **Medium:** Granular track-level playback history, dynamic genre filtering, 30s needle-drop previews, and relative timestamps. |
+| **`APP-10`** | Local Gig Radar: Top Artists Live in Your City | Core App | 6–8h | Bandsintown API, DICE Deep-Links, BigQuery SQL, Flask, Tailwind CSS | **High:** Connects vinyl listening telemetry to live concerts in the user's city with 1-click DICE checkout. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1h | JavaScript, DOM Lifecycle | **Medium:** Ensure DOMContentLoaded triggers `onFilterChange()` so 30D sort applies immediately on first load. |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
