@@ -108,6 +108,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed (Revision `00019-9ds`) |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
 | **`APP-08`** | Full-Length Virtual Turntable Player (Spotify Web Playback SDK) | Core App | 8–12 hours | Medium |
+| **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8 hours | Medium |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1 hour | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
@@ -117,6 +118,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5 hours | Completed (`v2.2.1`) |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
+| **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4 hours | Low |
 | **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
 
 ---
@@ -347,6 +349,20 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `APP-09`: Granular Track-Level Telemetry & Audio Archive
+* **Problem:**  
+  The Analytics view aggregates scrobbles at high levels (heatmaps, velocity, top albums). Listeners lack visibility into granular, track-level playback history and cannot drill into songs by genre or specific historical timeframes without querying raw logs.
+* **Solution:**  
+  Introduce an interactive track telemetry and archival playback log:
+  1. **Partitioned & Clustered Querying:** Query `playback_history` clustered by `user_id`, joined with `album_enriched_metadata` to retrieve genre/style classifications and acoustic tags.
+  2. **Dynamic Range & Genre Filtering:** Quick-filter pill deck for rolling windows (24h, 7d, 30d, Custom Range) alongside dynamic genre chips for focused sonic digging.
+  3. **Tactile Audio Auditioning:** 30s needle-drop preview with soundwave animation + Spotify web player deep link for instantaneous playback.
+  4. **Relative Timestamp Display:** Human-readable scrobbled timestamps with relative display (e.g., *"Played 2 hours ago"*).
+  5. **Performant Virtualization:** Cursor pagination / virtualized scrolling (50 tracks per batch) to ensure smooth client performance across large listening histories.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
+
+---
+
 ### 🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)
 
 #### `POLISH-01`: ✅ ~~Harmonise "Heavy Rotation" Filter Across Tabs & Simplify Crate Digger Selection~~
@@ -436,6 +452,19 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `BRAND-03`: Public Roadmap & Release Transparency Portal (`/roadmap`)
+* **Problem:**  
+  Prospective listeners, beta friends, and club supporters have no visibility into planned releases, active milestones, or upcoming features directly from the user interface.
+* **Solution:**  
+  Launch a dedicated public release and feature transparency portal at `/roadmap`:
+  1. **Public-Facing Route:** Dedicated unauthenticated `/roadmap` route accessible to prospective listeners, beta friends, and club members without login barriers.
+  2. **Global Navigation Link:** Prominent header and banner link (🗺️ *Roadmap*) in global navigation and the public landing page.
+  3. **Visual Lane Kanban:** Categorized lane presentation across *Shipped*, *In Progress*, and *Up Next*, filterable by category (`INFRA`, `OPS`, `APP`, `POLISH`, `BRAND`, `DOCS`).
+  4. **Release Notes Linkage:** Injects dynamic version (`v2.2.0`) linked directly to detailed release notes and changelog entries.
+* **Effort & Complexity:** ~3–4 hours (0.5 day) • **Complexity:** **Low**
+
+---
+
 ### 📚 Category: Architecture Mapping & Documentation (`DOCS`)
 
 #### `DOCS-01`: Comprehensive Technical Project Architecture Map (README Overhaul)
@@ -470,6 +499,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals Dynamic Time Horizon~~ | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | ✅ **Completed:** Rolling 30D play count aggregation in BQ view, 2-way horizon toggles in Crate Digger & SpinPals, and 30D library sort. |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
 | **`APP-08`** | Full-Length Virtual Turntable Web Player | Core App | 8–12h | Spotify Web Playback SDK, CSS Keyframes, Web Audio | **High:** Immersive full-length streaming with vinyl disc sliding from sleeve onto rotating 33⅓ platter. |
+| **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8h | BigQuery SQL, Spotify Web API, Tailwind CSS, JavaScript | **Medium:** Granular track-level playback history, dynamic genre filtering, 30s needle-drop previews, and relative timestamps. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1h | JavaScript, DOM Lifecycle | **Medium:** Ensure DOMContentLoaded triggers `onFilterChange()` so 30D sort applies immediately on first load. |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal / Newly Added) | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | **Medium:** Replace bare "0 Plays" with decimal normalized spins or contextual new tags. |
@@ -479,4 +509,5 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5h | Jinja2, HTML5 | ✅ **Completed** (`v2.2.1`): Removed header duplicate; harmonized Control Deck button to "Spin Again". |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, and visual feature showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
+| **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | **Low:** Public release transparency, active milestone visibility, and open roadmap portal for club supporters. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |
