@@ -1591,7 +1591,9 @@ LOGIN_HTML_TEMPLATE = """
         <div class="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-xs font-bold mb-3 tracking-wide">
             FRIENDS &amp; BETA ACCESS
         </div>
-        <h1 class="text-3xl font-extrabold text-white tracking-tight">SpinSleeve</h1>
+        <h1 class="text-3xl font-extrabold tracking-tight">
+            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
+        </h1>
         <p class="text-sm text-gray-400 mt-2 mb-8 leading-relaxed">
             A virtual record crate, 12" gatefold liner notes reader, and deep listening telemetry engine for your Spotify library.
         </p>
@@ -2066,6 +2068,24 @@ def admin_toggle_pals(spotify_id):
     return redirect("/admin")
 
 
+@app.route("/api/user/toggle-pals", methods=["POST"])
+@app.route("/beta/api/user/toggle-pals", methods=["POST"])
+def api_toggle_user_pals():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    client = get_datastore_client()
+    key = client.key("User", user_id)
+    user = client.get(key)
+    if user:
+        new_val = not user.get("pals_opt_in", False)
+        user["pals_opt_in"] = new_val
+        client.put(user)
+        session["pals_opt_in"] = new_val
+        return jsonify({"status": "success", "pals_opt_in": new_val})
+    return jsonify({"status": "error", "message": "User not found"}), 404
+
+
 @app.route("/admin/whitelist", methods=["POST"])
 @app.route("/beta/admin/whitelist", methods=["POST"])
 @admin_required
@@ -2315,7 +2335,9 @@ BETA_EXPLORER_HTML = """
                         {{ brand_icon | safe }}
                     </div>
                     <div class="flex items-center gap-2">
-                        <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
+                        <h1 class="text-3xl font-extrabold tracking-tight">
+                            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
+                        </h1>
                         <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-500/30" title="SpinSleeve {{ app_version }}">{{ app_version }}</span>
                     </div>
                 </div>
@@ -2336,21 +2358,37 @@ BETA_EXPLORER_HTML = """
                 <div class="relative flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5" id="userProfileWidget">
                     <button type="button" onclick="toggleAvatarDropdown(event)"
                             class="relative w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 hover:border-emerald-400 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0 focus:outline-none"
-                            title="Click to choose Music Legend avatar">
+                            title="Click for settings & avatar picker">
                         <img class="headerUserAvatarImg w-full h-full object-cover" src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}">
                     </button>
 
-                    <!-- Avatar Persona Dropdown Menu -->
+                    <!-- Avatar & Settings Dropdown Menu (POLISH-08) -->
                     <div class="avatarPickerDropdown hidden absolute right-0 top-full mt-2 w-72 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
                         <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
                             <div>
-                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">Music Legend Persona</span>
-                                <p class="text-[10px] text-gray-400">Pick an avatar for your crate &amp; lounge</p>
+                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">User Settings</span>
+                                <p class="text-[10px] text-gray-400">{{ user.display_name }}'s Crate &amp; Lounge</p>
                             </div>
                             <button type="button" onclick="closeAvatarDropdown(event)" class="text-gray-400 hover:text-white text-xs p-1 leading-none font-bold">&times;</button>
                         </div>
 
-                        <div class="max-h-64 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
+                        <div class="space-y-2 mb-3 pb-3 border-b border-gray-800">
+                            <button type="button" onclick="toggleUserPalsOptIn()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 transition text-xs font-semibold text-white">
+                                <span class="span-left flex items-center gap-2">🤝 Opt-in SpinPals</span>
+                                <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
+                                🚪 Logout ({{ user.display_name }})
+                            </a>
+                        </div>
+
+                        <div class="mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Music Legend Persona</span>
+                        </div>
+                        <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
                                 <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
@@ -2393,43 +2431,51 @@ BETA_EXPLORER_HTML = """
                         </div>
                     </div>
 
-                    <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
+                    <a href="/beta/logout" class="text-xs font-bold text-white hover:text-emerald-400 transition" title="Click to logout">{{ user.display_name }}</a>
                     {% if is_impersonating %}
                     <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
                         <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
                         <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
-                    <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
-            <a href="/beta/" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
-                <span>📚</span> Library Explorer
+        <!-- Top-Level Simplified Navigation (POLISH-08) -->
+        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-4 w-fit">
+            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                Library
             </a>
-            <a href="/beta/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📻</span> Crate Digger
+            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Analytics
             </a>
-            <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📊</span> Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
-        <!-- Crate Tab Switcher (APP-07) -->
-        <div class="flex items-center gap-2 mb-4">
+        <!-- Hardware-Inspired Segmented Sub-Tab Control Deck under Library (POLISH-08) -->
+        <div class="flex items-center p-1 bg-[#080a0c] rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
             <button id="savedVinylTabBtn" onclick="switchCrateTab('saved')"
-                    class="px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow">
-                <span>📦</span> My Saved Vinyl <span class="bg-emerald-500/30 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full">{{ albums|length }}</span>
+                    class="px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-gradient-to-r from-emerald-500/20 to-teal-500/25 text-emerald-300 border border-emerald-500/30 shadow-sm">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                <span>My Saved Vinyl</span>
+                <span class="bg-emerald-500/30 text-emerald-200 text-[10px] font-mono px-1.5 py-0.5 rounded-full">{{ albums|length }}</span>
             </button>
+            <a href="/beta/recommend" id="diggerTabBtn"
+               class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                <span>Crate Digger</span>
+            </a>
             <button id="unownedVinylTabBtn" onclick="switchCrateTab('unowned')"
-                    class="px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2">
-                <span>✨</span> You Should Save These <span class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full border border-amber-500/30" id="unownedCountBadge">{{ (unowned_albums or [])|length }}</span>
+                    class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                <span>You Should Save These</span>
+                <span class="bg-amber-500/20 text-amber-300 text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-amber-500/30" id="unownedCountBadge">{{ (unowned_albums or [])|length }}</span>
             </button>
         </div>
 
@@ -3379,7 +3425,9 @@ BETA_RECOMMEND_HTML = """
                         {{ brand_icon | safe }}
                     </div>
                     <div class="flex items-center gap-2">
-                        <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
+                        <h1 class="text-3xl font-extrabold tracking-tight">
+                            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
+                        </h1>
                         <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">CRATE DIGGER</span>
                     </div>
                 </div>
@@ -3403,17 +3451,33 @@ BETA_RECOMMEND_HTML = """
                         <img class="headerUserAvatarImg w-full h-full object-cover" src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}">
                     </button>
 
-                    <!-- Avatar Persona Dropdown Menu -->
+                    <!-- Avatar & Settings Dropdown Menu (POLISH-08) -->
                     <div class="avatarPickerDropdown hidden absolute right-0 top-full mt-2 w-72 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
                         <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
                             <div>
-                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">Music Legend Persona</span>
-                                <p class="text-[10px] text-gray-400">Pick an avatar for your crate &amp; lounge</p>
+                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">User Settings</span>
+                                <p class="text-[10px] text-gray-400">{{ user.display_name }}'s Crate &amp; Lounge</p>
                             </div>
                             <button type="button" onclick="closeAvatarDropdown(event)" class="text-gray-400 hover:text-white text-xs p-1 leading-none font-bold">&times;</button>
                         </div>
 
-                        <div class="max-h-64 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
+                        <div class="space-y-2 mb-3 pb-3 border-b border-gray-800">
+                            <button type="button" onclick="toggleUserPalsOptIn()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">🤝 Opt-in SpinPals</span>
+                                <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
+                                🚪 Logout ({{ user.display_name }})
+                            </a>
+                        </div>
+
+                        <div class="mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Music Legend Persona</span>
+                        </div>
+                        <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
                                 <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
@@ -3463,26 +3527,41 @@ BETA_RECOMMEND_HTML = """
                         <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
-                    <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
-            <a href="/beta/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📚</span> Library Explorer
+        <!-- Top-Level Simplified Navigation (POLISH-08) -->
+        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-4 w-fit">
+            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                Library
             </a>
-            <a href="/beta/recommend" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
-                <span>📻</span> Crate Digger
+            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Analytics
             </a>
-            <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📊</span> Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
+
+        <!-- Hardware-Inspired Segmented Sub-Tab Control Deck under Library (POLISH-08) -->
+        <div class="flex items-center p-1 bg-[#080a0c] rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
+            <a href="/beta/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                <span>My Saved Vinyl</span>
+            </a>
+            <a href="/beta/recommend" class="px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-gradient-to-r from-emerald-500/20 to-teal-500/25 text-emerald-300 border border-emerald-500/30 shadow-sm">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                <span>Crate Digger</span>
+            </a>
+            <a href="/beta/?tab=unowned" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                <span>You Should Save These</span>
+            </a>
+        </div>
 
         <!-- Control Deck (Streamlined 2-Tier Digging Console - POLISH-01) -->
         <div class="card-bg p-4 rounded-2xl border border-gray-800/90 mb-6 shadow-xl backdrop-blur-sm">
@@ -4494,14 +4573,17 @@ BETA_ANALYTICS_HTML = """
                         {{ brand_icon | safe }}
                     </div>
                     <div class="flex items-center gap-2">
-                        <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
-                        <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">ANALYTICS</span>
+                        <h1 class="text-3xl font-extrabold tracking-tight">
+                            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
+                        </h1>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">ANALYTICS</span>
                     </div>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Deep listening telemetry, taste velocity &amp; acoustic habits for {{ user.display_name }}</p>
             </div>
 
-            <div class="flex items-center gap-3">
+            <!-- User Status & Quick Audio Toggle -->
+            <div class="flex flex-wrap items-center gap-3">
                 {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
                     ⚙️ Admin
@@ -4510,21 +4592,37 @@ BETA_ANALYTICS_HTML = """
                 <div class="relative flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5" id="userProfileWidget">
                     <button type="button" onclick="toggleAvatarDropdown(event)"
                             class="relative w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 hover:border-emerald-400 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0 focus:outline-none"
-                            title="Click to choose Music Legend avatar">
+                            title="Click for settings & avatar picker">
                         <img class="headerUserAvatarImg w-full h-full object-cover" src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}">
                     </button>
 
-                    <!-- Avatar Persona Dropdown Menu -->
+                    <!-- Avatar & Settings Dropdown Menu (POLISH-08) -->
                     <div class="avatarPickerDropdown hidden absolute right-0 top-full mt-2 w-72 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
                         <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
                             <div>
-                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">Music Legend Persona</span>
-                                <p class="text-[10px] text-gray-400">Pick an avatar for your crate &amp; lounge</p>
+                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">User Settings</span>
+                                <p class="text-[10px] text-gray-400">{{ user.display_name }}'s Crate &amp; Lounge</p>
                             </div>
                             <button type="button" onclick="closeAvatarDropdown(event)" class="text-gray-400 hover:text-white text-xs p-1 leading-none font-bold">&times;</button>
                         </div>
 
-                        <div class="max-h-64 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
+                        <div class="space-y-2 mb-3 pb-3 border-b border-gray-800">
+                            <button type="button" onclick="toggleUserPalsOptIn()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">🤝 Opt-in SpinPals</span>
+                                <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
+                                🚪 Logout ({{ user.display_name }})
+                            </a>
+                        </div>
+
+                        <div class="mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Music Legend Persona</span>
+                        </div>
+                        <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
                                 <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
@@ -4574,23 +4672,22 @@ BETA_ANALYTICS_HTML = """
                         <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
-                    <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
-            <a href="/beta/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📚</span> Library Explorer
+        <!-- Top-Level Simplified Navigation (POLISH-08) -->
+        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
+            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                Library
             </a>
-            <a href="/beta/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📻</span> Crate Digger
+            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Analytics
             </a>
-            <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
-                <span>📊</span> Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
+            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
@@ -5421,7 +5518,9 @@ BETA_PALS_HTML = """
                         {{ brand_icon | safe }}
                     </div>
                     <div class="flex items-center gap-2">
-                        <h1 class="text-3xl font-extrabold tracking-tight text-white">SpinSleeve</h1>
+                        <h1 class="text-3xl font-extrabold tracking-tight">
+                            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
+                        </h1>
                         <span class="bg-rose-500/20 text-rose-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-rose-500/30">SPINPALS: CRATEMATES</span>
                     </div>
                 </div>
@@ -5441,17 +5540,33 @@ BETA_PALS_HTML = """
                         <img class="headerUserAvatarImg w-full h-full object-cover" src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}">
                     </button>
 
-                    <!-- Avatar Persona Dropdown Menu -->
+                    <!-- Avatar & Settings Dropdown Menu (POLISH-08) -->
                     <div class="avatarPickerDropdown hidden absolute right-0 top-full mt-2 w-72 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
                         <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
                             <div>
-                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">Music Legend Persona</span>
-                                <p class="text-[10px] text-gray-400">Pick an avatar for your crate &amp; lounge</p>
+                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">User Settings</span>
+                                <p class="text-[10px] text-gray-400">{{ user.display_name }}'s Crate &amp; Lounge</p>
                             </div>
                             <button type="button" onclick="closeAvatarDropdown(event)" class="text-gray-400 hover:text-white text-xs p-1 leading-none font-bold">&times;</button>
                         </div>
 
-                        <div class="max-h-64 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
+                        <div class="space-y-2 mb-3 pb-3 border-b border-gray-800">
+                            <button type="button" onclick="toggleUserPalsOptIn()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">🤝 Opt-in SpinPals</span>
+                                <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
+                                🚪 Logout ({{ user.display_name }})
+                            </a>
+                        </div>
+
+                        <div class="mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Music Legend Persona</span>
+                        </div>
+                        <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
                                 <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
@@ -5501,24 +5616,23 @@ BETA_PALS_HTML = """
                         <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
                     </div>
                     {% endif %}
-                    <a href="/beta/logout" class="text-[11px] text-gray-400 hover:text-white ml-1.5 transition">Logout</a>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-2 mb-6 border-b border-gray-800 pb-3">
-            <a href="/beta/" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📚</span> Library Explorer
+        <!-- Top-Level Simplified Navigation (POLISH-08) -->
+        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
+            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                Library
             </a>
-            <a href="/beta/recommend" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📻</span> Crate Digger
+            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Analytics
             </a>
-            <a href="/beta/analytics" class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition flex items-center gap-2">
-                <span>📊</span> Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-2">
-                <span>🤝</span> SpinPals
+            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
             </a>
         </nav>
 
