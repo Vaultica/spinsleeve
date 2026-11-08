@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [v2.4.0] — 2026-11-08
-### 📦 Played But Not Owned: "You Should Save These" Library Crate (`APP-07`)
+### 📦 Played But Not Owned: "You Should Save These" Library Crate (`APP-07`), README Overhaul (`DOCS-01`) & Modularisation Roadmap (`OPS-04`)
 * **Cloud Run Revision:** `spotify-dashboard-beta-00032-6f2`
 * **What:**
   - **APP-07 ("You Should Save These" Unowned Crate):** Designed, implemented, and deployed a dedicated discovery crate inside Library Explorer showcasing streamed albums not currently in the user's permanent Spotify library.
@@ -17,13 +17,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - **Strict Ownership Deduplication:** Filters out any album currently saved in the user's collection using strict normalized title and artist matching (`CONCAT(LOWER(TRIM(album_name)), '::', LOWER(TRIM(artist_name))) NOT IN (SELECT ... FROM user_saved_albums)`), guaranteeing zero duplicate recommendations.
   - **1-Click Save with Dynamic Spotify Search API Resolution:** Hovering an unowned sleeve presents `➕ Save to Library`. If historical scrobbles lack a Spotify `album_id` (`NULL`), `/api/save-album` dynamically queries Spotify's Search API (`sp.search`) to resolve the canonical ID, adds the album to Spotify saved library (`PUT /v1/me/albums`), inserts the record into BigQuery `user_saved_albums`, and invalidates caches for instant migration (~1-2s).
   - **Brand Avatar Fallback Sleeve:** Missing album artwork dynamically renders SpinSleeve's golden-glowing brand vinyl icon badge inside the amber dashed jacket.
+  - **DOCS-01 (README Overhaul):** Revamped `README.md` to feature top-level SpinSleeve mission and purpose, a comprehensive Mermaid architecture topology diagram, project file map, operational commands, and PolyForm license, while removing redundant local setup documentation.
+  - **OPS-04 (App Modularisation Roadmap):** Added app modularisation refactoring specification to `PROJECT_ROADMAP_AND_SPECS.md` to break down the monolithic `app.py` into small modules (`routes/`, `services/`, `config.py`) for AI context efficiency and testability.
 * **Why:**
-  - Music collectors stream dozens of exceptional albums during deep-dive listening sessions but frequently forget to save them into their permanent collection. This feature closes the loop between casual discovery and permanent curation.
+  - Music collectors stream dozens of exceptional albums during deep-dive listening sessions but frequently forget to save them into their permanent collection. This feature closes the loop between casual discovery and permanent curation. Additionally, revamping `README.md` and planning app modularisation ensures crystal-clear system documentation and AI parsing efficiency.
 * **How:**
   - Updated `src/report_v2/app.py` with `fetch_unowned_album_data()`, `/api/unowned-albums`, `/api/save-album`, and `get_token_for_user()`.
   - Added `user-library-modify` to Spotify OAuth scopes.
   - Updated `BETA_EXPLORER_HTML` with segmented crate tabs, unowned grid container, and JavaScript handlers.
   - Added unit test suite `tests/test_unowned_crate.py` (all 63 tests passing). Deployed to production Cloud Run (`spotify-dashboard-beta-00032-6f2`).
+  - Rewrote `README.md` with Mermaid diagram and purpose statement, and updated `PROJECT_ROADMAP_AND_SPECS.md`.
 
 ---
 

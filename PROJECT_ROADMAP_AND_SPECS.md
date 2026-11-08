@@ -126,7 +126,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4 hours | Low |
 | **`BRAND-04`** | ✅ ~~Software License & IP Protection Review (PolyForm Noncommercial 1.0.0)~~ | Legal & Brand | 2–4 hours | Completed (`v2.2.2`) |
-| **`DOCS-01`** | Comprehensive Technical Project Architecture Map (README) | Documentation | 3–4 hours | Low |
+| **`DOCS-01`** | ✅ ~~Comprehensive Technical Project Architecture Map (README)~~ | Documentation | 3–4 hours | Completed |
 
 ---
 
