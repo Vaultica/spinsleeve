@@ -122,6 +122,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher from Header)~~ | Tactical Polish | 1–2 hours | Completed (Revision `00022-z5t`) |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2 hours | Low |
 | **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5 hours | Completed (`v2.2.1`) |
+| **`POLISH-08`** | Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck | Tactical Polish | 2–3 hours | Low |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4 hours | Low |
@@ -553,6 +554,16 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `POLISH-08`: Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck
+* **Problem:** Top-level navigation was cluttered with 4 separate tabs (`Library Explorer`, `Crate Digger`, `Analytics`, `SpinPals`). Crate Digger is functionally a discovery mode of the music collection, so separating it into a top-level tab created unnecessary navigation friction.
+* **Solution:** 
+  1. Streamline top-level navigation from 4 to 3 tabs (`Library`, `Analytics`, `SpinPals`).
+  2. Nest **Crate Digger** under the Library Explorer domain as a sub-tab, placed between "My Saved Vinyl" and "You Should Save These" (leaving unowned recommendations as the rightmost subtab).
+  3. Replace busy emojis with minimalist SVG line icons and a hardware-inspired segmented pill control deck (`spinsleeve_nav_mockup.html`).
+* **Effort & Complexity:** ~2–3 hours • **Complexity:** **Low**
+
+---
+
 ### 🎨 Category: Brand Identity, Public Landing & Monetization (`BRAND`)
 
 #### `BRAND-01`: Homepage & Public Login Redesign with Feature Showcase
@@ -669,6 +680,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher)~~ | Tactical Polish | 1–2h | Jinja2, HTML5, Flask Session | ✅ **Completed** (Revision `00022-z5t`): Clean standard user avatar for all users; impersonation housed in Admin Portal. |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2h | HTML5, Tailwind CSS | **Low:** Eliminates table misalignment, button wrapping, and truncation on admin portal. |
 | **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5h | Jinja2, HTML5 | ✅ **Completed** (`v2.2.1`): Removed header duplicate; harmonized Control Deck button to "Spin Again". |
+| **`POLISH-08`** | Tab Navigation UX Simplification & Hardware Sub-Tab Deck | Tactical Polish | 2–3h | Jinja2, Tailwind CSS, SVG, JS | **High:** Streamlines top-level navigation from 4 to 3 tabs by nesting Crate Digger under Library Explorer alongside Saved & Unowned crates with hardware-inspired segmented pill bar and minimalist SVG line icons (`spinsleeve_nav_mockup.html`). |
 | **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, corporate firewall compliance, and visual showcase. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | **Low:** Public release transparency, active milestone visibility, and open roadmap portal for club supporters. |

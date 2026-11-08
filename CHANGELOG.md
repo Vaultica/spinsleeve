@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.4.1] — 2026-11-08
+### 🧭 Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck (`POLISH-08`)
+* **What:**
+  - **POLISH-08 (Simplified Navigation & Sub-Tabs):** Streamlined top-level navigation from 4 noisy tabs (`Library Explorer`, `Crate Digger`, `Analytics`, `SpinPals`) down to 3 clean domains (`Library`, `Analytics`, `SpinPals`).
+  - **Crate Digger Integration:** Nested Crate Digger under the Library Explorer domain as a sub-tab, placed between "My Saved Vinyl" and "You Should Save These" (leaving unowned recommendations as the rightmost subtab).
+  - **Hardware-Inspired Segmented Pill Deck:** Replaced busy emojis with minimalist SVG line icons and a recessed control deck (`bg-[#080a0c]` with inner shadow and gradient active pills).
+  - **Interactive Mockup (`spinsleeve_nav_mockup.html`):** Created a standalone Tailwind CSS / Vanilla JS visual prototype in the workspace root demonstrating the new layout and subtab state controller.
+  - **Roadmap Update:** Logged feature `POLISH-08` in `PROJECT_ROADMAP_AND_SPECS.md` with estimated effort and strategic impact.
+* **Why:**
+  - Crate Digger is functionally a discovery mode of the music collection, so separating it into a top-level tab created unnecessary navigation friction. Nesting it under Library Explorer creates a unified music hub while decluttering the primary navigation bar.
+* **How:**
+  - Created `spinsleeve_nav_mockup.html` for visual validation.
+  - Updated `PROJECT_ROADMAP_AND_SPECS.md` with `POLISH-08` specifications and backlog matrix entry.
+
+---
+
 ## [v2.4.0] — 2026-11-08
 ### 📦 Played But Not Owned: "You Should Save These" Library Crate (`APP-07`), README Overhaul (`DOCS-01`) & Modularisation Roadmap (`OPS-04`)
 * **Cloud Run Revision:** `spotify-dashboard-beta-00032-6f2`

@@ -124,4 +124,5 @@ gcloud run deploy spotify-dashboard-beta \
 | Session / Release | Date | Turns | Est. Input Tokens | Est. Output Tokens | Est. Spend (USD) | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`v2.4.0`** | 2026-11-08 | 36 | ~1,550,000 | ~21,000 | **~$2.02** | `APP-07` Unowned Crate, time horizons, avatar fallback, 1-click Spotify Search save, `INFRA-04` QA design. |
+| **`v2.4.1`** | 2026-11-08 | 6 | ~320,000 | ~4,200 | **~$0.38** | `POLISH-08` Tab Navigation UX Simplification, hardware sub-tab control deck mockup (`spinsleeve_nav_mockup.html`), and roadmap registration. |
 | **`v2.4.1`** (Planning) | 2026-11-08 | 10 | ~450,000 | ~6,500 | **~$0.55** | `OPS-04` Monolithic App Modularisation roadmap spec, `APP-02` Apple Music backend analysis. |
