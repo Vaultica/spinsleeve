@@ -83,6 +83,7 @@ This file is automatically loaded by Gemini CLI at the start of every session in
 | **POLISH-01 & 07** | **Crate Digger UX & Controls Harmonisation** (Single-dimension targets, 2-tier console, balanced VIBES, album artist isolation, de-duplicated Spin Again) | ✅ COMPLETED (`v2.2.1`) |
 | **POLISH-02, 03 & Era** | **Library Initial Sort, Decimal Play Badges & Era Filter Alignment** (Strict 30D load sort, decimal scrobble badges, never-played/newly-added tags, single-line Crate Digger Era filter) | ✅ COMPLETED (`v2.2.2`) |
 | **APP-04** | **Music Legend Illustrated Avatar Persona Picker** (12 vector legend presets, dropdown picker, Datastore sync) | ✅ COMPLETED (`v2.3.0`) |
+| **APP-07** | **Played But Not Owned: "You Should Save These" Crate** (Amber dashed sleeves, multi-track rule, time horizons, Spotify search save) | ✅ COMPLETED (`v2.4.0`) |
 | **Phase 7** | **Cross-Platform: Apple Music Library Collection Onboarding** (`APP-02`) | ⏳ Backlog |
 
 *See `PROJECT_ROADMAP_AND_SPECS.md` for full categorized backlog: `INFRA` (Fresh GCP project, Terraform, Sub-100ms Caching & Materialization), `OPS` (CI/CD GitHub Actions, Cloud Monitoring, Telegram alerts), `APP` (Tracklisting, Apple Music, Normalized Plays, Heavy Rotation Toggle, Played Not Owned, Turntable Web Player, Granular Track Telemetry, Local Gig Radar, Collector's Inscriptions & Ratings), `POLISH` (Harmonised Heavy Rotation, 30D sorting fix, decimal plays, dynamic versioning, clean header, admin table alignment), `BRAND` (Landing redesign, Buy Me a Coffee, Public Roadmap Portal, License & IP Protection Review), and `DOCS` (Technical architecture map).*
@@ -110,4 +111,17 @@ gcloud run deploy spotify-dashboard-beta \
 ---
 
 ## 6. Mandatory Workflow Rule: Session Closure
-* **"Close the Build Session":** Whenever the user issues the instruction or phrase **"close the build session"**, it is a mandatory requirement to update `CHANGELOG.md` with all completed features, bug fixes, and version bumps before concluding.
+* **"Close the Build Session":** Whenever the user issues the instruction or phrase **"close the build session"**, it is a mandatory requirement to:
+  1. Update `CHANGELOG.md` with all completed features, bug fixes, and version bumps.
+  2. Update `GEMINI.md` and `PROJECT_ROADMAP_AND_SPECS.md` status matrices.
+  3. Calculate and present session efficiency statistics (turns executed, cumulative token usage, and estimated financial spend in USD).
+  4. Record the metrics in Section 7 (Build Session Token & Spend Ledger) below.
+
+---
+
+## 7. Build Session Token & Spend Ledger
+
+| Session / Release | Date | Turns | Est. Input Tokens | Est. Output Tokens | Est. Spend (USD) | Primary Deliverables |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`v2.4.0`** | 2026-11-08 | 36 | ~1,550,000 | ~21,000 | **~$2.02** | `APP-07` Unowned Crate, time horizons, avatar fallback, 1-click Spotify Search save, `INFRA-04` QA design. |
+| **`v2.4.1`** (Planning) | 2026-11-08 | 10 | ~450,000 | ~6,500 | **~$0.55** | `OPS-04` Monolithic App Modularisation roadmap spec, `APP-02` Apple Music backend analysis. |

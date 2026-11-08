@@ -81,7 +81,7 @@ def get_oauth_client(request_obj):
     host = request_obj.headers.get("X-Forwarded-Host") or request_obj.host
     redirect_uri = f"{scheme}://{host}/beta/callback"
 
-    scope = "user-library-read user-read-recently-played user-read-email user-read-private"
+    scope = "user-library-read user-library-modify user-read-recently-played user-read-email user-read-private"
     return SpotifyOAuth(
         client_id=SPOTIPY_CLIENT_ID,
         client_secret=SPOTIPY_CLIENT_SECRET,
@@ -478,16 +478,16 @@ def serve_avatar(avatar_id):
 # ==============================================================================
 # AUTHENTICATION & ACCESS CONTROL HELPERS
 # ==============================================================================
-@app.before_request
-def local_dev_auth_bypass():
-    """Bypasses Spotify OAuth when testing locally on localhost or 127.0.0.1."""
-    host = request.headers.get("X-Forwarded-Host") or request.host or ""
-    if host.startswith("localhost") or host.startswith("127.0.0.1"):
-        if "user_id" not in session:
-            session["user_id"] = "sergebou"
-            session["display_name"] = "Serge"
-            session["role"] = "admin"
-            session["is_admin"] = True
+# @app.before_request
+# def local_dev_auth_bypass():
+#     """Bypasses Spotify OAuth when testing locally on localhost or 127.0.0.1."""
+#     host = request.headers.get("X-Forwarded-Host") or request.host or ""
+#     if host.startswith("localhost") or host.startswith("127.0.0.1"):
+#         if "user_id" not in session:
+#             session["user_id"] = "sergebou"
+#             session["display_name"] = "Serge"
+#             session["role"] = "admin"
+#             session["is_admin"] = True
 
 
 @app.route("/dev/login")
@@ -978,7 +978,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
 
     query = f"""
     WITH first_plays AS (
-      SELECT 
+      SELECT
         LOWER(TRIM(album_name)) as norm_album_name,
         LOWER(TRIM(artist_name)) as norm_artist_name,
         MIN(played_at) as first_played_at
@@ -987,7 +987,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
       GROUP BY norm_album_name, norm_artist_name
     ),
     filtered_plays AS (
-      SELECT 
+      SELECT
         p.album_name as album,
         p.artist_name as artist,
         p.track_name as track,
@@ -1002,20 +1002,20 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         fp.first_played_at
       FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
       LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` a
-        ON p.user_id = a.user_id 
+        ON p.user_id = a.user_id
         AND (
-          p.album_id = a.album_id 
+          p.album_id = a.album_id
           OR (
             LOWER(TRIM(p.album_name)) = LOWER(TRIM(a.album_name))
             AND LOWER(TRIM(p.artist_name)) = LOWER(TRIM(a.artist_name))
           )
         )
       LEFT JOIN (
-        SELECT 
+        SELECT
           LOWER(TRIM(album_name)) as norm_name,
           LOWER(TRIM(artist_name)) as norm_artist,
-          MAX(image_url) as image_url, 
-          MAX(release_date) as release_date, 
+          MAX(image_url) as image_url,
+          MAX(release_date) as release_date,
           MAX(genres) as genres
         FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
         GROUP BY norm_name, norm_artist
@@ -1245,7 +1245,7 @@ def compute_pal_compatibility(current_user_id, pal_id, horizon="30d"):
         pal_avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
 
     q_pal_albums = f"""
-    SELECT 
+    SELECT
       f.album_id,
       f.album_name,
       f.album_artist_name,
@@ -1824,13 +1824,6 @@ ADMIN_HTML_TEMPLATE = """
 @app.route("/login")
 @app.route("/beta/login")
 def login():
-    host = request.headers.get("X-Forwarded-Host") or request.host or ""
-    if (host.startswith("localhost") or host.startswith("127.0.0.1")) and "user_id" not in session:
-        session["user_id"] = "sergebou"
-        session["display_name"] = "Serge"
-        session["role"] = "admin"
-        session["is_admin"] = True
-        return redirect("/")
     if "user_id" in session:
         return redirect("/")
     return render_template_string(LOGIN_HTML_TEMPLATE, brand_icon=ICON_A_SVG)
@@ -2103,6 +2096,167 @@ def admin_whitelist():
     return redirect("/admin")
 
 
+def fetch_unowned_album_data(user_id, horizon="all"):
+    """Fetches streamed albums not in saved library, filtered by time horizon (APP-07)."""
+    try:
+        client = bigquery.Client(project=PROJECT_ID)
+
+        horizon_clause = ""
+        if horizon == "30d":
+            horizon_clause = "AND p.played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)"
+        elif horizon == "90d":
+            horizon_clause = "AND p.played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)"
+
+        query = f"""
+        SELECT 
+          p.album_name,
+          p.artist_name,
+          MAX(p.album_id) as album_id,
+          COUNT(1) as play_count,
+          COUNT(DISTINCT p.track_name) as distinct_tracks,
+          MAX(p.played_at) as last_played_at
+        FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
+        WHERE p.user_id = @user_id
+          AND CONCAT(LOWER(TRIM(p.album_name)), '::', LOWER(TRIM(p.artist_name))) NOT IN (
+            SELECT CONCAT(LOWER(TRIM(album_name)), '::', LOWER(TRIM(artist_name)))
+            FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+            WHERE user_id = @user_id
+          )
+          {horizon_clause}
+        GROUP BY p.album_name, p.artist_name
+        HAVING distinct_tracks >= 2
+        ORDER BY play_count DESC
+        LIMIT 50
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("user_id", "STRING", user_id)]
+        )
+        df = client.query(query, job_config=job_config).to_dataframe()
+        if df.empty:
+            return []
+        unowned = []
+        for _, row in df.iterrows():
+            aid = safe_str(row.get("album_id"))
+            unowned.append({
+                "album_id": aid if aid != "None" else "",
+                "album_name": safe_str(row.get("album_name"), "Unknown Album"),
+                "album_artist_name": safe_str(row.get("artist_name"), "Unknown Artist"),
+                "album_image_url": "/avatar/miles.svg",
+                "album_url": f"https://open.spotify.com/album/{aid}" if aid and aid != "None" else f"https://open.spotify.com/search/{safe_str(row.get('album_name'))}",
+                "play_count": safe_int(row.get("play_count")),
+                "last_played_at": str(row.get("last_played_at", ""))
+            })
+        return unowned
+    except Exception as e:
+        logger.error("Error fetching unowned albums for %s: %s", user_id, e)
+        return []
+
+
+@app.route("/api/unowned-albums")
+@app.route("/beta/api/unowned-albums")
+@login_required
+def api_unowned_albums():
+    """API endpoint to fetch unowned albums by time horizon (APP-07)."""
+    user_id = session.get("user_id")
+    horizon = request.args.get("horizon", "30d")
+    unowned = fetch_unowned_album_data(user_id, horizon=horizon)
+    return jsonify({"status": "success", "unowned": unowned, "horizon": horizon})
+
+
+def get_token_for_user(user_id):
+    """Retrieves and refreshes Spotify access token for a user from Datastore."""
+    try:
+        ds_client = get_datastore_client()
+        user_key = ds_client.key("User", user_id)
+        user = ds_client.get(user_key)
+        if not user or not user.get("refresh_token"):
+            return None
+        sp_oauth = get_oauth_client(request)
+        token_info = sp_oauth.refresh_access_token(user.get("refresh_token"))
+        return token_info
+    except Exception as e:
+        logger.error("Error refreshing token for user %s: %s", user_id, e)
+        return None
+
+
+@app.route("/api/save-album", methods=["POST"])
+@app.route("/beta/api/save-album", methods=["POST"])
+@login_required
+def api_save_album():
+    """Saves an unowned album to Spotify saved albums and inserts into BigQuery / clears cache (APP-07)."""
+    data = request.get_json(silent=True) or {}
+    album_id = str(data.get("album_id", "")).strip()
+    album_name = str(data.get("album_name", "")).strip()
+    artist_name = str(data.get("artist_name", "")).strip()
+
+    user_id = session.get("user_id")
+    token_info = get_token_for_user(user_id)
+    if not token_info:
+        return jsonify({"status": "error", "message": "Not authorized with Spotify"}), 401
+
+    try:
+        sp = spotipy.Spotify(auth=token_info.get("access_token"))
+        # If album_id is missing or None, search Spotify for it using album_name and artist_name
+        if not album_id or album_id == "None":
+            if not album_name:
+                return jsonify({"status": "error", "message": "Missing album_id or album_name"}), 400
+            search_res = sp.search(q=f"album:{album_name} artist:{artist_name}", type="album", limit=1)
+            albums_found = search_res.get("albums", {}).get("items", [])
+            if not albums_found:
+                search_res = sp.search(q=f"{album_name} {artist_name}", type="album", limit=1)
+                albums_found = search_res.get("albums", {}).get("items", [])
+            if albums_found:
+                album_id = albums_found[0]["id"]
+            else:
+                return jsonify({"status": "error", "message": f"Could not locate '{album_name}' by '{artist_name}' on Spotify"}), 404
+
+        sp.current_user_saved_albums_add(albums=[album_id])
+
+        client = bigquery.Client(project=PROJECT_ID)
+        album_meta = sp.album(album_id)
+        image_url = album_meta["images"][0]["url"] if album_meta.get("images") else ""
+        artists = album_meta.get("artists", [])
+        artist_name = artists[0]["name"] if artists else "Unknown Artist"
+        artist_id = artists[0]["id"] if artists else ""
+        rel_date = album_meta.get("release_date", "")
+        rel_year = rel_date[:4] if rel_date else ""
+
+        row_to_insert = [{
+            "user_id": user_id,
+            "album_id": album_id,
+            "album_name": album_meta.get("name", "Unknown Album"),
+            "artist_id": artist_id,
+            "artist_name": artist_name,
+            "added_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "release_date": rel_date,
+            "release_year": rel_year,
+            "tracks_total": album_meta.get("total_tracks", 0),
+            "album_type": album_meta.get("album_type", "album"),
+            "label": album_meta.get("label", ""),
+            "image_url": image_url,
+            "genres": ""
+        }]
+        table_ref = f"{PROJECT_ID}.{DATASET_V2}.user_saved_albums"
+        errors = client.insert_rows_json(table_ref, row_to_insert)
+        if errors:
+            logger.error("Error inserting saved album into BQ for %s: %s", user_id, errors)
+
+        if user_id in _user_album_cache:
+            del _user_album_cache[user_id]
+        if user_id in _user_album_cache_time:
+            del _user_album_cache_time[user_id]
+        try:
+            ds_client = get_datastore_client()
+            ds_client.delete(ds_client.key("UserCatalogCache", user_id))
+        except Exception:
+            pass
+
+        return jsonify({"status": "success", "message": f"'{album_meta.get('name')}' saved to library successfully!"})
+    except Exception as e:
+        logger.error("Error saving album %s for %s: %s", album_id or album_name, user_id, str(e))
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 # ==============================================================================
 # 1. TAB 1: LIBRARY EXPLORER ROUTE & TEMPLATE
 # ==============================================================================
@@ -2114,10 +2268,12 @@ def beta_index():
     user_id = session["user_id"]
     force_refresh = request.args.get("refresh") in ("1", "true")
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
+    unowned_albums = fetch_unowned_album_data(user_id)
 
     return render_template_string(
         BETA_EXPLORER_HTML,
         albums=data["albums"],
+        unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
         user=session,
         brand_icon=ICON_A_SVG,
@@ -2165,7 +2321,7 @@ BETA_EXPLORER_HTML = """
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Multi-tenant edition • Personal vinyl crate &amp; gatefold archive</p>
             </div>
-            
+
             <!-- User Status & Quick Audio Toggle -->
             <div class="flex flex-wrap items-center gap-3">
                 <button id="audioToggleBtn" onclick="toggleHoverAudio()"
@@ -2265,46 +2421,87 @@ BETA_EXPLORER_HTML = """
             </a>
         </nav>
 
-        <!-- Filter Controls Toolbar -->
-        <div class="card-bg p-4 rounded-xl border border-gray-800 mb-6 shadow-sm">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-center">
-                <div class="relative lg:col-span-2">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Search your albums or artists..."
-                           class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#1DB954] transition"
-                           oninput="onFilterChange()">
-                </div>
+        <!-- Crate Tab Switcher (APP-07) -->
+        <div class="flex items-center gap-2 mb-4">
+            <button id="savedVinylTabBtn" onclick="switchCrateTab('saved')"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow">
+                <span>📦</span> My Saved Vinyl <span class="bg-emerald-500/30 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full">{{ albums|length }}</span>
+            </button>
+            <button id="unownedVinylTabBtn" onclick="switchCrateTab('unowned')"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2">
+                <span>✨</span> You Should Save These <span class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full border border-amber-500/30" id="unownedCountBadge">{{ (unowned_albums or [])|length }}</span>
+            </button>
+        </div>
 
-                <div>
-                    <select id="genreSelect" onchange="onFilterChange()"
-                            class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
-                        <option value="all">All Genres</option>
-                        {% for g in top_genres %}
-                        <option value="{{ g }}">{{ g.title() }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+        <!-- Saved Vinyl View Container -->
+        <div id="savedVinylView">
+            <!-- Filter Controls Toolbar -->
+            <div class="card-bg p-4 rounded-xl border border-gray-800 mb-6 shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-center">
+                    <div class="relative lg:col-span-2">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Search your albums or artists..."
+                               class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#1DB954] transition"
+                               oninput="onFilterChange()">
+                    </div>
 
-                <div>
-                    <select id="sortSelect" onchange="onFilterChange()"
-                            class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
-                        <option value="plays_30d_desc">🔥 Heavy Rotation (Last 30 Days)</option>
-                        <option value="plays_desc">Most Played (All Time)</option>
-                        <option value="plays_asc">Least Played / Unplayed</option>
-                        <option value="added_desc">Recently Added</option>
-                        <option value="year_desc">Release Year (Newest)</option>
-                        <option value="artist_asc">Artist (A-Z)</option>
-                        <option value="artist_albums_desc">Artist (A-Z), Albums (Year desc)</option>
-                    </select>
+                    <div>
+                        <select id="genreSelect" onchange="onFilterChange()"
+                                class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
+                            <option value="all">All Genres</option>
+                            {% for g in top_genres %}
+                            <option value="{{ g }}">{{ g.title() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <select id="sortSelect" onchange="onFilterChange()"
+                                class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
+                            <option value="plays_30d_desc">🔥 Heavy Rotation (Last 30 Days)</option>
+                            <option value="plays_desc">Most Played (All Time)</option>
+                            <option value="plays_asc">Least Played / Unplayed</option>
+                            <option value="added_desc">Recently Added</option>
+                            <option value="year_desc">Release Year (Newest)</option>
+                            <option value="artist_asc">Artist (A-Z)</option>
+                            <option value="artist_albums_desc">Artist (A-Z), Albums (Year desc)</option>
+                        </select>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Album Grid -->
+            <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+
+            <div id="loadMoreTrigger" class="text-center py-10">
+                <span class="text-xs text-gray-500">Showing <span id="displayedCount">0</span> of <span id="totalMatchCount">0</span> albums</span>
             </div>
         </div>
 
-        <!-- Album Grid -->
-        <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+        <!-- Unowned Stream Discoveries View Container (APP-07) -->
+        <div id="unownedVinylView" class="hidden">
+            <div class="card-bg p-4 rounded-xl border border-gray-800 mb-6 shadow-sm space-y-3">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">🔍</span>
+                        <input type="text" id="unownedSearchInput" placeholder="Search unowned streamed albums or artists..."
+                               class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-amber-400 transition"
+                               oninput="onUnownedFilterChange()">
+                    </div>
+                    <!-- Time Horizon Selector (APP-07) -->
+                    <div class="flex items-center gap-1.5 bg-[#0c0f12] p-1 rounded-xl border border-gray-800">
+                        <button onclick="changeUnownedHorizon('30d')" id="unownedHorizon-30d" class="px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition">Last 30 Days</button>
+                        <button onclick="changeUnownedHorizon('90d')" id="unownedHorizon-90d" class="px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition">Last 90 Days</button>
+                        <button onclick="changeUnownedHorizon('all')" id="unownedHorizon-all" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/30">All Time</button>
+                    </div>
+                </div>
+            </div>
 
-        <div id="loadMoreTrigger" class="text-center py-10">
-            <span class="text-xs text-gray-500">Showing <span id="displayedCount">0</span> of <span id="totalMatchCount">0</span> albums</span>
+            <div id="unownedAlbumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+
+            <div class="text-center py-10">
+                <span class="text-xs text-gray-500">Showing <span id="unownedDisplayedCount">0</span> unowned stream-discovered albums</span>
+            </div>
         </div>
     </div>
 
@@ -2442,7 +2639,9 @@ BETA_EXPLORER_HTML = """
 
     <script>
         const ALL_ALBUMS = {{ albums | tojson }};
+        const UNOWNED_ALBUMS = {{ (unowned_albums or []) | tojson }};
         let filteredAlbums = [...ALL_ALBUMS];
+        let filteredUnowned = [...UNOWNED_ALBUMS];
         let displayLimit = 48;
 
         let hoverTimer = null;
@@ -2588,6 +2787,142 @@ BETA_EXPLORER_HTML = """
             const label = `🔥 ${dispVal} ${dispVal === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
             const colorClass = trackPlays > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
             return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
+        }
+
+        function renderUnownedGrid() {
+            const grid = document.getElementById("unownedAlbumGrid");
+            const toShow = filteredUnowned;
+            document.getElementById("unownedDisplayedCount").innerText = toShow.length;
+            const badge = document.getElementById("unownedCountBadge");
+            if (badge) badge.innerText = UNOWNED_ALBUMS.length;
+
+            if (toShow.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-16 text-center text-gray-500 text-sm">No unowned stream-discovered albums found. You have saved everything you spin!</div>';
+                return;
+            }
+
+            grid.innerHTML = toShow.map(a => `
+                <div class="group relative flex flex-col cursor-pointer"
+                     onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\\\'")}', '${a.album_name.replace(/'/g, "\\\\'")}', '${a.album_url}', this)"
+                     onmouseleave="onCardLeave(this)">
+                    <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border-2 border-dashed border-amber-500/40 group-hover:border-amber-400/70 shadow-[0_10px_25px_-5px_rgba(245,158,11,0.15)] transition duration-300 group-hover:scale-[1.03] relative flex items-center justify-center">
+                        ${a.album_image_url && a.album_image_url.startsWith('http') ? `
+                            <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition">
+                        ` : `
+                            <div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-950/40 via-gray-900 to-gray-950 p-4 text-center">
+                                <div class="w-14 h-14 mb-2 text-amber-400 opacity-90">
+                                    {{ brand_icon | safe }}
+                                </div>
+                                <span class="text-[10px] font-bold text-amber-300 tracking-wider uppercase px-2 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/30">Unowned Crate</span>
+                            </div>
+                        `}
+
+                        <div class="absolute top-2 left-2 bg-amber-500/20 text-amber-300 backdrop-blur-md rounded-lg px-2 py-0.5 border border-amber-500/30 text-[10px] font-bold select-none flex items-center gap-1 shadow">
+                            ✨ Streamed
+                        </div>
+
+                        <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] text-amber-200 select-none">
+                            🔥 ${a.play_count} ${a.play_count === 1 ? 'Play' : 'Plays'}
+                        </div>
+
+                        <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                        </div>
+
+                        <div class="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition flex justify-center">
+                            <button onclick="saveAlbumToLibrary('${(a.album_id||'').replace(/'/g, "\\\\'")}', '${a.album_name.replace(/'/g, "\\\\'")}', '${a.album_artist_name.replace(/'/g, "\\\\'")}', event)" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-1.5 rounded-xl shadow transition flex items-center gap-1.5">
+                                ➕ Save to Library
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 px-0.5">
+                        <h4 class="text-xs font-bold text-white truncate group-hover:text-amber-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                        <p class="text-[11px] text-gray-400 truncate" title="${a.album_artist_name}">${a.album_artist_name}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Last played: ${a.last_played_at ? a.last_played_at.substring(0,10) : 'Recent'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function onUnownedFilterChange() {
+            const query = document.getElementById("unownedSearchInput").value.toLowerCase().trim();
+            filteredUnowned = UNOWNED_ALBUMS.filter(a => {
+                return !query || a.album_name.toLowerCase().includes(query) || a.album_artist_name.toLowerCase().includes(query);
+            });
+            renderUnownedGrid();
+        }
+
+        async function saveAlbumToLibrary(albumId, albumName, artistName, event) {
+            if (event) event.stopPropagation();
+            const displayName = albumName ? `"${albumName}"` : "this album";
+            if (!confirm(`Add ${displayName} to your Spotify saved library and permanent vinyl crate?`)) return;
+
+            try {
+                const res = await fetch("/api/save-album", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ album_id: albumId, album_name: albumName, artist_name: artistName })
+                });
+                const data = await res.json();
+                if (data.status === "success") {
+                    alert(data.message || "Album successfully added to your library! Refreshing view...");
+                    window.location.reload();
+                } else {
+                    alert("Error: " + (data.message || "Failed to save album"));
+                }
+            } catch (e) {
+                alert("Network error while saving album.");
+            }
+        }
+
+        let currentUnownedHorizon = 'all';
+
+        async function changeUnownedHorizon(horizon) {
+            currentUnownedHorizon = horizon;
+            ['30d', '90d', 'all'].forEach(h => {
+                const btn = document.getElementById(`unownedHorizon-${h}`);
+                if (!btn) return;
+                if (h === horizon) {
+                    btn.className = "px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                } else {
+                    btn.className = "px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition";
+                }
+            });
+
+            try {
+                const res = await fetch(`/api/unowned-albums?horizon=${horizon}`);
+                const data = await res.json();
+                if (data.status === "success") {
+                    UNOWNED_ALBUMS.length = 0;
+                    UNOWNED_ALBUMS.push(...data.unowned);
+                    filteredUnowned = [...UNOWNED_ALBUMS];
+                    renderUnownedGrid();
+                }
+            } catch(e) {
+                console.error("Error fetching unowned albums horizon:", e);
+            }
+        }
+
+        function switchCrateTab(tab) {
+            const savedView = document.getElementById("savedVinylView");
+            const unownedView = document.getElementById("unownedVinylView");
+            const savedBtn = document.getElementById("savedVinylTabBtn");
+            const unownedBtn = document.getElementById("unownedVinylTabBtn");
+
+            if (tab === 'saved') {
+                savedView.classList.remove("hidden");
+                unownedView.classList.add("hidden");
+                savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow";
+                unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2";
+            } else {
+                savedView.classList.add("hidden");
+                unownedView.classList.remove("hidden");
+                unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2 shadow";
+                savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2";
+                renderUnownedGrid();
+            }
         }
 
         function renderGrid() {
@@ -3050,7 +3385,7 @@ BETA_RECOMMEND_HTML = """
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Smart crate digging &amp; personalized discovery based on {{ user.display_name }}'s library</p>
             </div>
-            
+
             <div class="flex flex-wrap items-center gap-3">
                 <button id="audioToggleBtn" onclick="toggleHoverAudio()"
                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
@@ -4165,7 +4500,7 @@ BETA_ANALYTICS_HTML = """
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Deep listening telemetry, taste velocity &amp; acoustic habits for {{ user.display_name }}</p>
             </div>
-            
+
             <div class="flex items-center gap-3">
                 {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
@@ -4275,7 +4610,7 @@ BETA_ANALYTICS_HTML = """
 
             <div class="flex flex-wrap items-center gap-3">
                 <div class="relative flex items-center">
-                    <input type="text" id="calendarPicker" placeholder="📅 Pick custom dates..." 
+                    <input type="text" id="calendarPicker" placeholder="📅 Pick custom dates..."
                            class="bg-[#0c0f12] border border-gray-700/80 hover:border-emerald-500/60 focus:border-[#1DB954] rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none transition cursor-pointer w-48 shadow-inner font-medium">
                 </div>
 
@@ -4456,7 +4791,7 @@ BETA_ANALYTICS_HTML = """
                     <span>More</span>
                 </div>
             </div>
-            
+
             <div class="overflow-x-auto pb-2">
                 <div class="min-w-[680px]">
                     <div class="flex items-center pl-12 pr-2 mb-1.5 text-[10px] font-mono text-gray-500">
@@ -4493,7 +4828,7 @@ BETA_ANALYTICS_HTML = """
             ['1d', '7d', '30d', '60d', '90d', 'year', 'all'].forEach(r => {
                 const btn = document.getElementById(`btn-${r}`);
                 if (btn) {
-                    btn.className = (r === range) 
+                    btn.className = (r === range)
                         ? 'active-pill px-3 py-1.5 rounded-lg text-xs transition'
                         : 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
                 }
@@ -5092,7 +5427,7 @@ BETA_PALS_HTML = """
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Acoustic chemistry, taste overlap &amp; vinyl shelf borrowing</p>
             </div>
-            
+
             <div class="flex items-center gap-3">
                 {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">

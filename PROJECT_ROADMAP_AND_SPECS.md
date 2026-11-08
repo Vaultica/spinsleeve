@@ -97,16 +97,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`INFRA-01`** | Fresh GCP Project Migration & Environment Isolation | Infrastructure | 6–8 hours | Medium |
 | **`INFRA-02`** | Declarative Infrastructure as Code (IaC) via Terraform | Infrastructure | 8–12 hours | Medium |
 | **`INFRA-03`** | Sub-100ms Multi-Tier Caching & BQ Materialization Architecture | Infrastructure | 6–8 hours | In Progress (Phase 6e Live: Revision `00021-42p`) |
+| **`INFRA-04`** | Dedicated QA Environment & BigQuery Production Dataset Clone | Infrastructure | 4–6 hours | Medium |
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
 | **`OPS-03`** | Real-Time Admin Alerts for User Join Requests | DevOps | 3–4 hours | Low |
+| **`OPS-04`** | Monolithic App Modularisation & AI Parsing Optimization | DevOps & Efficiency | 4–6 hours | Low–Med |
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A / Side B Breakdown | Core App | 4–6 hours | Low–Med |
 | **`APP-02`** | Cross-Platform Apple Music Library Onboarding (Phase 7) | Core App | 16–24 hours | Medium |
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
 | **`APP-04`** | ✅ ~~Music Legend Illustrated Avatar Persona Picker~~ | Core App | 4–5 hours | Completed (`v2.3.0`) |
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~ | Core App | 2–3 hours | Completed (Revision `00018-c67`) |
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed (Revision `00019-9ds`) |
-| **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
+| **`APP-07`** | ✅ ~~Played But Not Owned ("You Should Save These") Library Crate~~ | Core App | 4–6 hours | Completed (`v2.4.0`: Revision `00032-6f2`) |
 | **`APP-08`** | Full-Length Virtual Turntable Player (Spotify Web Playback SDK) | Core App | 8–12 hours | Medium |
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8 hours | Medium |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City (Bandsintown API) | Core App | 6–8 hours | Medium |
@@ -183,6 +185,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `INFRA-04`: Dedicated QA Environment & BigQuery Production Dataset Clone
+* **Problem:**  
+  Testing new features (such as `APP-07` or schema updates) currently runs either against production BigQuery dataset `spotify_v2` or requires mock test fixtures. There is no isolated QA environment to test multi-tenant sync jobs, OAuth token refreshes, and database migrations prior to production cutover.
+* **Solution:**  
+  Provision an isolated QA environment with zero-cost BigQuery data cloning:
+  1. **Parallel GCP QA Project / Service:** Deploy Cloud Run service `spotify-dashboard-qa` in a dedicated QA environment with an isolated Cloud Datastore namespace.
+  2. **BigQuery Zero-Cost Dataset Cloning (`spotify_v2_qa`):** Leverage BigQuery dataset copy / table cloning mechanisms (`bq cp` or snapshot policies) to replicate production dataset `spotify_v2` into `spotify_v2_qa`. BigQuery table clones are metadata-only copy operations with zero storage cost until source data changes.
+  3. **Automated Preview Deployments:** Configure GitHub Actions workflow (`qa-deploy.yml`) triggered on pull requests and staging branches to build and deploy automatically to `spotify-dashboard-qa`.
+* **Effort & Complexity:** ~4–6 hours (0.5 to 1 day) • **Complexity:** **Medium**
+
+---
+
 ### 🚀 Category: DevOps, CI/CD, Reliability & Observability (`OPS`)
 
 #### `OPS-01`: CI/CD Pipelines via GitHub Actions & Branch Protection
@@ -236,7 +250,36 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-### 🎵 Category: Music Digging, 12" Gatefolds & Streaming (`APP`)
+#### `OPS-04`: Monolithic App Modularisation & AI Parsing Optimization
+* **Problem:**  
+  `src/report_v2/app.py` has grown into a monolithic file containing route definitions, business logic, BigQuery queries, Datastore access, and Spotify API integrations. This large file structure increases context window consumption during AI-assisted development, slows down static analysis, and makes parallel development and unit testing more difficult.
+* **Solution:**  
+  Modularise the application code by breaking down the monolith into small, single-responsibility modules and smaller `.py` files. This optimizes AI token efficiency, improves code maintainability, enables faster parallelized unit testing, and establishes a clean dependency tree.
+  
+  **Target Directory Structure:**
+  ```text
+  src/report_v2/
+  ├── app.py                 # Thin entrypoint (< 150 lines: app init, middleware, error handlers)
+  ├── config.py              # Environment variables, GCP project IDs, constants
+  ├── routes/
+  │   ├── __init__.py
+  │   ├── auth.py            # OAuth callbacks, session cookies, logout
+  │   ├── crate.py           # Virtual crate browsing, pagination, filtering
+  │   ├── pals.py            # SpinPals Lounge, compatibility matching
+  │   └── telemetry.py       # Scrobbles, play counts, album spin calculations
+  ├── services/
+  │   ├── bigquery.py        # SQL queries, materialization, telemetry aggregation
+  │   ├── datastore.py       # Token vaults, user metadata, entity caches
+  │   └── spotify.py         # Web API client, token refresh logic
+  └── templates/             # Jinja partials and pages
+  ```
+
+  **Additional Architectural Benefits:**
+  1. **AI Context Efficiency:** AI models can load specific domain files (`routes/pals.py` or `services/bigquery.py`) rather than parsing a massive monolith, reducing token consumption by ~70% per turn.
+  2. **Isolating Side Effects:** Clear boundaries between HTTP routing, third-party API clients (Spotify), and analytical data storage (BigQuery/Datastore).
+  3. **Parallel Collaboration & Testability:** Enables independent unit testing of services without spinning up the full Flask WSGI application server.
+  4. **Faster Linters & Type Checkers:** Incremental type checking and linting (`ruff`, `mypy`) execute significantly faster on modularized files.
+* **Effort & Complexity:** ~4–6 hours (0.5 to 1 day) • **Complexity:** **Low–Medium**
 
 #### `APP-01`: 12" Gatefold Tracklisting & Side A / Side B Disc Breakdown
 * **Problem:**  
@@ -367,7 +410,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `APP-07`: Played But Not Owned ("You Should Save These") Library Crate
+#### `APP-07`: Played But Not Owned ("You Should Save These") Library Crate [✅ Completed]
 * **Problem:**  
   Listeners frequently stream albums or tracks they love, but haven't formally clicked "Save Album" in Spotify. Because SpinSleeve's primary Library Explorer defaults strictly to `user_saved_albums`, high-affinity played albums remain hidden unless searched or discovered through Analytics scrobble history.
 * **Solution:**  
@@ -614,7 +657,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-04`** | Music Legend Illustrated Avatars | Core App | 4–5h | SVG Vector Graphics, Datastore, Tailwind CSS | **Low:** Aesthetic charm and personal flair for users without profile photos. |
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge~~ | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed** (Revision `00018-c67`): Normalized spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals Dynamic Time Horizon~~ | Core App | 5–7h | BigQuery SQL, Python Flask, JavaScript | ✅ **Completed:** Rolling 30D play count aggregation in BQ view, 2-way horizon toggles in Crate Digger & SpinPals, and 30D library sort. |
-| **`APP-07`** | Played But Not Owned ("You Should Save These") Crate | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | **Medium:** Uncovers streamed favourites missing from the vinyl shelf with 1-click library save. |
+| **`APP-07`** | ✅ ~~Played But Not Owned ("You Should Save These") Crate~~ | Core App | 4–6h | BigQuery SQL, Flask, Spotify API | ✅ **Completed** (`v2.4.0`: Revision `00032-6f2`): Uncovers streamed favourites missing from the vinyl shelf with amber dashed sleeves, multi-track rule, time horizons, and 1-click Spotify Search API library save. |
 | **`APP-08`** | Full-Length Virtual Turntable Web Player | Core App | 8–12h | Spotify Web Playback SDK, CSS Keyframes, Web Audio | **High:** Immersive full-length streaming with vinyl disc sliding from sleeve onto rotating 33⅓ platter. |
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8h | BigQuery SQL, Spotify Web API, Tailwind CSS, JavaScript | **Medium:** Granular track-level playback history, dynamic genre filtering, 30s needle-drop previews, and relative timestamps. |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City | Core App | 6–8h | Bandsintown API, DICE Deep-Links, BigQuery SQL, Flask, Tailwind CSS | **High:** Connects vinyl listening telemetry to live concerts in the user's city with 1-click DICE checkout. |

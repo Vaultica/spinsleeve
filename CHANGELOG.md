@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.4.0] — 2026-11-08
+### 📦 Played But Not Owned: "You Should Save These" Library Crate (`APP-07`)
+* **Cloud Run Revision:** `spotify-dashboard-beta-00032-6f2`
+* **What:**
+  - **APP-07 ("You Should Save These" Unowned Crate):** Designed, implemented, and deployed a dedicated discovery crate inside Library Explorer showcasing streamed albums not currently in the user's permanent Spotify library.
+  - **Amber Dashed Aesthetic:** Unowned sleeves feature warm amber dashed contours (`border-2 border-dashed border-amber-500/40`), glowing amber shadows, glassmorphic `✨ Streamed` ribbon tags, and `🔥 X Plays` badges.
+  - **Multi-Track Album Rule (`HAVING distinct_tracks >= 2`):** Strictly enforces that an item must have at least 2 distinct tracks played to be recommended as a record crate album, filtering out accidental single-track plays and standalone singles.
+  - **Dynamic Time Horizon Filters (30D, 90D, All Time):** Integrated interactive time horizon buttons defaulting to **All Time**, with an asynchronous endpoint (`/api/unowned-albums?horizon=...`) for instant client-side switching.
+  - **Strict Ownership Deduplication:** Filters out any album currently saved in the user's collection using strict normalized title and artist matching (`CONCAT(LOWER(TRIM(album_name)), '::', LOWER(TRIM(artist_name))) NOT IN (SELECT ... FROM user_saved_albums)`), guaranteeing zero duplicate recommendations.
+  - **1-Click Save with Dynamic Spotify Search API Resolution:** Hovering an unowned sleeve presents `➕ Save to Library`. If historical scrobbles lack a Spotify `album_id` (`NULL`), `/api/save-album` dynamically queries Spotify's Search API (`sp.search`) to resolve the canonical ID, adds the album to Spotify saved library (`PUT /v1/me/albums`), inserts the record into BigQuery `user_saved_albums`, and invalidates caches for instant migration (~1-2s).
+  - **Brand Avatar Fallback Sleeve:** Missing album artwork dynamically renders SpinSleeve's golden-glowing brand vinyl icon badge inside the amber dashed jacket.
+* **Why:**
+  - Music collectors stream dozens of exceptional albums during deep-dive listening sessions but frequently forget to save them into their permanent collection. This feature closes the loop between casual discovery and permanent curation.
+* **How:**
+  - Updated `src/report_v2/app.py` with `fetch_unowned_album_data()`, `/api/unowned-albums`, `/api/save-album`, and `get_token_for_user()`.
+  - Added `user-library-modify` to Spotify OAuth scopes.
+  - Updated `BETA_EXPLORER_HTML` with segmented crate tabs, unowned grid container, and JavaScript handlers.
+  - Added unit test suite `tests/test_unowned_crate.py` (all 63 tests passing). Deployed to production Cloud Run (`spotify-dashboard-beta-00032-6f2`).
+
+---
+
 ## [v2.3.0] — 2026-11-08
 ### 🎵 Music Legend Illustrated Avatar Persona Picker (`APP-04`) & Spotify Full Scrobble Upload Roadmap (`APP-13`)
 * **Cloud Run Revision:** `spotify-dashboard-beta-00026-s9t`
