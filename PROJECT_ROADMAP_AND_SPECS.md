@@ -103,7 +103,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A / Side B Breakdown | Core App | 4–6 hours | Low–Med |
 | **`APP-02`** | Cross-Platform Apple Music Library Onboarding (Phase 7) | Core App | 16–24 hours | Medium |
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
-| **`APP-04`** | Music Legend Illustrated Avatar Persona Picker | Core App | 4–5 hours | Low |
+| **`APP-04`** | ✅ ~~Music Legend Illustrated Avatar Persona Picker~~ | Core App | 4–5 hours | Completed (`v2.3.0`) |
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~ | Core App | 2–3 hours | Completed (Revision `00018-c67`) |
 | **`APP-06`** | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~ | Core App | 5–7 hours | Completed (Revision `00019-9ds`) |
 | **`APP-07`** | Played But Not Owned ("You Should Save These") Library Crate | Core App | 4–6 hours | Low–Med |
@@ -112,6 +112,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City (Bandsintown API) | Core App | 6–8 hours | Medium |
 | **`APP-11`** | Collector’s Inscriptions: Personal Album Ratings & Archival Notes | Core App | 5–7 hours | Low–Med |
 | **`APP-12`** | Header Profile Dropdown, User Settings & Community Action Center | Core App | 3–4 hours | Low |
+| **`APP-13`** | Spotify Full Scrobble Historical Data Upload & Automated Ingestion | Core App | 6–8 hours | Medium |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | [Fix] Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load) | Tactical Polish | 1 hour | Low |
 | **`POLISH-03`** | Play Count Badge Refinement (Decimal Plays / Newly Added) | Tactical Polish | 1–2 hours | Low |
@@ -289,6 +290,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+#### `APP-13`: Spotify Full Scrobble Historical Data Upload & Automated Ingestion
+* **Problem:**  
+  Spotify's standard Web API and automated sync window only capture recent listening history (up to ~50 recent tracks or limited endpoints), leaving lifetime historical scrobbles prior to app onboarding uncaptured. Users want to import their complete historical listening data from Spotify personal data export requests (JSON streaming history files).
+* **Solution:**  
+  1. **UI Upload Portal:** Add a dedicated upload tab/section in user personal settings (`/settings` or profile management) enabling users to upload their Spotify personal data export JSON files (`StreamingHistory*.json` or extended streaming history files).
+  2. **Staging Area & Cloud Storage:** Securely stream and upload files to a temporary staging cloud storage bucket (`gs://.../staging/`).
+  3. **Automated Parsing & Validation:** Background worker / ingestion pipeline parsing JSON scrobble records, validating timestamps, matching track metadata/URIs, and deduplicating against existing BigQuery `spotify_v2.playback_history`.
+  4. **BigQuery Automated Merge:** Fully automated merge pipeline loading staged historical scrobbles into the tenant's partition in BigQuery and re-materializing user album features and Datastore catalog cache.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
+
+---
+
 #### `APP-03`: In-App Feedback & Liner Notes Wishlist Collector
 * **Problem:**  
   Friends testing SpinSleeve need a quick, seamless way to suggest missing liner notes, report bugs, or recommend features without leaving the application.
@@ -301,18 +314,26 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `APP-04`: Music Legend Illustrated Avatar Persona Picker
+#### `APP-04`: Music Legend Illustrated Avatar Persona Picker [✅ Completed `v2.3.0`]
 * **Problem:**  
   Users without custom Spotify profile pictures need recognizable, stylized artistic personas inside the vinyl club.
 * **Solution:**  
-  Curated illustrated vector avatars of musical legends:
+  12 curated illustrated vector avatars of musical legends spanning two centuries of genres:
+  - 🎹 Ludwig van Beethoven (*Classical / Romantic titan*)
+  - 🎺 Chet Baker (*West Coast cool jazz noir*)
+  - 🕶️ Miles Davis (*Kind of Blue modal jazz & Harmon mute*)
+  - 🎸 Bob Dylan (*Greenwich Village folk & harmonica rack*)
   - ⚡ David Bowie (*Aladdin Sane lightning bolt*)
-  - 🕶️ The Beatles (*Abbey Road silhouettes*)
-  - 🎹 Wolfgang Amadeus Mozart (*Classical wig*)
-  - 🐝 Beyoncé (*Renaissance disco hat*)
-  - 🕶️ Miles Davis (*Trumpet silhouette*)
-  - 🎤 Amy Winehouse (*Beehive & eyeliner*)
-  - Stored as `custom_avatar_id` in Datastore `User` entity.
+  - 🎹 Stevie Wonder (*Motown soul, braids & gold shades*)
+  - 🎸 Jimi Hendrix (*Psychedelic purple afro & headband*)
+  - 🎷 Fela Kuti (*Afrobeat clay face-paint & gold sax*)
+  - 👑 Madonna (*80s pop lace bow & crucifix*)
+  - 🎤 Amy Winehouse (*Camden beehive & winged eyeliner*)
+  - 🤖 Daft Punk (*Chrome robot helmet & rainbow LED visor*)
+  - 🦉 Drake (*Certified Lover Boy heart fade & OVO owl*)
+  - Interactive click-to-open dropdown attached to the user avatar pill in navigation header.
+  - 1-click selection updates Datastore `User` entity (`custom_avatar_id` & `avatar_url`), session cache, and all views in real time.
+  - Option to revert back to original Spotify photo.
 * **Effort & Complexity:** ~4–5 hours (0.5 day) • **Complexity:** **Low**
 
 ---

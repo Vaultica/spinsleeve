@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.3.0] — 2026-11-08
+### 🎵 Music Legend Illustrated Avatar Persona Picker (`APP-04`) & Spotify Full Scrobble Upload Roadmap (`APP-13`)
+* **Cloud Run Revision:** `spotify-dashboard-beta-00026-s9t`
+* **What:**
+  - **APP-04 (Music Legend Avatar Persona Picker):** Designed and deployed a curated collection of 12 vector SVG illustrated personas spanning two centuries of genres and cultural movements:
+    - 🎹 **Ludwig van Beethoven** (*Classical / Romantic*)
+    - 🎺 **Chet Baker** (*Cool / West Coast Jazz*)
+    - 🕶️ **Miles Davis** (*Modal Jazz / Post-Bop*)
+    - 🎸 **Bob Dylan** (*Folk / 60s Counterculture*)
+    - ⚡ **David Bowie** (*Glam Rock / Aladdin Sane*)
+    - 🎹 **Stevie Wonder** (*Soul / Motown / Funk*)
+    - 🎸 **Jimi Hendrix** (*Psychedelic Rock*)
+    - 🎷 **Fela Kuti** (*Afrobeat Pioneer*)
+    - 👑 **Madonna** (*80s Pop / Dance*)
+    - 🎤 **Amy Winehouse** (*Camden Neo-Soul / Jazz-Pop*)
+    - 🤖 **Daft Punk** (*French Touch / House*)
+    - 🦉 **Drake** (*Modern Hip-Hop / R&B*)
+    - Plus a default option to revert back to the user's authentic Spotify profile picture.
+  - **Click-to-Open Dropdown UI:** Integrated an interactive dropdown anchored to the user avatar in the global header across all four views (Library Explorer, Crate Digger, Listening Telemetry, and SpinPals).
+  - **Instant Save & Real-Time Reflection:** Selecting a persona fires an AJAX request to `/api/user/avatar`, persists `custom_avatar_id` and `avatar_url` into Cloud Datastore, and updates `session` in real time, updating the user avatar across the header, SpinPals listening lounge, and admin dashboard without requiring a page refresh.
+  - **Dedicated SVG Serving:** Implemented `/avatar/<avatar_id>.svg` and `/avatar/<avatar_id>` endpoints serving crisp scalable vector artwork with long-term immutable caching (`max-age=604800`).
+  - **APP-13 (Roadmap Addition):** Added Spotify Full Scrobble Historical Data Upload & Automated Ingestion feature specification to `PROJECT_ROADMAP_AND_SPECS.md`, outlining UI file uploads for Spotify personal data requests, cloud staging buckets, and automated BigQuery merge pipelines.
+* **Why:**
+  - Users without custom Spotify profile photos defaulted to generic grey silhouettes in the vinyl crate and SpinPals Listening Lounge. Adding music legends gives listeners iconic artistic personas to represent their musical tastes.
+* **How:**
+  - Embedded vector SVG art dictionary `AVATAR_SVGS` and registry `AVATAR_PRESETS` in `src/report_v2/app.py`.
+  - Added `@app.route("/avatar/<avatar_id>")` and `@app.route("/api/user/avatar")` endpoints.
+  - Injected `avatar_presets` into Jinja templates via Flask `@app.context_processor`.
+  - Updated OAuth callback (`spotify_callback`), `admin_assume`, and `admin_revert` to preserve and propagate `custom_avatar_id` and `spotify_avatar_url`.
+  - Added comprehensive test suite `tests/test_avatar_picker.py` covering XML validity, SVG serving, unauthenticated protection, and interactive dropdown rendering (61/61 tests passing).
+
+---
+
 ## [v2.2.2] — 2026-11-07
 ### ✨ Library Initial Sort (`POLISH-02`), Decimal Play Badges (`POLISH-03`), Crate Digger Era Filter Layout & License Migration (`BRAND-04`)
 * **What:**
