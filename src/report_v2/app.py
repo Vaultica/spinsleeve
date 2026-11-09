@@ -65,8 +65,8 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Application Version (POLISH-04, POLISH-01, APP-04)
-APP_VERSION = "v2.3.0"
+# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09)
+APP_VERSION = "v2.5.0"
 
 
 @app.context_processor
@@ -2851,7 +2851,7 @@ EXPLORER_HTML = """
         let hoverTimer = null;
         let activeAudio = new Audio();
         let currentHoverKey = null;
-        let isAudioEnabled = true;
+        let isAudioEnabled = localStorage.getItem('spinAudioEnabled') !== 'false';
         let isModalOpen = false;
         let currentModalAlbum = null;
         const previewUrlCache = new Map();
@@ -2864,15 +2864,16 @@ EXPLORER_HTML = """
 
         function toggleHoverAudio() {
             isAudioEnabled = !isAudioEnabled;
+            localStorage.setItem('spinAudioEnabled', isAudioEnabled);
             const btnText = document.getElementById('audioText');
             const btnIcon = document.getElementById('audioIcon');
             if (isAudioEnabled) {
-                btnText.innerText = 'Hover Audio: ON';
-                btnIcon.innerText = '🔊';
+                if (btnText) btnText.innerText = 'Hover Audio: ON';
+                if (btnIcon) btnIcon.innerText = '🔊';
             } else {
                 stopPreview();
-                btnText.innerText = 'Hover Audio: MUTED';
-                btnIcon.innerText = '🔇';
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
             }
         }
 
@@ -3563,6 +3564,19 @@ EXPLORER_HTML = """
 
         document.addEventListener("DOMContentLoaded", () => {
             onFilterChange();
+            if (!isAudioEnabled) {
+                const btnText = document.getElementById('audioText');
+                const btnIcon = document.getElementById('audioIcon');
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            if (tab === 'unowned') {
+                switchCrateTab('unowned');
+            } else if (tab === 'saved') {
+                switchCrateTab('saved');
+            }
         });
     </script>
 </body>
@@ -3637,6 +3651,22 @@ RECOMMEND_HTML = """
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Smart crate digging &amp; personalized discovery based on {{ user.display_name }}'s library</p>
             </div>
+
+            <!-- Top-Level Navigation Tabs -->
+            <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+                <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Library
+                </a>
+                <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                </a>
+                <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    SpinPals
+                </a>
+            </nav>
 
             <div class="flex flex-wrap items-center gap-3">
                 <button id="audioToggleBtn" onclick="toggleHoverAudio()"
@@ -3996,7 +4026,7 @@ RECOMMEND_HTML = """
         let hoverTimer = null;
         let activeAudio = new Audio();
         let currentHoverKey = null;
-        let isAudioEnabled = true;
+        let isAudioEnabled = localStorage.getItem('spinAudioEnabled') !== 'false';
         let isModalOpen = false;
         let currentModalAlbum = null;
         const previewUrlCache = new Map();
@@ -4009,15 +4039,16 @@ RECOMMEND_HTML = """
 
         function toggleHoverAudio() {
             isAudioEnabled = !isAudioEnabled;
+            localStorage.setItem('spinAudioEnabled', isAudioEnabled);
             const btnText = document.getElementById('audioText');
             const btnIcon = document.getElementById('audioIcon');
             if (isAudioEnabled) {
-                btnText.innerText = 'Hover Audio: ON';
-                btnIcon.innerText = '🔊';
+                if (btnText) btnText.innerText = 'Hover Audio: ON';
+                if (btnIcon) btnIcon.innerText = '🔊';
             } else {
                 stopPreview();
-                btnText.innerText = 'Hover Audio: MUTED';
-                btnIcon.innerText = '🔇';
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
             }
         }
 
@@ -4731,6 +4762,12 @@ RECOMMEND_HTML = """
 
         document.addEventListener("DOMContentLoaded", () => {
             runRecommender();
+            if (!isAudioEnabled) {
+                const btnText = document.getElementById('audioText');
+                const btnIcon = document.getElementById('audioIcon');
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
         });
     </script>
 </body>
@@ -4845,6 +4882,10 @@ ANALYTICS_HTML = """
 
             <!-- User Status & Quick Audio Toggle -->
             <div class="flex flex-wrap items-center gap-3">
+                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
+                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
+                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
+                </button>
                 {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
                     ⚙️ Admin
@@ -5484,7 +5525,28 @@ ANALYTICS_HTML = """
             }).join('');
         }
 
+        let isAudioEnabled = localStorage.getItem('spinAudioEnabled') !== 'false';
+        function toggleHoverAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            localStorage.setItem('spinAudioEnabled', isAudioEnabled);
+            const btnText = document.getElementById('audioText');
+            const btnIcon = document.getElementById('audioIcon');
+            if (isAudioEnabled) {
+                if (btnText) btnText.innerText = 'Hover Audio: ON';
+                if (btnIcon) btnIcon.innerText = '🔊';
+            } else {
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
+            if (!isAudioEnabled) {
+                const btnText = document.getElementById('audioText');
+                const btnIcon = document.getElementById('audioIcon');
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
             fpInstance = flatpickr("#calendarPicker", {
                 mode: "range",
                 dateFormat: "Y-m-d",
@@ -5826,7 +5888,27 @@ PALS_HTML = """
                 <p class="text-xs text-gray-400 mt-1">Acoustic chemistry, taste overlap &amp; vinyl shelf borrowing</p>
             </div>
 
-            <div class="flex items-center gap-3">
+            <!-- Top-Level Navigation Tabs -->
+            <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+                <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Library
+                </a>
+                <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                </a>
+                <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    SpinPals
+                </a>
+            </nav>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
+                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
+                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
+                </button>
                 {% if is_admin %}
                 <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
                     ⚙️ Admin
@@ -5840,7 +5922,7 @@ PALS_HTML = """
                     </button>
 
                     <!-- Avatar & Settings Dropdown Menu (POLISH-08) -->
-                    <div class="avatarPickerDropdown hidden absolute right-0 top-full mt-2 w-72 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
+                    <div class="avatarPickerDropdown hidden absolute right-0 sm:right-0 max-w-[calc(100vw-2rem)] sm:w-72 top-full mt-2 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
                         <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
                             <div>
                                 <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">User Settings</span>
@@ -6276,7 +6358,7 @@ PALS_HTML = """
         let hoverTimer = null;
         let activeAudio = new Audio();
         let currentHoverKey = null;
-        let isAudioEnabled = true;
+        let isAudioEnabled = localStorage.getItem('spinAudioEnabled') !== 'false';
         let isModalOpen = false;
         let currentModalAlbum = null;
         const previewUrlCache = new Map();
@@ -6289,15 +6371,16 @@ PALS_HTML = """
 
         function toggleHoverAudio() {
             isAudioEnabled = !isAudioEnabled;
+            localStorage.setItem('spinAudioEnabled', isAudioEnabled);
             const btnText = document.getElementById('audioText');
             const btnIcon = document.getElementById('audioIcon');
             if (isAudioEnabled) {
-                btnText.innerText = 'Hover Audio: ON';
-                btnIcon.innerText = '🔊';
+                if (btnText) btnText.innerText = 'Hover Audio: ON';
+                if (btnIcon) btnIcon.innerText = '🔊';
             } else {
                 stopPreview();
-                btnText.innerText = 'Hover Audio: MUTED';
-                btnIcon.innerText = '🔇';
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
             }
         }
 
@@ -6706,6 +6789,11 @@ PALS_HTML = """
 </body>
 </html>
 """
+
+BETA_EXPLORER_HTML = EXPLORER_HTML
+BETA_RECOMMEND_HTML = RECOMMEND_HTML
+BETA_PALS_HTML = PALS_HTML
+BETA_ANALYTICS_HTML = ANALYTICS_HTML
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=True)

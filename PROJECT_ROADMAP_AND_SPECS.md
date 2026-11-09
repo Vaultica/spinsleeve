@@ -122,7 +122,12 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher from Header)~~ | Tactical Polish | 1–2 hours | Completed (Revision `00022-z5t`) |
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2 hours | Low |
 | **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5 hours | Completed (`v2.2.1`) |
-| **`POLISH-08`** | Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck | Tactical Polish | 2–3 hours | Low |
+| **`POLISH-08`** | ✅ ~~Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck~~ | Tactical Polish | 2–3 hours | Completed (`v2.4.1`) |
+| **`POLISH-09`** | ✅ ~~Landing Page Version Number Alignment (`v2.5.0`)~~ | Tactical Polish | 0.2 hours | Completed (`v2.5.1`) |
+| **`POLISH-10`** | ✅ ~~Header Navigation & Audio Toggle Consistency Across All Views~~ | Tactical Polish | 1 hour | Completed (`v2.5.1`) |
+| **`POLISH-11`** | ✅ ~~Cross-Page Audio Mute State Persistence (`localStorage`)~~ | Tactical Polish | 1 hour | Completed (`v2.5.1`) |
+| **`POLISH-12`** | ✅ ~~URL Parameter Tab Routing (`?tab=unowned` / `?tab=saved`)~~ | Tactical Polish | 0.5 hours | Completed (`v2.5.1`) |
+| **`POLISH-13`** | ✅ ~~Mobile User Settings Menu Overflow & Positioning Fix~~ | Tactical Polish | 0.5 hours | Completed (`v2.5.1`) |
 | **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
 | **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4 hours | Low |
@@ -561,6 +566,41 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   2. Nest **Crate Digger** under the Library Explorer domain as a sub-tab, placed between "My Saved Vinyl" and "You Should Save These" (leaving unowned recommendations as the rightmost subtab).
   3. Replace busy emojis with minimalist SVG line icons and a hardware-inspired segmented pill control deck (`spinsleeve_nav_mockup.html`).
 * **Effort & Complexity:** ~2–3 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-09`: Landing Page Version Number Alignment
+* **Problem:** The version badge displayed on the landing page is hardcoded as `v2.3.0` instead of matching the current release version (`v2.5.0`).
+* **Solution:** Update `APP_VERSION = "v2.5.0"` (or current release constant) in `src/report_v2/app.py`.
+* **Effort & Complexity:** ~0.2 hours • **Complexity:** **Low (Trivial)**
+
+---
+
+#### `POLISH-10`: Consistent Header Navigation & Audio Toggle Across All Views
+* **Problem:** Certain pages (such as landing/auth or auxiliary views) are missing the main tab selection bar (`Library | Analytics | SpinPals`) and/or audio controls in the header masthead.
+* **Solution:** Standardize the persistent header masthead across all authenticated views so the tab bar and audio toggle are universally present.
+* **Effort & Complexity:** ~1 hour • **Complexity:** **Low**
+
+---
+
+#### `POLISH-11`: Cross-Page Audio Mute State Persistence (`localStorage`)
+* **Problem:** When hover audio is disabled by the user, the preference resets back to enabled (`ON`) upon navigating to another page.
+* **Solution:** Save and load `isAudioEnabled` state using browser `localStorage` (`spinAudioEnabled`) across page transitions.
+* **Effort & Complexity:** ~1 hour • **Complexity:** **Low**
+
+---
+
+#### `POLISH-12`: URL Parameter Tab Routing (`?tab=unowned` / `?tab=saved`)
+* **Problem:** Visiting or clicking links with `?tab=unowned` (e.g. `https://spinsleeve.cc/beta/?tab=unowned`) sometimes still displays the default library view instead of switching to the unowned crate tab.
+* **Solution:** Add DOMContentLoaded URLSearchParams query parameter parsing to automatically trigger `switchCrateTab('unowned')` or `switchCrateTab('saved')` on page load.
+* **Effort & Complexity:** ~0.5 hours • **Complexity:** **Low**
+
+---
+
+#### `POLISH-13`: Mobile User Settings Menu Overflow & Positioning Fix
+* **Problem:** The user settings and avatar dropdown menu in the header uses `absolute right-0 w-72`, causing it to overflow off the left side of the screen on narrow mobile viewports.
+* **Solution:** Add responsive constraints (`max-w-[calc(100vw-2rem)] right-0 sm:right-0`) to ensure the settings dropdown stays safely within mobile viewport bounds.
+* **Effort & Complexity:** ~0.5 hours • **Complexity:** **Low**
 
 ---
 

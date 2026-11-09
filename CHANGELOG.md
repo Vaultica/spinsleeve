@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.5.1] — 2026-11-09
+### ✨ UI Polish, Header Navigation Consistency, Persistent Audio Mute & Tab Routing (`POLISH-09` to `POLISH-13`)
+* **What:**
+  - **POLISH-09 (Landing Page Version Alignment):** Bumped landing page and header version constant to `v2.5.0` / `v2.5.1`.
+  - **POLISH-10 (Header Consistency Across All Views):** Restored the top-level navigation tab bar (`Library` | `Analytics` | `SpinPals`) and hover audio toggle buttons (`audioToggleBtn`) consistently across Library Explorer, Crate Digger (`/recommend`), Analytics (`/analytics`), and SpinPals (`/pals`) views.
+  - **POLISH-11 (Cross-Page Audio Mute State Persistence):** Integrated `localStorage` (`spinAudioEnabled`) across all view templates so user audio mute preferences persist seamlessly across page navigations.
+  - **POLISH-12 (URL Parameter Tab Routing):** Added `URLSearchParams` parsing on Library Explorer load (`?tab=unowned` or `?tab=saved`) to instantly activate the requested crate tab.
+  - **POLISH-13 (Mobile Avatar Dropdown Overflow Fix):** Added responsive bounds (`max-w-[calc(100vw-2rem)] sm:w-72 right-0 sm:right-0`) to the user settings dropdown menu to prevent left-side clipping on narrow mobile viewports.
+* **Why:**
+  - Ensures a polished, friction-free user experience across mobile and desktop devices with zero state loss during navigation or tab switching.
+* **How:**
+  - Updated `src/report_v2/app.py` template headers and script blocks for Crate Digger, Analytics, and SpinPals, integrated `localStorage` state management, added URL parameter parsing, and verified all 65 unit tests pass successfully.
+
+---
+
 ## [v2.5.0] — 2026-11-09
 ### 🎧 Spotify Full Scrobble Historical Data Upload & Ingestion (`APP-13`), UI Settings Integration & Header Masthead Navigation Refactoring
 * **Cloud Run Revision:** `spotify-dashboard-beta-00034-6lq`

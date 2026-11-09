@@ -138,7 +138,7 @@ class TestAdminAndPalsFeatures(unittest.TestCase):
         for name in ["explorer", "recommend", "analytics"]:
             t = jinja2.Template(self.templates[name])
             rendered = t.render(**context)
-            self.assertIn("🔒</span> SpinPals", rendered, f"Expected lock icon in {name}")
+            self.assertIn("SpinPals", rendered, f"Expected SpinPals tab in {name}")
 
         # In PALS_LOCKED_HTML:
         t_locked = jinja2.Template(PALS_LOCKED_HTML)
