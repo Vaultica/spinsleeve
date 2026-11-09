@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.5.0] — 2026-11-09
+### 🎧 Spotify Full Scrobble Historical Data Upload & Ingestion (`APP-13`), UI Settings Integration & Header Masthead Navigation Refactoring
+* **Cloud Run Revision:** `spotify-dashboard-beta-00034-6lq`
+* **What:**
+  - **APP-13 (Historical Scrobble Upload & Ingestion Engine):** Designed and implemented robust GDPR Spotify streaming history parser (`src/pipeline_v2/history_parser.py`) supporting both Extended (`Audio_Streaming_History_*.json`) and Legacy (`StreamingHistory*.json`) formats, with automated podcast filtering and short-scrobble elimination (<30s).
+  - **QA & Production Reconciliation (`src/pipeline_v2/ingest_qa.py`, `ingest_zip_qa.py`):** Built BigQuery QA test table (`playback_history_qa`) and year-by-year partition batching (`MERGE` deduplication) to successfully ingest 192,371 lifetime historical scrobbles (spanning 2011 to 2026) for verification without double-counting.
+  - **UI Settings Integration (`📂 Import History (.json / .zip)`):** Added user-facing file upload button inside avatar settings dropdowns across all application views. Enhanced backend endpoint (`/api/user/upload-history`) to support both `.json` files and full `.zip` archives (extracting and parsing `Streaming_History_Audio_*.json` in-memory).
+  - **Staging Idempotency & Instant Re-materialization:** Implemented isolated temporary staging tables with `WRITE_TRUNCATE`, composite key `MERGE` deduplication, automatic `user_albums_features_table` re-materialization, and `UserCatalogCache` invalidation so the Library Explorer instantly reflects updated lifetime play counts.
+  - **Header Masthead Navigation Relocation:** Moved the top-level tab menu (`Library` | `Analytics` | `SpinPals`) up into the persistent header row between the SpinSleeve logo and user settings menu.
+  - **SpinPals Emoji Clean-up:** Removed all emojis (`🤝`, `🔒`) from the SpinPals tab label for a clean, professional aesthetic.
+* **Why:**
+  - Music collectors accumulate over a decade of listening history before discovering SpinSleeve. Allowing 1-click lifetime history imports via GDPR JSON/ZIP exports bridges the gap between recent telemetry and archival archival listening history. Relocating navigation into the header masthead further declutters the UI and elevates the application chrome.
+* **How:**
+  - Created `src/pipeline_v2/history_parser.py`, `ingest_qa.py`, `ingest_zip_qa.py`, `validate_qa.py`, and `validate_dedup.py`.
+  - Added unit test suite `tests/test_history_parser.py`.
+  - Updated `src/report_v2/app.py` with `/api/user/upload-history`, `.zip` in-memory extraction, re-materialization hooks, and header layout refactoring.
+
+---
+
 ## [v2.4.1] — 2026-11-08
 ### 🧭 Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck (`POLISH-08`)
 * **What:**
