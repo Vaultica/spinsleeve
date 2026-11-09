@@ -103,3 +103,6 @@ ENV/
 
 # this project
 config.py
+StreamingHistory*.json
+Audio_Streaming_History_*.json
+*streaming_history*.json

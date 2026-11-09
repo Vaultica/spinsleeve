@@ -1,5 +1,7 @@
 import os
 import sys
+# Ensure src is in python path for pipeline_v2 imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import time
 import json
 import gzip
@@ -34,6 +36,7 @@ app = Flask(__name__)
 # Project & Dataset settings
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
 DATASET_V2 = "spotify_v2"
+PLAYBACK_HISTORY_TABLE = os.getenv("PLAYBACK_HISTORY_TABLE", f"{PROJECT_ID}.{DATASET_V2}.playback_history")
 ADMIN_USER_IDS = ["serbou", "sergebou", "vaultica"]
 
 
@@ -580,6 +583,141 @@ def update_user_avatar():
     })
 
 
+def invalidate_user_catalog_cache(user_id):
+    """Deletes cached catalog in Datastore when new listening events are synced (INFRA-03b)."""
+    try:
+        ds_client = get_datastore_client()
+        key = ds_client.key("UserCatalogCache", user_id)
+        ds_client.delete(key)
+        if user_id in _user_album_cache:
+            del _user_album_cache[user_id]
+        if user_id in _user_album_cache_time:
+            del _user_album_cache_time[user_id]
+        logger.info("[%s] Invalidated Datastore UserCatalogCache & in-memory cache.", user_id)
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate Datastore UserCatalogCache: %s", user_id, e)
+
+def rematerialize_user_albums_features(bq_client):
+    """Materializes the dynamic user_albums_features view into a clustered physical table (INFRA-03a)."""
+    logger.info("Materializing %s.user_albums_features_table...", DATASET_V2)
+    remat_q = f"""
+    CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
+    CLUSTER BY user_id AS
+    SELECT * FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features`
+    """
+    try:
+        job = bq_client.query(remat_q)
+        job.result()
+        logger.info("Successfully refreshed %s.user_albums_features_table!", DATASET_V2)
+    except Exception as e:
+        logger.error("Error refreshing materialized user_albums_features_table: %s", e)
+
+
+@app.route("/api/user/upload-history", methods=["POST"])
+@app.route("/beta/api/user/upload-history", methods=["POST"])
+@login_required
+def api_upload_history():
+    """Uploads and ingests Spotify streaming history JSON files for the active user (APP-13)."""
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    if "files" not in request.files:
+        return jsonify({"status": "error", "message": "No files provided"}), 400
+
+    files = request.files.getlist("files")
+    if not files or all(f.filename == '' for f in files):
+        return jsonify({"status": "error", "message": "No selected files"}), 400
+
+    logger.info("[%s] Starting history upload/ingestion request (files=%d)...", user_id, len(files))
+
+    try:
+        from pipeline_v2.history_parser import parse_spotify_history_json
+        
+        bq_client = bigquery.Client(project=PROJECT_ID)
+        all_dfs = []
+
+        for file in files:
+            filename = file.filename.lower()
+            if filename.endswith('.zip'):
+                logger.info("[%s] Extracting and parsing ZIP archive: %s", user_id, file.filename)
+                import zipfile, io
+                zip_bytes = file.read()
+                try:
+                    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+                        for sub_name in z.namelist():
+                            if "Streaming_History_Audio_" in sub_name and sub_name.endswith(".json"):
+                                with z.open(sub_name) as zf:
+                                    content = zf.read().decode('utf-8', errors='ignore')
+                                    df_file = parse_spotify_history_json(content, user_id)
+                                    if not df_file.empty:
+                                        all_dfs.append(df_file)
+                                        logger.info("[%s]  -> Parsed %d scrobbles from %s", user_id, len(df_file), sub_name)
+                except Exception as ze:
+                    logger.warning("[%s] Failed to parse uploaded zip %s: %s", user_id, file.filename, ze)
+            else:
+                logger.info("[%s] Parsing JSON file: %s", user_id, file.filename)
+                content = file.read().decode('utf-8', errors='ignore')
+                df_file = parse_spotify_history_json(content, user_id)
+                if not df_file.empty:
+                    all_dfs.append(df_file)
+                    logger.info("[%s]  -> Parsed %d scrobbles from %s", user_id, len(df_file), file.filename)
+
+        if not all_dfs:
+            return jsonify({"status": "error", "message": "No valid scrobbles found in uploaded JSON files."}), 400
+
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+        if combined_df.empty:
+            return jsonify({"status": "error", "message": "Parsed dataframe is empty."}), 400
+
+        logger.info("[%s] Total valid scrobbles parsed: %d. Loading to BigQuery staging table...", user_id, len(combined_df))
+
+        # Load to staging table and MERGE into PLAYBACK_HISTORY_TABLE with deduplication
+        safe_uid = user_id.replace("-", "_")
+        staging_table = f"{PROJECT_ID}.{DATASET_V2}.playback_history_staging_ui_{safe_uid}"
+
+        job_config = bigquery.LoadJobConfig(
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
+        )
+        load_job = bq_client.load_table_from_dataframe(combined_df, staging_table, job_config=job_config)
+        load_job.result()
+        logger.info("[%s] Staging table loaded: %s", user_id, staging_table)
+
+        merge_query = f"""
+        MERGE `{PLAYBACK_HISTORY_TABLE}` T
+        USING `{staging_table}` S
+        ON T.user_id = S.user_id
+           AND T.played_at = S.played_at
+           AND T.track_name = S.track_name
+           AND T.artist_name = S.artist_name
+        WHEN NOT MATCHED THEN
+          INSERT (user_id, played_at, track_uri, track_id, track_name, artist_id, artist_name, album_id, album_name)
+          VALUES (user_id, played_at, track_uri, track_id, track_name, artist_id, artist_name, album_id, album_name)
+        """
+        logger.info("[%s] Executing MERGE reconciliation into %s...", user_id, PLAYBACK_HISTORY_TABLE)
+        merge_job = bq_client.query(merge_query)
+        merge_job.result()
+        logger.info("[%s] MERGE reconciliation completed successfully.", user_id)
+
+        bq_client.delete_table(staging_table, not_found_ok=True)
+
+        # Rematerialize features table and invalidate cache so Library Explorer updates instantly
+        rematerialize_user_albums_features(bq_client)
+        invalidate_user_catalog_cache(user_id)
+
+        logger.info("[%s] Successfully completed web history upload workflow (%d scrobbles processed)!", user_id, len(combined_df))
+
+        return jsonify({
+            "status": "success",
+            "imported_count": len(combined_df),
+            "message": f"Successfully ingested {len(combined_df):,} historical scrobbles!"
+        })
+
+    except Exception as e:
+        logger.error("[%s] Error uploading history: %s", user_id, e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 # ==============================================================================
 # DATA CONVERTERS & SAFE PARSING
 # ==============================================================================
@@ -784,7 +922,7 @@ def sync_user_initial_data(user_id, access_token):
                     "album_name": alb.get("name")
                 })
             df_tracks = pd.DataFrame(t_rows)
-            table_ref = f"{PROJECT_ID}.{DATASET_V2}.playback_history"
+            table_ref = PLAYBACK_HISTORY_TABLE
             job = bq_client.load_table_from_dataframe(df_tracks, table_ref)
             job.result()
             logger.info("Loaded %d initial tracks for %s into %s", len(df_tracks), user_id, table_ref)
@@ -982,7 +1120,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         LOWER(TRIM(album_name)) as norm_album_name,
         LOWER(TRIM(artist_name)) as norm_artist_name,
         MIN(played_at) as first_played_at
-      FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
+      FROM `{PLAYBACK_HISTORY_TABLE}`
       WHERE user_id = @user_id
       GROUP BY norm_album_name, norm_artist_name
     ),
@@ -1000,7 +1138,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         COALESCE(a.release_date, g.release_date) as album_release_date,
         COALESCE(a.genres, g.genres) as album_genres,
         fp.first_played_at
-      FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
+      FROM `{PLAYBACK_HISTORY_TABLE}` p
       LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` a
         ON p.user_id = a.user_id
         AND (
@@ -2135,7 +2273,7 @@ def fetch_unowned_album_data(user_id, horizon="all"):
           COUNT(1) as play_count,
           COUNT(DISTINCT p.track_name) as distinct_tracks,
           MAX(p.played_at) as last_played_at
-        FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
+        FROM `{PLAYBACK_HISTORY_TABLE}` p
         WHERE p.user_id = @user_id
           AND CONCAT(LOWER(TRIM(p.album_name)), '::', LOWER(TRIM(p.artist_name))) NOT IN (
             SELECT CONCAT(LOWER(TRIM(album_name)), '::', LOWER(TRIM(artist_name)))
@@ -2291,7 +2429,7 @@ def beta_index():
     unowned_albums = fetch_unowned_album_data(user_id)
 
     return render_template_string(
-        BETA_EXPLORER_HTML,
+        EXPLORER_HTML,
         albums=data["albums"],
         unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
@@ -2301,7 +2439,7 @@ def beta_index():
     )
 
 
-BETA_EXPLORER_HTML = """
+EXPLORER_HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2328,7 +2466,7 @@ BETA_EXPLORER_HTML = """
 <body class="min-h-screen p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <!-- Persistent Header -->
-        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
+        <header class="flex flex-col lg:flex-row lg:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
             <div>
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 flex-shrink-0">
@@ -2343,6 +2481,34 @@ BETA_EXPLORER_HTML = """
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Multi-tenant edition • Personal vinyl crate &amp; gatefold archive</p>
             </div>
+
+            <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+                <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Library
+                </a>
+                <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                </a>
+                <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    SpinPals
+                </a>
+            </nav>
 
             <!-- User Status & Quick Audio Toggle -->
             <div class="flex flex-wrap items-center gap-3">
@@ -2380,6 +2546,12 @@ BETA_EXPLORER_HTML = """
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
                                 </span>
                             </button>
+                            <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
+                            <button type="button" onclick="document.getElementById('historyUploadInput').click()"
+                                    class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition">
+                                📂 Import History (.json / .zip)
+                            </button>
+                            <div id="historyUploadStatus" class="hidden text-[10px] text-center font-bold text-amber-400 pt-1"></div>
                             <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
                                 🚪 Logout ({{ user.display_name }})
                             </a>
@@ -2442,21 +2614,7 @@ BETA_EXPLORER_HTML = """
             </div>
         </header>
 
-        <!-- Top-Level Simplified Navigation (POLISH-08) -->
-        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-4 w-fit">
-            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                Library
-            </a>
-            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
-            </a>
-        </nav>
+        
 
         <!-- Hardware-Inspired Segmented Sub-Tab Control Deck under Library (POLISH-08) -->
         <div class="flex items-center p-1 bg-[#080a0c] rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
@@ -3288,6 +3446,52 @@ BETA_EXPLORER_HTML = """
             }
         });
 
+        async function uploadHistoryFiles(e) {
+            if (e) e.stopPropagation();
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const statusEl = document.getElementById('historyUploadStatus');
+            if (statusEl) {
+                statusEl.className = "text-[10px] text-center font-bold text-amber-400 pt-1";
+                statusEl.textContent = `Uploading & parsing ${files.length} file(s)...`;
+                statusEl.classList.remove('hidden');
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const resp = await fetch('/api/user/upload-history', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (resp.ok && data.status === 'success') {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-emerald-400 pt-1";
+                        statusEl.textContent = `✓ ${data.message}`;
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                        statusEl.textContent = `Error: ${data.message || 'Upload failed'}`;
+                    }
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                if (statusEl) {
+                    statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                    statusEl.textContent = `Error: Network failure`;
+                }
+            }
+        }
+
         async function selectAvatarPreset(presetId, e) {
             if (e) e.stopPropagation();
             const statusEl = document.querySelector('.avatarSaveStatus');
@@ -3378,7 +3582,7 @@ def beta_recommend():
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
 
     return render_template_string(
-        BETA_RECOMMEND_HTML,
+        RECOMMEND_HTML,
         albums=data["albums"],
         top_genres=data["top_genres"],
         kpis=data["kpis"],
@@ -3388,7 +3592,7 @@ def beta_recommend():
     )
 
 
-BETA_RECOMMEND_HTML = """
+RECOMMEND_HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3469,6 +3673,12 @@ BETA_RECOMMEND_HTML = """
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
                                 </span>
                             </button>
+                            <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
+                            <button type="button" onclick="document.getElementById('historyUploadInput').click()"
+                                    class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition">
+                                📂 Import History (.json / .zip)
+                            </button>
+                            <div id="historyUploadStatus" class="hidden text-[10px] text-center font-bold text-amber-400 pt-1"></div>
                             <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
                                 🚪 Logout ({{ user.display_name }})
                             </a>
@@ -3531,21 +3741,7 @@ BETA_RECOMMEND_HTML = """
             </div>
         </header>
 
-        <!-- Top-Level Simplified Navigation (POLISH-08) -->
-        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-4 w-fit">
-            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                Library
-            </a>
-            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
-            </a>
-        </nav>
+        
 
         <!-- Hardware-Inspired Segmented Sub-Tab Control Deck under Library (POLISH-08) -->
         <div class="flex items-center p-1 bg-[#080a0c] rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
@@ -4427,6 +4623,52 @@ BETA_RECOMMEND_HTML = """
             }
         });
 
+        async function uploadHistoryFiles(e) {
+            if (e) e.stopPropagation();
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const statusEl = document.getElementById('historyUploadStatus');
+            if (statusEl) {
+                statusEl.className = "text-[10px] text-center font-bold text-amber-400 pt-1";
+                statusEl.textContent = `Uploading & parsing ${files.length} file(s)...`;
+                statusEl.classList.remove('hidden');
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const resp = await fetch('/api/user/upload-history', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (resp.ok && data.status === 'success') {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-emerald-400 pt-1";
+                        statusEl.textContent = `✓ ${data.message}`;
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                        statusEl.textContent = `Error: ${data.message || 'Upload failed'}`;
+                    }
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                if (statusEl) {
+                    statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                    statusEl.textContent = `Error: Network failure`;
+                }
+            }
+        }
+
         async function selectAvatarPreset(presetId, e) {
             if (e) e.stopPropagation();
             const statusEl = document.querySelector('.avatarSaveStatus');
@@ -4507,7 +4749,7 @@ def beta_analytics():
     data = fetch_user_album_data(user_id)
 
     return render_template_string(
-        BETA_ANALYTICS_HTML,
+        ANALYTICS_HTML,
         top_genres=data["top_genres"],
         user=session,
         brand_icon=ICON_A_SVG
@@ -4534,7 +4776,7 @@ def beta_api_analytics():
     return jsonify(payload)
 
 
-BETA_ANALYTICS_HTML = """
+ANALYTICS_HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4582,6 +4824,25 @@ BETA_ANALYTICS_HTML = """
                 <p class="text-xs text-gray-400 mt-1">Deep listening telemetry, taste velocity &amp; acoustic habits for {{ user.display_name }}</p>
             </div>
 
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+                <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Library
+                </a>
+                <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                </a>
+                <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    SpinPals
+                </a>
+            </nav>
+
             <!-- User Status & Quick Audio Toggle -->
             <div class="flex flex-wrap items-center gap-3">
                 {% if is_admin %}
@@ -4614,6 +4875,12 @@ BETA_ANALYTICS_HTML = """
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
                                 </span>
                             </button>
+                            <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
+                            <button type="button" onclick="document.getElementById('historyUploadInput').click()"
+                                    class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition">
+                                📂 Import History (.json / .zip)
+                            </button>
+                            <div id="historyUploadStatus" class="hidden text-[10px] text-center font-bold text-amber-400 pt-1"></div>
                             <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
                                 🚪 Logout ({{ user.display_name }})
                             </a>
@@ -4676,21 +4943,7 @@ BETA_ANALYTICS_HTML = """
             </div>
         </header>
 
-        <!-- Top-Level Simplified Navigation (POLISH-08) -->
-        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
-            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                Library
-            </a>
-            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
-            </a>
-        </nav>
+        
 
         <!-- Filter Control Bar -->
         <div class="card-bg p-4 rounded-2xl border border-gray-800 mb-6 shadow-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
@@ -5279,6 +5532,52 @@ BETA_ANALYTICS_HTML = """
             }
         });
 
+        async function uploadHistoryFiles(e) {
+            if (e) e.stopPropagation();
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const statusEl = document.getElementById('historyUploadStatus');
+            if (statusEl) {
+                statusEl.className = "text-[10px] text-center font-bold text-amber-400 pt-1";
+                statusEl.textContent = `Uploading & parsing ${files.length} file(s)...`;
+                statusEl.classList.remove('hidden');
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const resp = await fetch('/api/user/upload-history', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (resp.ok && data.status === 'success') {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-emerald-400 pt-1";
+                        statusEl.textContent = `✓ ${data.message}`;
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                        statusEl.textContent = `Error: ${data.message || 'Upload failed'}`;
+                    }
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                if (statusEl) {
+                    statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                    statusEl.textContent = `Error: Network failure`;
+                }
+            }
+        }
+
         async function selectAvatarPreset(presetId, e) {
             if (e) e.stopPropagation();
             const statusEl = document.querySelector('.avatarSaveStatus');
@@ -5469,7 +5768,7 @@ def beta_pals(pal_id=None):
     pal_data = compute_pal_compatibility(current_user_id, target_pal["spotify_id"], horizon=horizon)
 
     return render_template_string(
-        BETA_PALS_HTML,
+        PALS_HTML,
         user=session,
         pals=pals_directory,
         selected_pal=pal_data["pal"],
@@ -5483,7 +5782,7 @@ def beta_pals(pal_id=None):
     )
 
 
-BETA_PALS_HTML = """
+PALS_HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5558,6 +5857,12 @@ BETA_PALS_HTML = """
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
                                 </span>
                             </button>
+                            <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
+                            <button type="button" onclick="document.getElementById('historyUploadInput').click()"
+                                    class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition">
+                                📂 Import History (.json / .zip)
+                            </button>
+                            <div id="historyUploadStatus" class="hidden text-[10px] text-center font-bold text-amber-400 pt-1"></div>
                             <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
                                 🚪 Logout ({{ user.display_name }})
                             </a>
@@ -5620,21 +5925,7 @@ BETA_PALS_HTML = """
             </div>
         </header>
 
-        <!-- Top-Level Simplified Navigation (POLISH-08) -->
-        <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
-            <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                Library
-            </a>
-            <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                Analytics
-            </a>
-            <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                <span>{% if (is_admin and not is_impersonating) or user.pals_opt_in %}🤝{% else %}🔒{% endif %}</span> SpinPals
-            </a>
-        </nav>
+        
 
         <!-- 1. THE LISTENING LOUNGE (Active Club Members Carousel) -->
         <div class="mb-8">
@@ -6305,6 +6596,52 @@ BETA_PALS_HTML = """
                 }
             }
         });
+
+        async function uploadHistoryFiles(e) {
+            if (e) e.stopPropagation();
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const statusEl = document.getElementById('historyUploadStatus');
+            if (statusEl) {
+                statusEl.className = "text-[10px] text-center font-bold text-amber-400 pt-1";
+                statusEl.textContent = `Uploading & parsing ${files.length} file(s)...`;
+                statusEl.classList.remove('hidden');
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const resp = await fetch('/api/user/upload-history', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (resp.ok && data.status === 'success') {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-emerald-400 pt-1";
+                        statusEl.textContent = `✓ ${data.message}`;
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                        statusEl.textContent = `Error: ${data.message || 'Upload failed'}`;
+                    }
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                if (statusEl) {
+                    statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                    statusEl.textContent = `Error: Network failure`;
+                }
+            }
+        }
 
         async function selectAvatarPreset(presetId, e) {
             if (e) e.stopPropagation();
