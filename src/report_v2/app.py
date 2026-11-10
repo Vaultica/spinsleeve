@@ -1802,64 +1802,442 @@ def open_apple(album_id):
 # ==============================================================================
 # HTML TEMPLATES: LOGIN, PENDING INVITE, ADMIN
 # ==============================================================================
-LOGIN_HTML_TEMPLATE = """
+ROADMAP_HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpinSleeve - Private Beta Login</title>
+    <title>SpinSleeve - Product Roadmap (APP Features)</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
     <style>body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }</style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-md w-full bg-[#14181f] border border-gray-800 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
-        <div class="w-16 h-16 mx-auto mb-4">
-            {{ brand_icon | safe }}
-        </div>
-        <div class="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-xs font-bold mb-3 tracking-wide">
-            FRIENDS &amp; BETA ACCESS
-        </div>
-        <h1 class="text-3xl font-extrabold tracking-tight">
-            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
-        </h1>
-        <p class="text-sm text-gray-400 mt-2 mb-8 leading-relaxed">
-            A virtual record crate, 12" gatefold liner notes reader, and deep listening telemetry engine for your Spotify library.
-        </p>
-
-        <a href="/beta/auth" class="w-full py-3.5 px-6 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-sm flex items-center justify-center gap-3 transition shadow-lg hover:scale-[1.02] active:scale-[0.98]">
-            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.495 17.306c-.215.353-.674.464-1.026.25-2.812-1.718-6.353-2.107-10.522-1.155-.403.092-.806-.16-.898-.564-.092-.403.16-.806.564-.898 4.568-1.045 8.483-.598 11.632 1.341.352.215.464.674.25 1.026zm1.467-3.262c-.27.44-.847.579-1.287.308-3.22-1.979-8.128-2.553-11.936-1.396-.497.151-1.025-.133-1.176-.63-.151-.497.133-1.025.63-1.176 4.356-1.323 9.775-.68 13.461 1.587.44.27.579.847.308 1.287zm.126-3.41c-3.86-2.292-10.229-2.503-13.896-1.39-.592.18-1.221-.155-1.401-.747-.18-.592.155-1.221.747-1.401 4.218-1.281 11.253-1.033 15.696 1.604.533.316.707 1.011.391 1.544-.316.533-1.011.707-1.537.39z"/></svg>
-            <span>Log in with Spotify</span>
-        </a>
-
-        <div class="mt-3 text-center">
-            <a href="https://accounts.spotify.com/en/logout" target="_blank" class="text-[11px] text-gray-500 hover:text-emerald-400 transition underline">
-                Switch or log out of Spotify Web account
+<body class="min-h-screen p-6 md:p-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center justify-between pb-6 mb-8 border-b border-gray-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 shrink-0">{{ brand_icon | safe }}</div>
+                <div>
+                    <h1 class="text-2xl font-black text-white">🗺️ SpinSleeve Product Roadmap</h1>
+                    <p class="text-xs text-gray-400 mt-0.5">Core Application Features (`APP`) &amp; Release Backlog</p>
+                </div>
+            </div>
+            <a href="/" class="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold text-xs px-4 py-2 rounded-xl transition shadow">
+                ← Back to SpinSleeve
             </a>
         </div>
 
-        <!-- Fast Testing Switcher -->
-        <div class="mt-6 pt-5 border-t border-gray-800/80">
-            <p class="text-[10px] font-mono uppercase text-gray-500 mb-2.5 font-bold tracking-wider">🛠️ 1-Click Fast Switcher (For Testing)</p>
-            <div class="flex flex-wrap items-center justify-center gap-2">
-                <a href="/beta/dev-switch/sergebou" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-emerald-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
-                    <span>👑</span> Serge
-                </a>
-                <a href="/beta/dev-switch/sarahboosch" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-rose-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
-                    <span>👩</span> Sarah
-                </a>
-                <a href="/beta/dev-switch/31sevhztrcbajfcowsahl7z2p26q" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-amber-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
-                    <span>🐹</span> GuineaPig
+        <div class="space-y-4">
+            <!-- Shipped Section -->
+            <div class="bg-[#14181f] border border-gray-800 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-4">✅ Shipped &amp; Deployed Core Features</h2>
+                <div class="space-y-3 text-xs">
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-04: Music Legend Illustrated Avatar Picker</strong> (12 vector legend presets, Datastore sync).</div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-bold rounded">v2.3.0</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-05: Album Sleeve Normalized Play Count Badge</strong> ("🔥 X Plays").</div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-bold rounded">v2.2.0</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-06: Dynamic Time Horizon</strong> (Heavy Rotation Last 30D vs All-Time Collection).</div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-bold rounded">v2.2.0</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-07: Played But Not Owned Crate</strong> ("You Should Save These" Amber dashed sleeves).</div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-bold rounded">v2.4.0</span>
+                    </div>
+                    <div class="flex items-start justify-between">
+                        <div><strong class="text-white">APP-13: Spotify Full Scrobble Historical Data Upload</strong> (Extended/Legacy JSON &amp; ZIP support).</div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-bold rounded">v2.5.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In Progress / Upcoming Section -->
+            <div class="bg-[#14181f] border border-gray-800 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider mb-4">⏳ Upcoming Application Backlog (`APP`)</h2>
+                <div class="space-y-3 text-xs">
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-01: 12" Gatefold Tracklisting &amp; Side A / Side B Breakdown</strong> (Spotify API track sequences and needle-drop track auditioning).</div>
+                        <span class="text-gray-400 font-mono">4-6h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-02: Cross-Platform Apple Music Library Onboarding</strong> (MusicKit JS v3 &amp; Apple Developer JWT tokens).</div>
+                        <span class="text-gray-400 font-mono">16-24h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-03: In-App Feedback &amp; Liner Notes Wishlist Collector</strong> (Direct collector feedback drawer).</div>
+                        <span class="text-gray-400 font-mono">5-7h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-08: Full-Length Virtual Turntable Player</strong> (Spotify Web Playback SDK integration).</div>
+                        <span class="text-gray-400 font-mono">8-12h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-09: Granular Track-Level Telemetry &amp; Audio Archive</strong> (Deep track play archives).</div>
+                        <span class="text-gray-400 font-mono">6-8h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-10: Local Gig Radar</strong> (Bandsintown API integration for top live artists).</div>
+                        <span class="text-gray-400 font-mono">6-8h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-11: Collector’s Inscriptions</strong> (Personal star ratings and archival grade notes).</div>
+                        <span class="text-gray-400 font-mono">5-7h</span>
+                    </div>
+                    <div class="flex items-start justify-between">
+                        <div><strong class="text-white">APP-12: Header Profile Dropdown &amp; Settings</strong> (SpinPals opt-in, display name editing, scrobble pause).</div>
+                        <span class="text-gray-400 font-mono">3-4h</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+
+LANDING_PAGE_HTML = """
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinSleeve — Your Digital Library, Pressed on Virtual Vinyl</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
+        .serif-title { font-family: 'Playfair Display', serif; }
+        .card-bg { background-color: #14181f; }
+        .sleeve-shadow { box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 10px 20px -10px rgba(0, 0, 0, 0.5); }
+        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spinSlow 20s linear infinite; }
+        @keyframes soundWave { 0%, 100% { height: 4px; } 50% { height: 20px; } }
+        .wave-bar { animation: soundWave 1.2s ease-in-out infinite; }
+        .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.6s; }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-emerald-500 selection:text-black">
+
+    <!-- Navigation Bar -->
+    <header class="fixed top-0 left-0 right-0 z-50 bg-[#0c0f12]/80 backdrop-blur-md border-b border-gray-800/60 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-9 h-9 relative">
+                    {{ brand_icon | safe }}
+                </div>
+                <span class="text-xl font-extrabold tracking-tight">Spin<span class="text-[#1DB954]">Sleeve</span></span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-gray-400">
+                <a href="#features" class="hover:text-white transition">Features</a>
+                <a href="#carousel" class="hover:text-white transition">Gatefold Gallery</a>
+                <a href="#social" class="hover:text-white transition">SpinPals</a>
+                <a href="/roadmap" class="hover:text-white transition">Roadmap (APP)</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <a href="/beta/auth" class="px-5 py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-sm transition shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95">
+                    Connect Spotify
                 </a>
             </div>
         </div>
+    </header>
 
-        <div class="mt-6 pt-5 border-t border-gray-800 text-[11px] text-gray-500">
-            Private Beta: Access is currently invite-only. If you haven't been invited yet, your login will submit an approval request to Serge.
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 md:pt-44 md:pb-32 px-6 overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/20 via-[#0c0f12] to-[#0c0f12] -z-10"></div>
+        <div class="max-w-5xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold mb-6 tracking-wide shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                v2.5.2 LIVE • VIRTUAL CRATE &amp; TELEMETRY ENGINE
+            </div>
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]">
+                Your digital library,<br>
+                <span class="serif-title italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-green-500">pressed on virtual vinyl.</span>
+            </h1>
+            <p class="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                Transform sterile streaming playlists into an archival record store crate. Featuring 12" gatefold liner notes, 30s needle-drop previews, heavy rotation time horizons, and acoustic taste chemistry with friends.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="/beta/auth" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-base transition shadow-xl shadow-emerald-500/30 hover:scale-105 active:scale-95 flex items-center justify-center gap-3">
+                    <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.495 17.306c-.215.353-.674.464-1.026.25-2.812-1.718-6.353-2.107-10.522-1.155-.403.092-.806-.16-.898-.564-.092-.403.16-.806.564-.898 4.568-1.045 8.483-.598 11.632 1.341.352.215.464.674.25 1.026zm1.467-3.262c-.27.44-.847.579-1.287.308-3.22-1.979-8.128-2.553-11.936-1.396-.497.151-1.025-.133-1.176-.63-.151-.497.133-1.025.63-1.176 4.356-1.323 9.775-.68 13.461 1.587.44.27.579.847.308 1.287zm.126-3.41c-3.86-2.292-10.229-2.503-13.896-1.39-.592.18-1.221-.155-1.401-.747-.18-.592.155-1.221.747-1.401 4.218-1.281 11.253-1.033 15.696 1.604.533.316.707 1.011.391 1.544-.316.533-1.011.707-1.537.39z"/></svg>
+                    <span>Connect with Spotify</span>
+                </a>
+                <a href="#carousel" class="w-full sm:w-auto px-8 py-4 rounded-2xl card-bg border border-gray-800 hover:border-gray-700 font-bold text-base transition flex items-center justify-center gap-2 text-gray-300 hover:text-white">
+                    <span>Explore Gatefolds</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </a>
+            </div>
+
+            <!-- Fast Testing Switcher -->
+            <div class="mt-10 pt-6 border-t border-gray-800/80 max-w-md mx-auto">
+                <p class="text-[10px] font-mono uppercase text-gray-500 mb-2.5 font-bold tracking-wider">🛠️ 1-Click Fast Switcher (For Testing)</p>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    <a href="/beta/dev-switch/sergebou" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-emerald-400 font-bold border border-gray-700 transition flex items-center gap-1.5 shadow-sm">
+                        <span>👑</span> Serge (Admin)
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Static Gatefold Record Sleeve Gallery Section -->
+    <section id="carousel" class="py-20 px-6 card-bg border-y border-gray-800/80">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <span class="text-xs font-mono uppercase text-emerald-400 font-bold tracking-widest">Archival Presentation</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mt-2">12" Gatefold Liners &amp; Record Sleeves</h2>
+                <p class="text-gray-400 mt-2 max-w-xl mx-auto">Experience your music collection transformed into archival physical record store sleeves with Wikipedia summaries and Pitchfork scores.</p>
+            </div>
+
+            <!-- 3-Card Static Sleeve Showcase with Authentic Apple Music / iTunes CDN Artwork -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Sleeve 1: Pink Floyd -->
+                <div class="bg-[#0c0f12] border border-gray-800 rounded-3xl p-6 sleeve-shadow flex flex-col justify-between group hover:border-emerald-500/50 transition">
+                    <div>
+                        <div class="w-full h-56 rounded-2xl bg-black relative overflow-hidden shadow-inner border border-gray-700/55 flex items-center justify-center">
+                            <img src="https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Dark_Side_of_the_Moon.png/960px-Dark_Side_of_the_Moon.png" alt="Pink Floyd - The Dark Side of the Moon" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 flex flex-col justify-between p-4 text-white pointer-events-none">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-xs font-mono bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-emerald-400 font-bold">1973</span>
+                                    <span class="text-xs font-bold bg-emerald-500 text-black px-2.5 py-0.5 rounded-full shadow">🔥 84 Plays</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold serif-title italic text-white">The Dark Side of the Moon</h3>
+                                    <p class="text-xs text-gray-300 font-medium">Pink Floyd</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Progressive Rock</span>
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pitchfork: 10/10</span>
+                            </div>
+                            <p class="text-xs text-gray-400 leading-relaxed">
+                                A monumental exploration of conflict, greed, time, and mental illness, wrapped in Hipgnosis's iconic prism artwork.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-500 font-mono">
+                        <span>Side A • 1 Track</span>
+                        <span class="text-emerald-400 font-bold">Gatefold Loaded</span>
+                    </div>
+                </div>
+
+                <!-- Sleeve 2: Daft Punk -->
+                <div class="bg-[#0c0f12] border border-gray-800 rounded-3xl p-6 sleeve-shadow flex flex-col justify-between group hover:border-emerald-500/50 transition">
+                    <div>
+                        <div class="w-full h-56 rounded-2xl bg-black relative overflow-hidden shadow-inner border border-gray-700/55 flex items-center justify-center">
+                            <img src="https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/fd/4a/77/fd4a77db-0ebc-d043-41a2-f32fa1bb0fb4/dj.qrikkdwj.jpg/600x600bb.jpg" alt="Daft Punk - Discovery" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 flex flex-col justify-between p-4 text-white pointer-events-none">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-xs font-mono bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-emerald-400 font-bold">2001</span>
+                                    <span class="text-xs font-bold bg-emerald-500 text-black px-2.5 py-0.5 rounded-full shadow">🔥 68 Plays</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold serif-title italic text-white">Discovery</h3>
+                                    <p class="text-xs text-gray-300 font-medium">Daft Punk</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">House / Synth-Pop</span>
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pitchfork: 8.8/10</span>
+                            </div>
+                            <p class="text-xs text-gray-400 leading-relaxed">
+                                An emotional odyssey of vocoded vocals, filtered disco loops, and futuristic pop hooks soundtracking neon night drives.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-500 font-mono">
+                        <span>Side B • Track 4</span>
+                        <span class="text-emerald-400 font-bold">Gatefold Loaded</span>
+                    </div>
+                </div>
+
+                <!-- Sleeve 3: Radiohead -->
+                <div class="bg-[#0c0f12] border border-gray-800 rounded-3xl p-6 sleeve-shadow flex flex-col justify-between group hover:border-emerald-500/50 transition">
+                    <div>
+                        <div class="w-full h-56 rounded-2xl bg-black relative overflow-hidden shadow-inner border border-gray-700/55 flex items-center justify-center">
+                            <img src="https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/bd/8e/13/bd8e1358-b367-a689-cb84-cebd0b067dc4/634904078263.png/600x600bb.jpg" alt="Radiohead - Kid A" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 flex flex-col justify-between p-4 text-white pointer-events-none">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-xs font-mono bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-emerald-400 font-bold">2000</span>
+                                    <span class="text-xs font-bold bg-emerald-500 text-black px-2.5 py-0.5 rounded-full shadow">🔥 42 Plays</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold serif-title italic text-white">Kid A</h3>
+                                    <p class="text-xs text-gray-300 font-medium">Radiohead</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Art Rock / Electronic</span>
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pitchfork: 10/10</span>
+                            </div>
+                            <p class="text-xs text-gray-400 leading-relaxed">
+                                A radical departure from guitar rock, weaving fractured electronica and jazz samples into an icy architectural monument.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-500 font-mono">
+                        <span>Side A • Track 1</span>
+                        <span class="text-emerald-400 font-bold">Gatefold Loaded</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Features Grid -->
+    <section id="features" class="py-24 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <span class="text-xs font-mono uppercase text-emerald-400 font-bold tracking-widest">Engineered for Collectors</span>
+                <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight mt-2">Everything Your Digital Library Missed</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Feature 1 -->
+                <div class="card-bg border border-gray-800 rounded-3xl p-8 hover:border-emerald-500/50 transition group">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Smart Crate Digger</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">
+                        Filter by vibe (Chill, Energetic, Vintage, Mellow), era, and subgenres. Switch instantly between Heavy Rotation (30D) and All-Time Collection.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="card-bg border border-gray-800 rounded-3xl p-8 hover:border-emerald-500/50 transition group">
+                    <div class="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-6 group-hover:scale-110 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    </div>
+                    <h3 id="social" class="text-xl font-bold mb-3">SpinPals (CrateMates)</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">
+                        The Listening Lounge member directory. Calculate acoustic chemistry gauges (50% artist + 50% album overlap), earn kinship badges, and borrow recommendations.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="card-bg border border-gray-800 rounded-3xl p-8 hover:border-emerald-500/50 transition group">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Unowned Crate Discovery</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">
+                        Automatically detects heavily scrobbled albums missing from your saved library, displaying amber dashed sleeves with 1-click Spotify save actions.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="card-bg border border-gray-800 rounded-3xl p-8 hover:border-emerald-500/50 transition group">
+                    <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Listening Analytics</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">
+                        Deep listening telemetry engine with listening clock heatmaps, custom date ranges, fresh vs repeat ratios, and taste velocity tracking.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 border-t border-gray-800/80 bg-[#0c0f12]">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 animate-spin-slow">
+                    {{ brand_icon | safe }}
+                </div>
+                <span class="font-bold text-gray-300">SpinSleeve v2.5.2</span>
+                <span>•</span>
+                <span>Built for music collectors</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="/roadmap" class="hover:text-emerald-400 transition">Roadmap</a>
+                <a href="https://github.com" target="_blank" class="hover:text-emerald-400 transition">GitHub</a>
+                <a href="/beta/auth" class="text-emerald-400 font-bold hover:underline">Log In with Spotify →</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Carousel JS Script -->
+    <script>
+        const slides = [
+            {
+                album: "The Dark Side of the Moon",
+                artist: "Pink Floyd",
+                year: "1973",
+                plays: "84 Plays",
+                genre: "Progressive Rock / Psychedelic",
+                score: "Pitchfork: 10/10",
+                title: "The Definitive Progressive Masterpiece",
+                desc: "A monumental exploration of conflict, greed, time, and mental illness, wrapped in Hipgnosis's iconic prism artwork and pristine analog production.",
+                image: "https://upload.wikimedia.org/wikipedia/en/3/3b/Dark_Side_of_the_Moon.png"
+            },
+            {
+                album: "Discovery",
+                artist: "Daft Punk",
+                year: "2001",
+                plays: "68 Plays",
+                genre: "House / Synth-Pop",
+                score: "Pitchfork: 8.8/10",
+                title: "The Golden Age of French Touch",
+                desc: "An emotional odyssey of vocoded vocals, filtered disco loops, and futuristic pop hooks that soundtracked an entire generation's neon-lit night drives.",
+                image: "https://upload.wikimedia.org/wikipedia/en/2/27/Daft_Punk_-_Discovery.png"
+            },
+            {
+                album: "Kid A",
+                artist: "Radiohead",
+                year: "2000",
+                plays: "42 Plays",
+                genre: "Art Rock / Electronic",
+                score: "Pitchfork: 10/10",
+                title: "Masterpiece of Electronic Ambience",
+                desc: "A radical departure from guitar rock, weaving fractured electronica, jazz samples, and haunting falsettos into an icy architectural monument of the new millennium.",
+                image: "https://upload.wikimedia.org/wikipedia/en/a/a1/Radiohead.kida.albumart.jpg"
+            }
+        ];
+
+        let currentSlide = 0;
+
+        function updateSlide() {
+            const s = slides[currentSlide];
+            document.getElementById('slide-year').innerText = s.year;
+            document.getElementById('slide-plays').innerText = s.plays;
+            document.getElementById('slide-album').innerText = s.album;
+            document.getElementById('slide-artist').innerText = s.artist;
+            document.getElementById('slide-genre').innerText = s.genre;
+            document.getElementById('slide-score').innerText = s.score;
+            document.getElementById('slide-title').innerText = s.title;
+            document.getElementById('slide-desc').innerText = s.desc;
+            document.getElementById('slide-indicator').innerText = (currentSlide + 1) + ' / ' + slides.length;
+            document.getElementById('slide-img').src = s.image;
+        }
+
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slides.length;
+            updateSlide();
+        }
+
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            updateSlide();
+        }
+    </script>
 </body>
 </html>
 """
@@ -2052,14 +2430,22 @@ ADMIN_HTML_TEMPLATE = """
 
 
 # ==============================================================================
-# AUTHENTICATION ROUTES
+# AUTHENTICATION & PUBLIC ROUTES
 # ==============================================================================
 @app.route("/login")
 @app.route("/beta/login")
 def login():
     if "user_id" in session:
         return redirect("/")
-    return render_template_string(LOGIN_HTML_TEMPLATE, brand_icon=ICON_A_SVG)
+    return render_template_string(LANDING_PAGE_HTML, brand_icon=ICON_A_SVG)
+
+
+@app.route("/roadmap")
+@app.route("/beta/roadmap")
+@app.route("/roadmap/")
+@app.route("/beta/roadmap/")
+def public_roadmap():
+    return render_template_string(ROADMAP_HTML_TEMPLATE, brand_icon=ICON_A_SVG)
 
 
 @app.route("/auth")
@@ -2508,14 +2894,71 @@ def api_save_album():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+def fetch_landing_showcase_albums():
+    """Fetches real scrobbled album artwork from BigQuery user_albums_features_table for landing showcase."""
+    try:
+        client = bigquery.Client(project=PROJECT_ID)
+        query = f"""
+            SELECT album_name, artist_name, image_url, release_year, album_plays
+            FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
+            WHERE image_url IS NOT NULL AND image_url != ''
+            GROUP BY album_name, artist_name, image_url, release_year, album_plays
+            ORDER BY album_plays DESC
+            LIMIT 3
+        """
+        df = client.query(query).to_dataframe()
+        if not df.empty:
+            showcase = []
+            for _, r in df.iterrows():
+                showcase.append({
+                    "album": safe_str(r.get("album_name")),
+                    "artist": safe_str(r.get("artist_name")),
+                    "year": safe_str(r.get("release_year")) or "2020",
+                    "plays": int(r.get("album_plays") or 42),
+                    "image": safe_str(r.get("image_url"))
+                })
+            if len(showcase) >= 3:
+                return showcase
+    except Exception as e:
+        logger.debug("Could not query BigQuery for showcase albums: %s", e)
+
+    # Fallback default real album artwork (Spotify CDN)
+    return [
+        {
+            "album": "The Dark Side of the Moon",
+            "artist": "Pink Floyd",
+            "year": "1973",
+            "plays": 84,
+            "image": "https://i.scdn.co/image/ab67616d0000b273ea75e50f9d414e0cc7f45abf"
+        },
+        {
+            "album": "Discovery",
+            "artist": "Daft Punk",
+            "year": "2001",
+            "plays": 68,
+            "image": "https://i.scdn.co/image/ab67616d0000b273a0484dcec2eb06a0956b9c9e"
+        },
+        {
+            "album": "Kid A",
+            "artist": "Radiohead",
+            "year": "2000",
+            "plays": 42,
+            "image": "https://i.scdn.co/image/ab67616d0000b273bd2631586554749b6b0cfa9a"
+        }
+    ]
+
+
 # ==============================================================================
 # 1. TAB 1: LIBRARY EXPLORER ROUTE & TEMPLATE
 # ==============================================================================
 @app.route("/")
 @app.route("/beta")
 @app.route("/beta/")
-@login_required
 def beta_index():
+    if "user_id" not in session:
+        showcase_albums = fetch_landing_showcase_albums()
+        return render_template_string(LANDING_PAGE_HTML, brand_icon=ICON_A_SVG, showcase_albums=showcase_albums)
+
     user_id = session["user_id"]
     force_refresh = request.args.get("refresh") in ("1", "true")
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)

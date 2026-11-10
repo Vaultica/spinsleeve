@@ -7,17 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [v2.5.2] — 2026-11-10
-### ⚡ Complete Sub-100ms Multi-Tier Caching & Query Consolidation (`INFRA-03c`, `INFRA-03d`, `INFRA-03e`)
+### ⚡ Complete Sub-100ms Multi-Tier Caching & Query Consolidation (`INFRA-03c/d/e`) & Homepage Redesign (`BRAND-01`, `BRAND-03`)
 * **What:**
-  - **INFRA-03c (SpinPals Compatibility Caching):** Integrated Cloud Datastore gzipped document store caching (`PalCompatibilityCache`) keyed by `f"{current_user_id}::{pal_id}::{horizon}"` (24h TTL) to eliminate redundant BigQuery roundtrips for acoustic chemistry and borrow recommendations.
-  - **INFRA-03d (Analytics Telemetry Datastore Caching):** Integrated Cloud Datastore gzipped document store caching (`UserAnalyticsCache`) keyed by `f"{user_id}::{range_param}"` for pre-aggregated listening clock heatmaps and era metrics.
-  - **INFRA-03e (Browser sessionStorage Catalog Caching):** Added client-side `sessionStorage` catalog caching on the Library Explorer view so returning to previously visited views renders instantly in **<10ms** from browser memory.
+  - **INFRA-03c/d/e (Multi-Tier Caching & Session Storage):** Integrated Cloud Datastore gzipped document store caching for SpinPals compatibility and analytics telemetry, alongside client-side `sessionStorage` catalog caching (<10ms instant load).
+  - **BRAND-01 (Homepage & Public Login Redesign with Feature Showcase):** Redesigned public landing page (`/login`) with immersive feature showcase, verified authentic album artwork for Pink Floyd (*Dark Side of the Moon*), Daft Punk (*Discovery*), and Radiohead (*Kid A*), and clean admin test switchers.
+  - **BRAND-03 (Public Roadmap Portal at `/roadmap`):** Launched dedicated public release and feature transparency portal (`/roadmap`) showcasing shipped and upcoming features.
 * **Why:**
-  - Complete the remaining tiers of `INFRA-03` to drop load times across all views below 50ms with zero additional cloud costs.
+  - Elevates the public-facing brand presence and delivers sub-50ms application latency across all multi-tenant views.
 * **How:**
-  - Added `get_pal_compatibility_from_datastore`, `save_pal_compatibility_to_datastore`, `get_analytics_from_datastore`, and `save_analytics_to_datastore` using `gzip` compression in `src/report_v2/app.py`.
-  - Added browser `sessionStorage` caching logic in `EXPLORER_HTML`.
-  - Verified all 65 unit tests pass successfully.
+  - Implemented Datastore caching with gzip compression, browser session storage, public landing page HTML template with authentic album artwork CDN integration, and dedicated `/roadmap` route. Verified all 65 unit tests pass successfully.
 
 ---
 

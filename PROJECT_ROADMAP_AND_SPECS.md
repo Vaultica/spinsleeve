@@ -140,9 +140,9 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-11`** | ✅ ~~Cross-Page Audio Mute State Persistence (`localStorage`)~~ | Tactical Polish | 1 hour | Completed (`v2.5.1`) |
 | **`POLISH-12`** | ✅ ~~URL Parameter Tab Routing (`?tab=unowned` / `?tab=saved`)~~ | Tactical Polish | 0.5 hours | Completed (`v2.5.1`) |
 | **`POLISH-13`** | ✅ ~~Mobile User Settings Menu Overflow & Positioning Fix~~ | Tactical Polish | 0.5 hours | Completed (`v2.5.1`) |
-| **`BRAND-01`** | Homepage & Public Login Redesign with Feature Showcase | Brand & Growth | 6–8 hours | Low–Med |
+| **`BRAND-01`** | ✅ ~~Homepage & Public Login Redesign with Feature Showcase~~ | Brand & Growth | 6–8 hours | Completed (`v2.5.2`) |
 | **`BRAND-02`** | "Buy Me a Coffee" Supporter Integration | Monetization | 1–2 hours | Low |
-| **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4 hours | Low |
+| **`BRAND-03`** | ✅ ~~Public Roadmap & Release Transparency Portal (`/roadmap`)~~ | Brand & Growth | 3–4 hours | Completed (`v2.5.2`) |
 | **`BRAND-04`** | ✅ ~~Software License & IP Protection Review (PolyForm Noncommercial 1.0.0)~~ | Legal & Brand | 2–4 hours | Completed (`v2.2.2`) |
 | **`DOCS-01`** | ✅ ~~Comprehensive Technical Project Architecture Map (README)~~ | Documentation | 3–4 hours | Completed |
 
@@ -733,8 +733,8 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish | Tactical Polish | 1–2h | HTML5, Tailwind CSS | **Low:** Eliminates table misalignment, button wrapping, and truncation on admin portal. |
 | **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~ | Tactical Polish | 0.5h | Jinja2, HTML5 | ✅ **Completed** (`v2.2.1`): Removed header duplicate; harmonized Control Deck button to "Spin Again". |
 | **`POLISH-08`** | Tab Navigation UX Simplification & Hardware Sub-Tab Deck | Tactical Polish | 2–3h | Jinja2, Tailwind CSS, SVG, JS | **High:** Streamlines top-level navigation from 4 to 3 tabs by nesting Crate Digger under Library Explorer alongside Saved & Unowned crates with hardware-inspired segmented pill bar and minimalist SVG line icons (`spinsleeve_nav_mockup.html`). |
-| **`BRAND-01`** | Landing Page Redesign & Feature Showcase | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | **High:** Professional public face, manifesto narrative, corporate firewall compliance, and visual showcase. |
+| **`BRAND-01`** | ✅ ~~Landing Page Redesign & Feature Showcase~~ | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | ✅ **Completed** (`v2.5.2`): Professional public landing page with feature showcase, authentic album artwork CDN integration, and admin test switchers. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
-| **`BRAND-03`** | Public Roadmap & Release Transparency Portal (`/roadmap`) | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | **Low:** Public release transparency, active milestone visibility, and open roadmap portal for club supporters. |
+| **`BRAND-03`** | ✅ ~~Public Roadmap & Release Transparency Portal (`/roadmap`)~~ | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | ✅ **Completed** (`v2.5.2`): Public release transparency portal at `/roadmap` showcasing shipped and upcoming features. |
 | **`BRAND-04`** | ✅ ~~Software License & IP Protection Review~~ | Legal & Brand | 2–4h | PolyForm Noncommercial 1.0.0 | ✅ **Completed** (`v2.2.2`): Migrated repository to PolyForm Noncommercial 1.0.0 to prevent unauthorized commercial exploitation while keeping non-commercial use & contributions free. |
 | **`DOCS-01`** | Technical Architecture Map (README Overhaul) | Documentation | 3–4h | Markdown, Mermaid Diagrams | **High:** Complete developer transparency and comprehensive system mapping. |
