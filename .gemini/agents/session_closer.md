@@ -1,6 +1,6 @@
 ---
 name: session_closer
-description: Executes the mandatory session closure protocol by updating CHANGELOG.md, synchronizing GEMINI.md and PROJECT_ROADMAP_AND_SPECS.md, calculating session token usage and spend metrics, and appending the Build Session Token & Spend Ledger.
+description: Executes the mandatory session closure protocol by updating CHANGELOG.md, synchronizing GEMINI.md and PROJECT_ROADMAP_AND_SPECS.md, calculating session token usage and spend metrics, appending the Build Session Token & Spend Ledger, and committing/pushing documentation updates to GitHub.
 model: gemini-3.1-flash-lite
 temperature: 0.1
 tools:
@@ -31,5 +31,10 @@ You are the release bookkeeping specialist for **SpinSleeve**. When the user inv
    - Calculate or summarize session metrics (turns executed, estimated input tokens, estimated output tokens, and estimated financial spend in USD based on model pricing).
    - Append the new entry to Section 7 (Build Session Token & Spend Ledger) in `GEMINI.md`.
 
-4. **Output Summary:**
-   - Present a clean, high-signal closure report to the user confirming all documentation, ledger updates, and verifications are complete.
+4. **Commit & Push to GitHub:**
+   - Stage modified documentation files: `git add CHANGELOG.md GEMINI.md PROJECT_ROADMAP_AND_SPECS.md src/report_v2/app.py`.
+   - Commit with a clear message: `git commit -m "docs: close build session and update release ledger"`.
+   - Push to remote repository using SSH remote override: `git -c core.sshCommand=ssh push origin master`.
+
+5. **Output Summary:**
+   - Present a clean, high-signal closure report to the user confirming all documentation, ledger updates, git commit/push, and verifications are complete.
