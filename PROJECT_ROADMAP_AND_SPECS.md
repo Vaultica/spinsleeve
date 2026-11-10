@@ -70,6 +70,18 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Standardized user profile widget in global navigation header with normal user avatar and display name across all views.
   - Removed admin user-switcher clutter (`👑 Serge`, `👩 Sarah`, `🐹 GuineaPig`) from header, keeping impersonation strictly housed inside `/admin` with clear `↩ Revert` escape button.
   - Deployed live revision `spotify-dashboard-beta-00022-z5t`.
+* **Phase 6g: Spotify Full Scrobble Historical Data Upload & Ingestion (`APP-13`)**
+  - In-memory ZIP/JSON streaming history parser supporting Extended and Legacy GDPR formats with podcast filtering and short-scrobble elimination (<30s).
+  - Dedicated QA reconciliation tables (`playback_history_qa`) and automated validation scripts.
+  - UI settings integration and masthead navigation relocation.
+  - Deployed live revision `spotify-dashboard-beta-00034-6lq` (`v2.5.0`).
+* **Phase 6h: UI Polish, Header Navigation Consistency & Persistent Audio Mute (`POLISH-09` to `POLISH-13`)**
+  - Landing page version number alignment (`v2.5.1`).
+  - Consistent header navigation tabs and audio toggles across Library, Crate Digger, Analytics & SpinPals.
+  - Cross-page audio mute state persistence via `localStorage`.
+  - URL parameter tab routing (`?tab=unowned`, `?tab=saved`).
+  - Mobile user settings menu overflow and positioning fix.
+  - Deployed live release `v2.5.1`.
 
 ---
 
@@ -96,7 +108,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | :--- | :--- | :--- | :--- | :--- |
 | **`INFRA-01`** | Fresh GCP Project Migration & Environment Isolation | Infrastructure | 6–8 hours | Medium |
 | **`INFRA-02`** | Declarative Infrastructure as Code (IaC) via Terraform | Infrastructure | 8–12 hours | Medium |
-| **`INFRA-03`** | Sub-100ms Multi-Tier Caching & BQ Materialization Architecture | Infrastructure | 6–8 hours | In Progress (Phase 6e Live: Revision `00021-42p`) |
+| **`INFRA-03`** | ✅ ~~Sub-100ms Multi-Tier Caching & BQ Materialization Architecture~~ | Infrastructure | 6–8 hours | Completed (`v2.5.2`: INFRA-03c/d/e Live) |
 | **`INFRA-04`** | Dedicated QA Environment & BigQuery Production Dataset Clone | Infrastructure | 4–6 hours | Medium |
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
@@ -114,7 +126,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City (Bandsintown API) | Core App | 6–8 hours | Medium |
 | **`APP-11`** | Collector’s Inscriptions: Personal Album Ratings & Archival Notes | Core App | 5–7 hours | Low–Med |
 | **`APP-12`** | Header Profile Dropdown, User Settings & Community Action Center | Core App | 3–4 hours | Low |
-| **`APP-13`** | Spotify Full Scrobble Historical Data Upload & Automated Ingestion | Core App | 6–8 hours | Medium |
+| **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Automated Ingestion~~ | Core App | 6–8 hours | Completed (`v2.5.0`: Revision `00034-6lq`) |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1 hour | Completed (`v2.2.2`) |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.2`) |

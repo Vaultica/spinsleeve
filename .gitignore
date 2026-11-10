@@ -106,3 +106,4 @@ config.py
 StreamingHistory*.json
 Audio_Streaming_History_*.json
 *streaming_history*.json
+init_prompt.txt

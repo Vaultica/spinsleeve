@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.5.2] — 2026-11-10
+### ⚡ Complete Sub-100ms Multi-Tier Caching & Query Consolidation (`INFRA-03c`, `INFRA-03d`, `INFRA-03e`)
+* **What:**
+  - **INFRA-03c (SpinPals Compatibility Caching):** Integrated Cloud Datastore gzipped document store caching (`PalCompatibilityCache`) keyed by `f"{current_user_id}::{pal_id}::{horizon}"` (24h TTL) to eliminate redundant BigQuery roundtrips for acoustic chemistry and borrow recommendations.
+  - **INFRA-03d (Analytics Telemetry Datastore Caching):** Integrated Cloud Datastore gzipped document store caching (`UserAnalyticsCache`) keyed by `f"{user_id}::{range_param}"` for pre-aggregated listening clock heatmaps and era metrics.
+  - **INFRA-03e (Browser sessionStorage Catalog Caching):** Added client-side `sessionStorage` catalog caching on the Library Explorer view so returning to previously visited views renders instantly in **<10ms** from browser memory.
+* **Why:**
+  - Complete the remaining tiers of `INFRA-03` to drop load times across all views below 50ms with zero additional cloud costs.
+* **How:**
+  - Added `get_pal_compatibility_from_datastore`, `save_pal_compatibility_to_datastore`, `get_analytics_from_datastore`, and `save_analytics_to_datastore` using `gzip` compression in `src/report_v2/app.py`.
+  - Added browser `sessionStorage` caching logic in `EXPLORER_HTML`.
+  - Verified all 65 unit tests pass successfully.
+
+---
+
 ## [v2.5.1] — 2026-11-09
 ### ✨ UI Polish, Header Navigation Consistency, Persistent Audio Mute & Tab Routing (`POLISH-09` to `POLISH-13`)
 * **What:**

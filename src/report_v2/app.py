@@ -857,6 +857,84 @@ def save_catalog_to_datastore(user_id, data):
         logger.warning("[%s] Failed to save catalog to Cloud Datastore cache: %s", user_id, e)
 
 
+def get_pal_compatibility_from_datastore(current_user_id, pal_id, horizon):
+    """Retrieves and decompresses pal compatibility payload from Cloud Datastore (INFRA-03c)."""
+    try:
+        ds_client = get_datastore_client()
+        cache_key_name = f"{current_user_id}::{pal_id}::{horizon}"
+        key = ds_client.key("PalCompatibilityCache", cache_key_name)
+        entity = ds_client.get(key)
+        if not entity:
+            return None
+        updated_at = entity.get("updated_at")
+        if updated_at:
+            age = time.time() - updated_at.timestamp() if hasattr(updated_at, "timestamp") else 0
+            if age > DATASTORE_CACHE_TTL:
+                return None
+        raw_bytes = entity.get("compressed_payload")
+        if not raw_bytes:
+            return None
+        return json.loads(gzip.decompress(raw_bytes).decode("utf-8"))
+    except Exception as e:
+        logger.warning("Failed to read pal compatibility from Datastore cache: %s", e)
+        return None
+
+
+def save_pal_compatibility_to_datastore(current_user_id, pal_id, horizon, data):
+    """Serializes, gzips, and stores pal compatibility payload into Cloud Datastore (INFRA-03c)."""
+    try:
+        ds_client = get_datastore_client()
+        cache_key_name = f"{current_user_id}::{pal_id}::{horizon}"
+        key = ds_client.key("PalCompatibilityCache", cache_key_name)
+        entity = datastore.Entity(key=key, exclude_from_indexes=["compressed_payload"])
+        raw_json = json.dumps(data)
+        compressed_bytes = gzip.compress(raw_json.encode("utf-8"))
+        entity["compressed_payload"] = compressed_bytes
+        entity["updated_at"] = datetime.datetime.now(datetime.timezone.utc)
+        ds_client.put(entity)
+    except Exception as e:
+        logger.warning("Failed to save pal compatibility to Datastore cache: %s", e)
+
+
+def get_analytics_from_datastore(user_id, range_param):
+    """Retrieves and decompresses user analytics telemetry payload from Cloud Datastore (INFRA-03d)."""
+    try:
+        ds_client = get_datastore_client()
+        cache_key_name = f"{user_id}::{range_param}"
+        key = ds_client.key("UserAnalyticsCache", cache_key_name)
+        entity = ds_client.get(key)
+        if not entity:
+            return None
+        updated_at = entity.get("updated_at")
+        if updated_at:
+            age = time.time() - updated_at.timestamp() if hasattr(updated_at, "timestamp") else 0
+            if age > DATASTORE_CACHE_TTL:
+                return None
+        raw_bytes = entity.get("compressed_payload")
+        if not raw_bytes:
+            return None
+        return json.loads(gzip.decompress(raw_bytes).decode("utf-8"))
+    except Exception as e:
+        logger.warning("[%s] Failed to read analytics from Datastore cache: %s", user_id, e)
+        return None
+
+
+def save_analytics_to_datastore(user_id, range_param, data):
+    """Serializes, gzips, and stores user analytics telemetry payload into Cloud Datastore (INFRA-03d)."""
+    try:
+        ds_client = get_datastore_client()
+        cache_key_name = f"{user_id}::{range_param}"
+        key = ds_client.key("UserAnalyticsCache", cache_key_name)
+        entity = datastore.Entity(key=key, exclude_from_indexes=["compressed_payload"])
+        raw_json = json.dumps(data)
+        compressed_bytes = gzip.compress(raw_json.encode("utf-8"))
+        entity["compressed_payload"] = compressed_bytes
+        entity["updated_at"] = datetime.datetime.now(datetime.timezone.utc)
+        ds_client.put(entity)
+    except Exception as e:
+        logger.warning("[%s] Failed to save analytics to Datastore cache: %s", user_id, e)
+
+
 def sync_user_initial_data(user_id, access_token):
     """Syncs the initial 50 saved albums and 50 tracks for an approved user on first login."""
     try:
@@ -1085,6 +1163,13 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
 
     if cache_key in _user_analytics_cache and (now - _user_analytics_cache_time.get(cache_key, 0)) < 300:
         return _user_analytics_cache[cache_key]
+
+    ds_cached = get_analytics_from_datastore(user_id, cache_key)
+    if ds_cached:
+        _user_analytics_cache[cache_key] = ds_cached
+        _user_analytics_cache_time[cache_key] = now
+        logger.info("[%s] Loaded analytics from Cloud Datastore cache (key=%s)", user_id, cache_key)
+        return ds_cached
 
     client = bigquery.Client(project=PROJECT_ID)
 
@@ -1323,6 +1408,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         return obj
 
     payload = sanitize_payload(payload)
+    save_analytics_to_datastore(user_id, cache_key, payload)
     _user_analytics_cache[cache_key] = payload
     _user_analytics_cache_time[cache_key] = now
     return payload
@@ -1372,6 +1458,11 @@ def fetch_pals_directory(current_user_id):
 
 def compute_pal_compatibility(current_user_id, pal_id, horizon="30d"):
     """Computes acoustic chemistry, shared vinyl, and top 5 borrow recommendations (supporting 30D and all-time horizon)."""
+    ds_cached = get_pal_compatibility_from_datastore(current_user_id, pal_id, horizon)
+    if ds_cached:
+        logger.info("[%s] Loaded pal compatibility from Datastore cache (pal=%s, horizon=%s)", current_user_id, pal_id, horizon)
+        return ds_cached
+
     bq_client = bigquery.Client(project=PROJECT_ID)
     ds_client = get_datastore_client()
 
@@ -1598,7 +1689,7 @@ def compute_pal_compatibility(current_user_id, pal_id, horizon="30d"):
             item["active_plays_tooltip"] = item["album_plays_tooltip"]
             item["active_track_plays"] = item["album_track_plays"]
 
-    return {
+    result = {
         "pal": {
             "spotify_id": pal_id,
             "display_name": pal_name,
@@ -1618,6 +1709,8 @@ def compute_pal_compatibility(current_user_id, pal_id, horizon="30d"):
         "pal_full_crate": processed_pal_albums,
         "horizon": horizon
     }
+    save_pal_compatibility_to_datastore(current_user_id, pal_id, horizon, result)
+    return result
 
 
 # ==============================================================================
