@@ -116,6 +116,7 @@ gcloud run deploy spotify-dashboard-beta \
 ## 6. Mandatory Workflow Rule: Session Closure
 * **"Close the Build Session":** Whenever the user issues the instruction or phrase **"close the build session"**, it is a mandatory requirement to:
   1. Update `CHANGELOG.md` with all completed features, bug fixes, and version bumps.
+  1b. Update `APP_VERSION` in `src/report_v2/app.py` to match the new release version.
   2. Update `GEMINI.md` and `PROJECT_ROADMAP_AND_SPECS.md` status matrices.
   3. Calculate and present session efficiency statistics (turns executed, cumulative token usage, and estimated financial spend in USD).
   4. Record the metrics in Section 7 (Build Session Token & Spend Ledger) below.
