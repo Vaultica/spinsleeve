@@ -7,11 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [v2.5.2] — 2026-11-10
-### ⚡ Complete Sub-100ms Multi-Tier Caching & Query Consolidation (`INFRA-03c/d/e`) & Homepage Redesign (`BRAND-01`, `BRAND-03`)
+### ⚡ Complete Sub-100ms Multi-Tier Caching & Query Consolidation (`INFRA-03c/d/e`), Homepage Redesign (`BRAND-01`, `BRAND-03`) & Analytics Cache Refresh Fix
 * **What:**
   - **INFRA-03c/d/e (Multi-Tier Caching & Session Storage):** Integrated Cloud Datastore gzipped document store caching for SpinPals compatibility and analytics telemetry, alongside client-side `sessionStorage` catalog caching (<10ms instant load).
   - **BRAND-01 (Homepage & Public Login Redesign with Feature Showcase):** Redesigned public landing page (`/login`) with immersive feature showcase, verified authentic album artwork for Pink Floyd (*Dark Side of the Moon*), Daft Punk (*Discovery*), and Radiohead (*Kid A*), and clean admin test switchers.
   - **BRAND-03 (Public Roadmap Portal at `/roadmap`):** Launched dedicated public release and feature transparency portal (`/roadmap`) showcasing shipped and upcoming features.
+  - **Analytics Cache Invalidation & Refresh Propagation:** Implemented robust `invalidate_user_analytics_cache()` and `?refresh=1` query parameter propagation in analytics views and API endpoints to allow instant telemetry cache clearing on demand.
 * **Why:**
   - Elevates the public-facing brand presence and delivers sub-50ms application latency across all multi-tenant views.
 * **How:**
