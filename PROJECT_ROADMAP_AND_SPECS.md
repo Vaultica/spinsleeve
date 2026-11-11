@@ -82,6 +82,11 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - URL parameter tab routing (`?tab=unowned`, `?tab=saved`).
   - Mobile user settings menu overflow and positioning fix.
   - Deployed live release `v2.5.1`.
+* **Phase 6i: Legacy Streaming History Format Support & BigQuery Partition Limit Fix (`v2.5.3`)**
+  - Extended and legacy (`StreamingHistory_music_*.json`) Spotify GDPR ZIP extraction filter support.
+  - Year-by-year BigQuery DML batching (`MERGE`/`INSERT`) to prevent `400 Too many partitions produced by query` ceiling errors on multi-year lifetime archives.
+  - Strict pandas-level dataframe deduplication (`drop_duplicates`) prior to staging load for 100% upload idempotency.
+  - Deployed live release `v2.5.3`.
 
 ---
 
