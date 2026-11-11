@@ -59,7 +59,7 @@ def batch_ingest_zip(zip_path, user_id):
     
     with zipfile.ZipFile(zip_path, 'r') as z:
         for filename in z.namelist():
-            if "Streaming_History_Audio_" in filename and filename.endswith(".json"):
+            if ("Streaming_History_Audio_" in filename or "StreamingHistory_music_" in filename) and filename.endswith(".json"):
                 logger.info("Parsing audio history file from ZIP: %s", filename)
                 with z.open(filename) as f:
                     df_file = parse_spotify_history_json(f, user_id)

@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.5.3] — 2026-11-11
+### 🛠️ Legacy Streaming History Format Support (`StreamingHistory_music_*.json`) & BigQuery Partition Limit & Idempotency Fixes
+* **What:**
+  - **Legacy ZIP Format Support:** Extended ZIP extraction filters in `api_upload_history` and `ingest_zip_qa.py` to support both extended (`Streaming_History_Audio_*.json`) and legacy (`StreamingHistory_music_*.json`) Spotify GDPR export formats.
+  - **BigQuery Partition Limit Fix (`400 Too many partitions produced by query`):** Refactored web history upload (`api_upload_history`) and reconciliation scripts to batch BigQuery `MERGE` and `INSERT` operations year-by-year, respecting BigQuery's 4,000 partition DML modification limit across lifetime archives spanning 15+ years (~5,500 partitions).
+  - **Strict Upload Idempotency (`drop_duplicates`):** Added explicit pandas-level deduplication (`drop_duplicates` on `user_id, played_at, track_name, artist_name`) prior to staging load to guarantee 100% idempotency and prevent duplicate scrobbles during file uploads.
+* **Why:**
+  - Ensures seamless ingestion of all historical formats and prevents BigQuery DML partition ceiling errors or duplicate play count inflation when users upload lifetime Spotify history archives.
+* **How:**
+  - Updated `src/report_v2/app.py` and `src/pipeline_v2/ingest_zip_qa.py` with multi-format ZIP filtering, year-by-year DML batching, and strict deduplication. Verified all 65 unit tests pass successfully.
+
+---
+
 ## [v2.5.2] — 2026-11-10
 ### ⚡ Complete Sub-100ms Multi-Tier Caching & Query Consolidation (`INFRA-03c/d/e`), Homepage Redesign (`BRAND-01`, `BRAND-03`) & Analytics Cache Refresh Fix
 * **What:**

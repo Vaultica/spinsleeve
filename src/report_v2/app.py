@@ -66,7 +66,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 # Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09)
-APP_VERSION = "v2.5.2"
+APP_VERSION = "v2.5.3"
 
 
 @app.context_processor
@@ -646,7 +646,7 @@ def api_upload_history():
                 try:
                     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
                         for sub_name in z.namelist():
-                            if "Streaming_History_Audio_" in sub_name and sub_name.endswith(".json"):
+                            if ("Streaming_History_Audio_" in sub_name or "StreamingHistory_music_" in sub_name) and sub_name.endswith(".json"):
                                 with z.open(sub_name) as zf:
                                     content = zf.read().decode('utf-8', errors='ignore')
                                     df_file = parse_spotify_history_json(content, user_id)
@@ -670,36 +670,44 @@ def api_upload_history():
         if combined_df.empty:
             return jsonify({"status": "error", "message": "Parsed dataframe is empty."}), 400
 
-        logger.info("[%s] Total valid scrobbles parsed: %d. Loading to BigQuery staging table...", user_id, len(combined_df))
+        # Deduplicate to guarantee strict idempotency (prevent duplicate plays if JSON files overlap/duplicate)
+        combined_df = combined_df.drop_duplicates(subset=["user_id", "played_at", "track_name", "artist_name"])
 
-        # Load to staging table and MERGE into PLAYBACK_HISTORY_TABLE with deduplication
+        logger.info("[%s] Total unique valid scrobbles parsed: %d. Processing year-by-year...", user_id, len(combined_df))
+
+        # Extract year for batching to respect BigQuery's 4,000 partition DML limit
+        combined_df["year"] = combined_df["played_at"].dt.year
+        years = sorted(combined_df["year"].unique())
         safe_uid = user_id.replace("-", "_")
-        staging_table = f"{PROJECT_ID}.{DATASET_V2}.playback_history_staging_ui_{safe_uid}"
 
-        job_config = bigquery.LoadJobConfig(
-            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
-        )
-        load_job = bq_client.load_table_from_dataframe(combined_df, staging_table, job_config=job_config)
-        load_job.result()
-        logger.info("[%s] Staging table loaded: %s", user_id, staging_table)
+        for yr in years:
+            df_year = combined_df[combined_df["year"] == yr].drop(columns=["year"])
+            if df_year.empty:
+                continue
 
-        merge_query = f"""
-        MERGE `{PLAYBACK_HISTORY_TABLE}` T
-        USING `{staging_table}` S
-        ON T.user_id = S.user_id
-           AND T.played_at = S.played_at
-           AND T.track_name = S.track_name
-           AND T.artist_name = S.artist_name
-        WHEN NOT MATCHED THEN
-          INSERT (user_id, played_at, track_uri, track_id, track_name, artist_id, artist_name, album_id, album_name)
-          VALUES (user_id, played_at, track_uri, track_id, track_name, artist_id, artist_name, album_id, album_name)
-        """
-        logger.info("[%s] Executing MERGE reconciliation into %s...", user_id, PLAYBACK_HISTORY_TABLE)
-        merge_job = bq_client.query(merge_query)
-        merge_job.result()
-        logger.info("[%s] MERGE reconciliation completed successfully.", user_id)
+            logger.info("[%s] --- Ingesting Year %d (%d scrobbles) ---", user_id, yr, len(df_year))
+            staging_table = f"{PROJECT_ID}.{DATASET_V2}.playback_history_staging_ui_{safe_uid}_{yr}"
 
-        bq_client.delete_table(staging_table, not_found_ok=True)
+            job_config = bigquery.LoadJobConfig(
+                write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
+            )
+            load_job = bq_client.load_table_from_dataframe(df_year, staging_table, job_config=job_config)
+            load_job.result()
+
+            merge_query = f"""
+            MERGE `{PLAYBACK_HISTORY_TABLE}` T
+            USING `{staging_table}` S
+            ON T.user_id = S.user_id
+               AND T.played_at = S.played_at
+               AND T.track_name = S.track_name
+               AND T.artist_name = S.artist_name
+            WHEN NOT MATCHED THEN
+              INSERT (user_id, played_at, track_uri, track_id, track_name, artist_id, artist_name, album_id, album_name)
+              VALUES (user_id, played_at, track_uri, track_id, track_name, artist_id, artist_name, album_id, album_name)
+            """
+            merge_job = bq_client.query(merge_query)
+            merge_job.result()
+            bq_client.delete_table(staging_table, not_found_ok=True)
 
         # Rematerialize features table and invalidate cache so Library Explorer updates instantly
         rematerialize_user_albums_features(bq_client)
