@@ -1156,20 +1156,43 @@ def fetch_user_album_data(user_id, force_refresh=False):
     return result
 
 
-def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", start_date=None, end_date=None):
+def invalidate_user_analytics_cache(user_id):
+    """Deletes cached analytics in Cloud Datastore & memory when refresh is requested (INFRA-03d)."""
+    try:
+        ds_client = get_datastore_client()
+        for r_param in ["1d", "7d", "30d", "60d", "90d", "year", "this_year", "all"]:
+            try:
+                key = ds_client.key("UserAnalyticsCache", f"{user_id}::{r_param}")
+                ds_client.delete(key)
+            except Exception:
+                pass
+        keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
+        for k in keys_to_del:
+            _user_analytics_cache.pop(k, None)
+            _user_analytics_cache_time.pop(k, None)
+        logger.info("[%s] Invalidated Datastore UserAnalyticsCache & in-memory analytics cache.", user_id)
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate Datastore UserAnalyticsCache: %s", user_id, e)
+
+
+def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", start_date=None, end_date=None, force_refresh=False):
     global _user_analytics_cache, _user_analytics_cache_time
     cache_key = f"{user_id}::{range_param}::{genre_param}::{start_date}::{end_date}"
     now = time.time()
 
-    if cache_key in _user_analytics_cache and (now - _user_analytics_cache_time.get(cache_key, 0)) < 300:
-        return _user_analytics_cache[cache_key]
+    if force_refresh:
+        invalidate_user_analytics_cache(user_id)
 
-    ds_cached = get_analytics_from_datastore(user_id, cache_key)
-    if ds_cached:
-        _user_analytics_cache[cache_key] = ds_cached
-        _user_analytics_cache_time[cache_key] = now
-        logger.info("[%s] Loaded analytics from Cloud Datastore cache (key=%s)", user_id, cache_key)
-        return ds_cached
+    if not force_refresh:
+        if cache_key in _user_analytics_cache and (now - _user_analytics_cache_time.get(cache_key, 0)) < 300:
+            return _user_analytics_cache[cache_key]
+
+        ds_cached = get_analytics_from_datastore(user_id, cache_key)
+        if ds_cached:
+            _user_analytics_cache[cache_key] = ds_cached
+            _user_analytics_cache_time[cache_key] = now
+            logger.info("[%s] Loaded analytics from Cloud Datastore cache (key=%s)", user_id, cache_key)
+            return ds_cached
 
     client = bigquery.Client(project=PROJECT_ID)
 
@@ -5319,7 +5342,13 @@ RECOMMEND_HTML = """
 @login_required
 def beta_analytics():
     user_id = session["user_id"]
-    data = fetch_user_album_data(user_id)
+    force_refresh = request.args.get("refresh") in ("1", "true")
+    if force_refresh:
+        keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
+        for k in keys_to_del:
+            _user_analytics_cache.pop(k, None)
+            _user_analytics_cache_time.pop(k, None)
+    data = fetch_user_album_data(user_id, force_refresh=force_refresh)
 
     return render_template_string(
         ANALYTICS_HTML,
@@ -5338,13 +5367,20 @@ def beta_api_analytics():
     genre_param = request.args.get("genre", "all")
     start_date = request.args.get("start")
     end_date = request.args.get("end")
+    force_refresh = request.args.get("refresh") in ("1", "true")
+    if force_refresh:
+        keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
+        for k in keys_to_del:
+            _user_analytics_cache.pop(k, None)
+            _user_analytics_cache_time.pop(k, None)
 
     payload = fetch_user_analytics_data(
         user_id=user_id,
         range_param=range_param,
         genre_param=genre_param,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        force_refresh=force_refresh
     )
     return jsonify(payload)
 
@@ -5776,6 +5812,9 @@ ANALYTICS_HTML = """
             let url = `/beta/api/analytics?range=${encodeURIComponent(currentRange)}&genre=${encodeURIComponent(genre)}`;
             if (customStart && customEnd) {
                 url += `&start=${encodeURIComponent(customStart)}&end=${encodeURIComponent(customEnd)}`;
+            }
+            if (window.location.search.includes('refresh=1') || window.location.search.includes('refresh=true')) {
+                url += '&refresh=1';
             }
 
             try {
