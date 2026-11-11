@@ -65,8 +65,8 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09)
-APP_VERSION = "v2.5.3"
+# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09, v2.6.0)
+APP_VERSION = "v2.6.0"
 
 
 @app.context_processor
@@ -1920,9 +1920,17 @@ ROADMAP_HTML_TEMPLATE = """
                         <div><strong class="text-white">APP-11: Collector’s Inscriptions</strong> (Personal star ratings and archival grade notes).</div>
                         <span class="text-gray-400 font-mono">5-7h</span>
                     </div>
-                    <div class="flex items-start justify-between">
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
                         <div><strong class="text-white">APP-12: Header Profile Dropdown &amp; Settings</strong> (SpinPals opt-in, display name editing, scrobble pause).</div>
                         <span class="text-gray-400 font-mono">3-4h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-14: Headless API &amp; Firestore Catalog Rearchitecture (Phase 1)</strong> (REST JSON API endpoints &amp; Firebase CDN reverse proxy).</div>
+                        <span class="text-gray-400 font-mono">12-16h</span>
+                    </div>
+                    <div class="flex items-start justify-between">
+                        <div><strong class="text-white">APP-15: Native iOS SwiftUI Companion App (Phase 2)</strong> (SwiftUI iOS app with Spotify OAuth PKCE &amp; crate browsing).</div>
+                        <span class="text-gray-400 font-mono">20-30h</span>
                     </div>
                 </div>
             </div>

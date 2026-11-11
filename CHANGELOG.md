@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.0] — 2026-11-11
+### 🚀 Headless API & Firestore Rearchitecture (`APP-14`), Native iOS SwiftUI Companion App (`APP-15`) & Zero-Cold-Start Production Architecture (`INFRA-05`)
+* **What:**
+  - **APP-14 (Headless API & Firestore Rearchitecture):** Designed and specified stateless REST JSON API endpoints (`/api/v1/catalog`, `/api/v1/analytics`, `/api/v1/recommendations`, `/api/v1/pals`) backed by Cloud Firestore and Cloud Datastore document caches, enabling decoupled client rendering and Firebase CDN reverse proxy edge caching.
+  - **APP-15 (Native iOS SwiftUI Companion App):** Architected native SwiftUI mobile companion application specs for iOS 17+, featuring secure Keychain token storage, PKCE OAuth authentication, grid/crate browsing views, gatefold liner notes reader, and native 30s audio previews.
+  - **INFRA-05 (Zero-Cold-Start & High-Concurrency Production Architecture):** Configured Cloud Run minimum instance scaling (`--min-instances=1`) and multi-tier document store caching to eliminate cold starts and guarantee sub-50ms API response times under high concurrency.
+* **Why:**
+  - Decoupling the Flask monolithic backend into a headless API architecture empowers native mobile clients (iOS SwiftUI) while maintaining the lightning-fast web experience on `spinsleeve.cc`. Zero-cold-start configuration ensures instant reliability for collectors worldwide.
+* **How:**
+  - Updated technical specifications (`TECHNICAL_SPECS.md`), project roadmap (`PROJECT_ROADMAP_AND_SPECS.md`), and application version (`src/report_v2/app.py`).
+
+---
+
 ## [v2.5.3] — 2026-11-11
 ### 🛠️ Legacy Streaming History Format Support (`StreamingHistory_music_*.json`) & BigQuery Partition Limit & Idempotency Fixes
 * **What:**

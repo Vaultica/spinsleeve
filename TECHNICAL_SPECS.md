@@ -396,6 +396,54 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
+### `APP-14`: Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1)
+* **Technical Objective:** Decouple Flask monolithic templates (`src/report_v2/app.py`) into a clean, token-authenticated REST/JSON API layer (`/api/v1/library`, `/api/v1/recommend`, `/api/v1/analytics`, `/api/v1/pals`). Configure Firebase Hosting reverse proxy (`firebase.json` rewrites) to proxy `/api/**` to Cloud Run while serving frontend static files from CDN. Migrate user catalog and document caching to Cloud Firestore / Datastore for sub-20ms reads.
+* **API Endpoints & Contracts:**
+  - `GET /api/v1/library`: Returns user saved albums, normalized play counts, release years, cover art URLs, and review metadata as compressed JSON.
+  - `GET /api/v1/recommend`: Crate Digger recommendations filtered by vibe, era, and 30D/All-Time horizon.
+  - `GET /api/v1/analytics`: Listening telemetry, heatmap matrices, and taste velocity metrics.
+  - `GET /api/v1/pals`: Listening Lounge member directory and acoustic compatibility scores.
+* **Firebase Hosting Reverse Proxy Configuration (`firebase.json`):**
+  ```json
+  {
+    "hosting": {
+      "public": "public",
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": {
+            "serviceId": "spotify-dashboard-beta",
+            "region": "europe-west2",
+            "pinTag": true
+          }
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+### `APP-15`: Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2)
+* **Technical Objective:** Build a native iOS companion app in Swift and SwiftUI, supporting Spotify OAuth PKCE authentication (`ASWebAuthenticationSession`), virtual 33⅓ RPM vinyl crate browsing, 30-second audio previews (`AVPlayer`), 12" gatefold detail sheets, and "Played But Not Owned" unowned crate view.
+* **Architecture & Tech Stack:**
+  - **Framework:** Swift, SwiftUI, Combine, URLSession async/await, KeychainServices.
+  - **Authentication:** Spotify OAuth 2.0 PKCE via `ASWebAuthenticationSession` opening securely in iOS web view and persisting tokens in iOS Keychain.
+  - **UI Views:**
+    - **Library Explorer:** Lazy-loaded grid (`LazyVGrid`) of album artwork tiles with local image caching (Kingfisher / Nuke).
+    - **Gatefold Sheet:** Slide-up sheet presentation displaying Wikipedia summaries, ratings, and tracklists.
+    - **Audio Previews:** `AVPlayer` background snippet streaming on tap.
+* **Effort & Cost Estimates Summary:**
+  - **Phase 1 (Headless API & Firestore):** 12–16 hours engineering • Negligible cloud cost ($0–$5/mo).
+  - **Phase 2 (SwiftUI iOS App):** 20–30 hours engineering • Free (Local development / TestFlight).
+  - **Total:** 32–46 hours engineering • <$5/month cloud infrastructure cost.
+
+---
+
 ## 5. Category: Tactical Polish & UX Streamlining (`POLISH`)
 
 ### `POLISH-02`: Library Explorer 30-Day Sort Initialization Fix

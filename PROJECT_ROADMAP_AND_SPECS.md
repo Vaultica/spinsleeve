@@ -115,6 +115,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`INFRA-02`** | Declarative Infrastructure as Code (IaC) via Terraform | Infrastructure | 8–12 hours | Medium |
 | **`INFRA-03`** | ✅ ~~Sub-100ms Multi-Tier Caching & BQ Materialization Architecture~~ | Infrastructure | 6–8 hours | Completed (`v2.5.2`: INFRA-03c/d/e Live) |
 | **`INFRA-04`** | Dedicated QA Environment & BigQuery Production Dataset Clone | Infrastructure | 4–6 hours | Medium |
+| **`INFRA-05`** | Zero-Cold-Start & High-Concurrency Production Architecture (`--min-instances=1`, 100% Zero-BQ Caching) | Infrastructure | 4–6 hours | Low–Medium |
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
 | **`OPS-03`** | Real-Time Admin Alerts for User Join Requests | DevOps | 3–4 hours | Low |
@@ -132,6 +133,8 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-11`** | Collector’s Inscriptions: Personal Album Ratings & Archival Notes | Core App | 5–7 hours | Low–Med |
 | **`APP-12`** | Header Profile Dropdown, User Settings & Community Action Center | Core App | 3–4 hours | Low |
 | **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Automated Ingestion~~ | Core App | 6–8 hours | Completed (`v2.5.0`: Revision `00034-6lq`) |
+| **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16 hours | Medium |
+| **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30 hours | Medium–High |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1 hour | Completed (`v2.2.2`) |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.2`) |
@@ -217,6 +220,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   2. **BigQuery Zero-Cost Dataset Cloning (`spotify_v2_qa`):** Leverage BigQuery dataset copy / table cloning mechanisms (`bq cp` or snapshot policies) to replicate production dataset `spotify_v2` into `spotify_v2_qa`. BigQuery table clones are metadata-only copy operations with zero storage cost until source data changes.
   3. **Automated Preview Deployments:** Configure GitHub Actions workflow (`qa-deploy.yml`) triggered on pull requests and staging branches to build and deploy automatically to `spotify-dashboard-qa`.
 * **Effort & Complexity:** ~4–6 hours (0.5 to 1 day) • **Complexity:** **Medium**
+
+---
+
+#### `INFRA-05`: Zero-Cold-Start & High-Concurrency Production Architecture (`--min-instances=1`, 100% Zero-BQ Caching)
+* **Problem:**  
+  While Tier 2 caching (`UserCatalogCache`) successfully eliminates BigQuery queries for library browsing, cold starts on Cloud Run and on-demand queries for analytics (`/analytics`) and social compatibility (`/pals`) can introduce latency spikes when scaling to hundreds of concurrent users.
+* **Solution:**  
+  Implement the full zero-cold-start and 100% zero-BQ-on-demand production architecture:
+  1. **Cloud Run Minimum Warm Instance (`--min-instances=1`):** Keep at least 1 container instance warm 24/7 (`1 vCPU, 512MB RAM`, ~~$5.40/mo idle cost), eliminating cold starts entirely and ensuring sub-50ms instant response times.
+  2. **100% Zero-BQ Analytics & Pal Caching (`INFRA-03d/e`):** Extend pre-aggregated document caching to analytics listening heatmaps and SpinPals acoustic compatibility payloads during background `sync.py` runs. The backend serves static JSON directly from Cloud Datastore with zero BigQuery queries during live user sessions.
+  3. **Edge CDN Delivery (Firebase Hosting):** Serve frontend static assets globally via Firebase CDN, allowing instant (<20ms) page shell loading and async API hydration.
+* **Effort & Complexity:** ~4–6 hours (0.5 day) • **Complexity:** **Low–Medium**
 
 ---
 
@@ -365,6 +380,42 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   3. **Automated Parsing & Validation:** Background worker / ingestion pipeline parsing JSON scrobble records, validating timestamps, matching track metadata/URIs, and deduplicating against existing BigQuery `spotify_v2.playback_history`.
   4. **BigQuery Automated Merge:** Fully automated merge pipeline loading staged historical scrobbles into the tenant's partition in BigQuery and re-materializing user album features and Datastore catalog cache.
 * **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
+
+---
+
+#### `APP-14`: Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1)
+* **Problem:**  
+  SpinSleeve's Flask backend (`src/report_v2/app.py`) is currently monolithic, rendering Jinja2 HTML templates directly on the server. Supporting a native iOS companion app (`APP-15`) requires decoupling the presentation layer from backend logic, exposing clean REST/JSON endpoints, and ensuring sub-20ms latency for mobile client requests without increasing cloud spend.
+* **Solution:**  
+  1. **Headless API Route Layer (`/api/v1/...`):**
+     - Refactor Flask application routes to expose structured JSON endpoints (`/api/v1/library`, `/api/v1/recommendations`, `/api/v1/analytics`, `/api/v1/pals`).
+     - Share core BigQuery querying and data pipelines while completely decoupling HTML rendering from API responses.
+  2. **Firebase Hosting CDN & Reverse Proxy Routing (`firebase.json`):**
+     - Configure Firebase Hosting static asset hosting to serve frontend builds globally from CDN.
+     - Set up declarative rewrites (`/api/**`) pointing to Cloud Run service (`spotify-dashboard-beta`, region `europe-west2`, `pinTag: true`).
+  3. **Cloud Firestore / Datastore Document Store Caching:**
+     - Utilize Cloud Datastore (`UserCatalogCache`) and gzipped document payloads to guarantee O(1) read latency (~15–20ms) for mobile library payloads.
+* **Effort & Complexity:** ~12–16 hours (1.5–2 days) • **Complexity:** **Medium**
+
+---
+
+#### `APP-15`: Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2)
+* **Problem:**  
+  SpinSleeve collectors want a native, portable mobile experience on their iPhones to browse their virtual vinyl crate, check heavy rotation, audition 30-second audio previews, and view 12" gatefold liner notes without being tethered to a desktop web browser.
+* **Solution:**  
+  1. **Native Swift & SwiftUI Architecture:**
+     - Built natively using Apple's declarative SwiftUI framework with smooth animations (33⅓ RPM rotating vinyl platters, gatefold slide-out sheets, and fluid navigation).
+     - State management via `@Observable` and async/await `URLSession` networking communicating with Cloud Run `/api/v1/` endpoints.
+  2. **Spotify OAuth PKCE on iOS:**
+     - Secure authentication flow utilizing `ASWebAuthenticationSession` to authenticate users via Spotify and securely store tokens in iOS Keychain Services.
+  3. **Core Mobile Features:**
+     - **Virtual Vinyl Crate Explorer:** Lazy-loaded grid (`LazyVGrid`) of album sleeves with search, sorting (Heavy Rotation vs All-Time), and local image caching (Kingfisher / Nuke).
+     - **30-Second Needle-Drop Audio Previews:** Integrated `AVPlayer` streaming snippet previews on card tap.
+     - **12" Gatefold Archival Sheets:** Slide-up sheet presentation displaying Wikipedia summaries, Discogs/Pitchfork ratings, and tracklists.
+     - **Played But Not Owned ("You Should Save These") Crate:** Mobile view for discovering unsaved heavy rotation records with 1-click save to Spotify.
+  4. **Distribution & Testing:**
+     - Local unit testing with XCTest, SwiftUI live previews, and automated TestFlight beta distribution.
+* **Effort & Complexity:** ~20–30 hours (3–4 days) • **Complexity:** **Medium–High**
 
 ---
 
