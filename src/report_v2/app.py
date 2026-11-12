@@ -1938,6 +1938,79 @@ ROADMAP_HTML_TEMPLATE = """
                     </div>
                 </div>
             </div>
+
+            <!-- Effort vs Value ROI Matrix Section -->
+            <div class="bg-[#14181f] border border-gray-800 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-4">🎯 Effort vs. Value ROI Priority Matrix</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-gray-800 text-gray-400">
+                                <th class="pb-3 font-semibold">Priority / Tier</th>
+                                <th class="pb-3 font-semibold">Feature &amp; Code</th>
+                                <th class="pb-3 font-semibold">Effort</th>
+                                <th class="pb-3 font-semibold">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800/60 text-gray-300">
+                            <tr>
+                                <td class="py-3 font-bold text-amber-400">🔥 Tier 1: Quick Wins</td>
+                                <td class="py-3"><strong class="text-white">APP-12</strong>: Header Profile Dropdown &amp; Settings</td>
+                                <td class="py-3 font-mono">3–4h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">High</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-amber-400">🔥 Tier 1: Quick Wins</td>
+                                <td class="py-3"><strong class="text-white">DOCS-01</strong>: Technical Architecture Map / README</td>
+                                <td class="py-3 font-mono">3–4h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">High</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-emerald-400">⭐ Tier 2: High-Impact</td>
+                                <td class="py-3"><strong class="text-white">APP-01</strong>: 12" Gatefold Tracklisting &amp; Side A/B Splits</td>
+                                <td class="py-3 font-mono">4–6h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">High</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-emerald-400">⭐ Tier 2: High-Impact</td>
+                                <td class="py-3"><strong class="text-white">APP-11</strong>: Collector’s Inscriptions &amp; Ratings</td>
+                                <td class="py-3 font-mono">5–7h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">High</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-emerald-400">⭐ Tier 2: High-Impact</td>
+                                <td class="py-3"><strong class="text-white">APP-09</strong>: Granular Track Telemetry &amp; Audio Archive</td>
+                                <td class="py-3 font-mono">6–8h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">High</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-emerald-400">⭐ Tier 2: High-Impact</td>
+                                <td class="py-3"><strong class="text-white">APP-10</strong>: Local Gig Radar (Bandsintown API)</td>
+                                <td class="py-3 font-mono">6–8h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">High</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-indigo-400">🚀 Tier 3: Strategic</td>
+                                <td class="py-3"><strong class="text-white">APP-08</strong>: Full-Length Virtual Turntable Web Player</td>
+                                <td class="py-3 font-mono">8–12h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">Massive</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-indigo-400">🚀 Tier 3: Strategic</td>
+                                <td class="py-3"><strong class="text-white">APP-02</strong>: Apple Music Library Onboarding (Phase 7)</td>
+                                <td class="py-3 font-mono">16–24h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">Massive</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-bold text-indigo-400">🚀 Tier 3: Strategic</td>
+                                <td class="py-3"><strong class="text-white">APP-15</strong>: Native iOS SwiftUI Companion App (Phase 2)</td>
+                                <td class="py-3 font-mono">20–30h</td>
+                                <td class="py-3"><span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">Massive</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </body>
@@ -3194,7 +3267,7 @@ EXPLORER_HTML = """
                         <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
                                     {% if user.spotify_avatar_url %}
                                     <img src="{{ user.spotify_avatar_url }}" class="w-full h-full object-cover">
                                     {% else %}
@@ -3214,7 +3287,7 @@ EXPLORER_HTML = """
                             {% for preset in avatar_presets %}
                             <button type="button" onclick="selectAvatarPreset('{{ preset.id }}', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if user.custom_avatar_id == preset.id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
                                     <img src="/avatar/{{ preset.id }}.svg" alt="{{ preset.name }}" class="w-full h-full object-cover">
                                 </div>
                                 <div class="flex-1 min-w-0">
@@ -4351,7 +4424,7 @@ RECOMMEND_HTML = """
                         <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
                                     {% if user.spotify_avatar_url %}
                                     <img src="{{ user.spotify_avatar_url }}" class="w-full h-full object-cover">
                                     {% else %}
@@ -4371,7 +4444,7 @@ RECOMMEND_HTML = """
                             {% for preset in avatar_presets %}
                             <button type="button" onclick="selectAvatarPreset('{{ preset.id }}', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if user.custom_avatar_id == preset.id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
                                     <img src="/avatar/{{ preset.id }}.svg" alt="{{ preset.name }}" class="w-full h-full object-cover">
                                 </div>
                                 <div class="flex-1 min-w-0">
@@ -5577,7 +5650,7 @@ ANALYTICS_HTML = """
                         <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
                                     {% if user.spotify_avatar_url %}
                                     <img src="{{ user.spotify_avatar_url }}" class="w-full h-full object-cover">
                                     {% else %}
@@ -5597,7 +5670,7 @@ ANALYTICS_HTML = """
                             {% for preset in avatar_presets %}
                             <button type="button" onclick="selectAvatarPreset('{{ preset.id }}', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if user.custom_avatar_id == preset.id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
                                     <img src="/avatar/{{ preset.id }}.svg" alt="{{ preset.name }}" class="w-full h-full object-cover">
                                 </div>
                                 <div class="flex-1 min-w-0">
@@ -6603,7 +6676,7 @@ PALS_HTML = """
                         <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
                             <button type="button" onclick="selectAvatarPreset('spotify', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
                                     {% if user.spotify_avatar_url %}
                                     <img src="{{ user.spotify_avatar_url }}" class="w-full h-full object-cover">
                                     {% else %}
@@ -6623,7 +6696,7 @@ PALS_HTML = """
                             {% for preset in avatar_presets %}
                             <button type="button" onclick="selectAvatarPreset('{{ preset.id }}', event)"
                                     class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if user.custom_avatar_id == preset.id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
-                                <div class="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
                                     <img src="/avatar/{{ preset.id }}.svg" alt="{{ preset.name }}" class="w-full h-full object-cover">
                                 </div>
                                 <div class="flex-1 min-w-0">
