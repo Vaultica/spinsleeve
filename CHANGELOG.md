@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.1] — 2026-11-11
+### 📚 Semantic Liner Notes & Description Classification for Crate Digger Relevance (`APP-16`)
+* **What:**
+  - **APP-16 (Semantic Liner Notes Classification):** Specified and documented text classification and NLP pipeline extensions in `src/pipeline_v2/enrich.py` to parse Wikipedia and Discogs archival narratives, extracting macro-genres (`macro_genre`), derived moods (`derived_moods`), and stylistic tags (`descriptive_tags`).
+  - **BigQuery Schema & Semantic Discovery:** Added DDL specs for `spotify_v2.album_enriched_metadata` table expansion and semantic similarity scoring to power kindred spirit recommendations in Crate Digger (`/recommend`) even when official Spotify tags differ.
+* **Why:**
+  - Raw Spotify API genre tags often mix broad categories with hyper-niche tags. Semantic classification of archival gatefold liner notes ensures highly relevant, nuanced Crate Digger discoveries and vibe filtering.
+* **How:**
+  - Updated technical specifications (`TECHNICAL_SPECS.md`), project roadmap (`PROJECT_ROADMAP_AND_SPECS.md`), application version (`src/report_v2/app.py`), and engineering changelog (`CHANGELOG.md`).
+
+---
+
 ## [v2.6.0] — 2026-11-11
 ### 🚀 Headless API & Firestore Rearchitecture (`APP-14`), Native iOS SwiftUI Companion App (`APP-15`) & Zero-Cold-Start Production Architecture (`INFRA-05`)
 * **What:**

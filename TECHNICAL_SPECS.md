@@ -444,6 +444,28 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
+### `APP-16`: Semantic Liner Notes & Description Classification for Crate Digger Relevance
+* **Technical Objective:** Parse enriched album descriptions and gatefold liner notes (`album_enriched_metadata`) using text classification, keyword scoring, and atmosphere extraction to derive clean macro-categories (`derived_moods`, `macro_genre`, `descriptive_tags`) and enable semantic "If You Like This Gatefold..." recommendations in Crate Digger.
+* **Pipeline Implementation (`src/pipeline_v2/enrich.py`):**
+  1. **Text Extraction & Tokenization:** When Wikipedia/Discogs scraper fetches archival narratives, pass raw description text through a lightweight NLP classifier (keyword dictionaries / TF-IDF scoring).
+  2. **Derived Structured Attributes:**
+     - `macro_genre` (STRING): Normalized high-level genre (e.g. *Electronic, Ambient, Post-Punk, Jazz*).
+     - `derived_moods` (ARRAY<STRING>): Extracted atmospheric attributes (e.g. *["Chill", "Immersive", "Late Night", "Driving"]*).
+     - `descriptive_tags` (ARRAY<STRING>): Stylistic markers (e.g. *["Synthesizers", "Sequencer Loops", "Minimalist"]*).
+  3. **BigQuery Table Schema Update (`spotify_v2.album_enriched_metadata`):**
+     ```sql
+     ALTER TABLE `secret-compass-181513.spotify_v2.album_enriched_metadata`
+     ADD COLUMN IF NOT EXISTS macro_genre STRING,
+     ADD COLUMN IF NOT EXISTS derived_moods ARRAY<STRING>,
+     ADD COLUMN IF NOT EXISTS descriptive_tags ARRAY<STRING>;
+     ```
+  4. **Semantic Similarity Scoring for Crate Digger:**
+     - Compute cosine similarity or Jaccard overlap on derived mood/tag arrays and TF-IDF feature vectors of liner notes.
+     - When a user views an album or uses Crate Digger, query kindred spirit albums sharing narrative descriptions even if official Spotify tags differ.
+* **Zero-Latency Read Path:** Pre-computed during daily Cloud Run enrichment job (`spotify-v2-enrichment-job`), ensuring zero runtime query latency for frontend Crate Digger filters.
+
+---
+
 ## 5. Category: Tactical Polish & UX Streamlining (`POLISH`)
 
 ### `POLISH-02`: Library Explorer 30-Day Sort Initialization Fix

@@ -135,6 +135,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Automated Ingestion~~ | Core App | 6–8 hours | Completed (`v2.5.0`: Revision `00034-6lq`) |
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16 hours | Medium |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30 hours | Medium–High |
+| **`APP-16`** | Semantic Liner Notes & Description Classification for Crate Digger Relevance | Core App | 6–8 hours | Medium |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1 hour | Completed (`v2.2.2`) |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.2`) |
@@ -416,6 +417,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   4. **Distribution & Testing:**
      - Local unit testing with XCTest, SwiftUI live previews, and automated TestFlight beta distribution.
 * **Effort & Complexity:** ~20–30 hours (3–4 days) • **Complexity:** **Medium–High**
+
+---
+
+#### `APP-16`: Semantic Liner Notes & Description Classification for Crate Digger Relevance
+* **Problem:**  
+  Raw Spotify API genre tags give a jarring mix of broad tags ("Rock") and hyper-niche tags ("Kosmische Musik"), making Crate Digger discovery and vibe filtering noisy and imprecise.
+* **Solution:**  
+  1. **Enrichment Text Parsing (`src/pipeline_v2/enrich.py`):** Pass scraped Wikipedia and Discogs archival descriptions and gatefold liner notes through text classification, keyword scoring, and atmosphere extraction.
+  2. **Derived Structured Attributes:** Automatically map unstructured narratives into clean macro-categories (`derived_moods`, `macro_genre`, `descriptive_tags`) during the daily enrichment pipeline.
+  3. **Semantic Similarity & "If You Like This Gatefold..." Recommendations:** Vectorize narrative descriptions (via TF-IDF or lightweight keyword scoring) to power kindred spirit recommendations in Crate Digger even when official Spotify tags differ.
+  4. **Zero-Latency Read Path:** Pre-computed BigQuery columns queried instantly by Crate Digger (`/recommend`) with zero runtime latency penalty.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
 
 ---
 
