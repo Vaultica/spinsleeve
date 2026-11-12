@@ -2826,6 +2826,55 @@ def fetch_unowned_album_data(user_id, horizon="all"):
                 "play_count": safe_int(row.get("play_count")),
                 "last_played_at": str(row.get("last_played_at", ""))
             })
+
+        # On-the-fly Spotify API artwork enrichment for unowned albums
+        try:
+            sp = None
+            token_info = get_token_for_user(user_id)
+            if token_info and token_info.get("access_token"):
+                sp = spotipy.Spotify(auth=token_info.get("access_token"), requests_timeout=10)
+            else:
+                # Fallback to client credentials for local dev login bypasses
+                from spotipy.oauth2 import SpotifyClientCredentials
+                client_credentials_manager = SpotifyClientCredentials()
+                sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager, requests_timeout=10)
+
+            if sp:
+                # 1. Batch fetch by album_id
+                valid_aids = [row["album_id"] for row in unowned if row["album_id"] and row["album_id"] != "None"]
+                if valid_aids:
+                    for i in range(0, len(valid_aids), 20):
+                        chunk = valid_aids[i:i+20]
+                        res = sp.albums(chunk)
+                        for album_obj in res.get("albums", []):
+                            if album_obj and album_obj.get("id"):
+                                aid = album_obj["id"]
+                                images = album_obj.get("images", [])
+                                img_url = images[0].get("url") if images else ""
+                                if img_url:
+                                    for item in unowned:
+                                        if item["album_id"] == aid:
+                                            item["album_image_url"] = img_url
+
+                # 2. Fallback search by album name and artist name for any still missing images
+                for item in unowned:
+                    if not item["album_image_url"] or item["album_image_url"] == "/avatar/miles.svg":
+                        try:
+                            search_res = sp.search(q=f"album:{item['album_name']} artist:{item['album_artist_name']}", type="album", limit=1)
+                            items = search_res.get("albums", {}).get("items", [])
+                            if items:
+                                alb = items[0]
+                                if not item["album_id"] or item["album_id"] == "None":
+                                    item["album_id"] = alb.get("id", "")
+                                    item["album_url"] = f"https://open.spotify.com/album/{item['album_id']}"
+                                images = alb.get("images", [])
+                                if images:
+                                    item["album_image_url"] = images[0].get("url", "")
+                        except Exception as ex:
+                            logger.debug("Could not search Spotify for unowned album %s: %s", item["album_name"], ex)
+        except Exception as e:
+            logger.debug("Could not enrich unowned album artwork from Spotify: %s", e)
+
         return unowned
     except Exception as e:
         logger.error("Error fetching unowned albums for %s: %s", user_id, e)
