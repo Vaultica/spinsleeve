@@ -10,12 +10,12 @@
 2. [2. Product & Engineering Backlog (By Category)](#2-product--engineering-backlog-by-category)
    - [Summary Feature Index](#summary-feature-index)
 3. [3. Detailed Feature Specifications](#3-detailed-feature-specifications)
-   - [🏛️ Category: Infrastructure & Cloud Architecture (`INFRA`)](#🏛️-category-infrastructure--cloud-architecture-infra)
-   - [🚀 Category: DevOps, CI/CD, Reliability & Observability (`OPS`)](#🚀-category-devops-cicd-reliability--observability-observability--reliability-ops)
-   - [🎵 Category: Core Application & Vinyl Streaming (`APP`)](#🎵-category-core-application--vinyl-streaming-app)
-   - [🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)](#🛠️-category-tactical-polish-ux-streamlining--quick-fixes-polish)
-   - [🎨 Category: Brand Identity, Public Landing & Monetization (`BRAND`)](#🎨-category-brand-identity-public-landing--monetization-brand)
-   - [📚 Category: Architecture Mapping & Documentation (`DOCS`)](#📚-category-architecture-mapping--documentation-docs)
+   - [🏛️ Category: Infrastructure & Cloud Architecture (`INFRA`)](#category-infrastructure--cloud-architecture-infra)
+   - [🚀 Category: DevOps, CI/CD, Reliability & Observability (`OPS`)](#category-devops-cicd-reliability--observability-ops)
+   - [🎵 Category: Core Application & Vinyl Streaming (`APP`)](#category-core-application--vinyl-streaming-app)
+   - [🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)](#category-tactical-polish-ux-streamlining--quick-fixes-polish)
+   - [🎨 Category: Brand Identity, Public Landing & Monetization (`BRAND`)](#category-brand-identity-public-landing--monetization-brand)
+   - [📚 Category: Architecture Mapping & Documentation (`DOCS`)](#category-architecture-mapping--documentation-docs)
 4. [4. Master Engineering Backlog Matrix](#4-master-engineering-backlog-matrix)
 
 ---
@@ -809,6 +809,11 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8h | BigQuery SQL, Spotify Web API, Tailwind CSS, JavaScript | **Medium:** Granular track-level playback history, dynamic genre filtering, 30s needle-drop previews, and relative timestamps. |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City | Core App | 6–8h | Bandsintown API, DICE Deep-Links, BigQuery SQL, Flask, Tailwind CSS | **High:** Connects vinyl listening telemetry to live concerts in the user's city with 1-click DICE checkout. |
 | **`APP-11`** | Collector’s Inscriptions & Ratings | Core App | 5–7h | Cloud Datastore, BigQuery, Jinja2, Tailwind CSS | **High:** Personal 5-star ratings, handwritten liner notes, and dual OLTP/BigQuery storage for taste analysis. |
+| **`APP-12`** | Header Profile Dropdown, User Settings & Community Action Center | Core App | 3–4h | Flask, Jinja2, Tailwind CSS | **Low:** SpinPals opt-in toggles, display name editing, and scrobble pause controls. |
+| **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Ingestion~~ | Core App | 6–8h | Python, BigQuery, Jinja2 | ✅ **Completed** (`v2.5.0`: Revision `00034-6lq`): Extended and legacy GDPR JSON/ZIP streaming history ingestion with QA table reconciliation and UI settings integration. |
+| **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16h | Flask REST JSON API, Firebase CDN Reverse Proxy | **Medium:** Decouples Flask monolithic templates into clean REST endpoints and Firebase CDN proxy. |
+| **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30h | SwiftUI, Swift, Spotify OAuth PKCE | **High:** Native iOS app with Spotify OAuth PKCE authentication and 33⅓ RPM crate browsing. |
+| **`APP-16`** | Semantic Liner Notes & Description Classification for Crate Digger Relevance | Core App | 6–8h | NLP Text Parsing, BigQuery Schema Expansion | **Medium:** Keyword scoring and text parsing to derive macro-genres and moods for Crate Digger relevance. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1h | JavaScript, DOM Lifecycle | ✅ **Completed** (`v2.2.2`): Initial sort triggers `onFilterChange()` on DOMContentLoaded for strict 30D heavy rotation sorting. |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | ✅ **Completed** (`v2.2.2`): Decimal fractional scrobbles, integer whole spins, and contextual "Newly Added" / "Never Played" tags. |
