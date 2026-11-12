@@ -5,6 +5,21 @@
 
 ---
 
+## Table of Contents
+1. [1. Executive Summary & Implemented Milestones](#1-executive-summary--implemented-milestones)
+2. [2. Product & Engineering Backlog (By Category)](#2-product--engineering-backlog-by-category)
+   - [Summary Feature Index](#summary-feature-index)
+3. [3. Detailed Feature Specifications](#3-detailed-feature-specifications)
+   - [🏛️ Category: Infrastructure & Cloud Architecture (`INFRA`)](#🏛️-category-infrastructure--cloud-architecture-infra)
+   - [🚀 Category: DevOps, CI/CD, Reliability & Observability (`OPS`)](#🚀-category-devops-cicd-reliability--observability-observability--reliability-ops)
+   - [🎵 Category: Core Application & Vinyl Streaming (`APP`)](#🎵-category-core-application--vinyl-streaming-app)
+   - [🛠️ Category: Tactical Polish, UX Streamlining & Quick Fixes (`POLISH`)](#🛠️-category-tactical-polish-ux-streamlining--quick-fixes-polish)
+   - [🎨 Category: Brand Identity, Public Landing & Monetization (`BRAND`)](#🎨-category-brand-identity-public-landing--monetization-brand)
+   - [📚 Category: Architecture Mapping & Documentation (`DOCS`)](#📚-category-architecture-mapping--documentation-docs)
+4. [4. Master Engineering Backlog Matrix](#4-master-engineering-backlog-matrix)
+
+---
+
 ## 1. Executive Summary & Implemented Milestones
 
 SpinSleeve transforms digital streaming libraries into physical-style virtual vinyl crates, delivering 12" gatefold archival liner notes, 30-second needle-drop preview snippets, deep listening telemetry, and friend-to-friend acoustic compatibility.

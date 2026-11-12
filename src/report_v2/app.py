@@ -1925,8 +1925,12 @@ ROADMAP_HTML_TEMPLATE = """
                         <span class="text-gray-400 font-mono">3-4h</span>
                     </div>
                     <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
-                        <div><strong class="text-white">APP-14: Headless API &amp; Firestore Catalog Rearchitecture (Phase 1)</strong> (REST JSON API endpoints &amp; Firebase CDN reverse proxy).</div>
+                        <div><strong class="text-white">APP-14: Headless API &amp; Firestore Catalog Rearchitecture</strong> (REST JSON endpoints &amp; Firebase CDN proxy).</div>
                         <span class="text-gray-400 font-mono">12-16h</span>
+                    </div>
+                    <div class="flex items-start justify-between pb-3 border-b border-gray-800/60">
+                        <div><strong class="text-white">APP-16: Semantic Liner Notes &amp; Description Classification</strong> (NLP text parsing &amp; macro-genres).</div>
+                        <span class="text-gray-400 font-mono">6-8h</span>
                     </div>
                     <div class="flex items-start justify-between">
                         <div><strong class="text-white">APP-15: Native iOS SwiftUI Companion App (Phase 2)</strong> (SwiftUI iOS app with Spotify OAuth PKCE &amp; crate browsing).</div>
@@ -2871,7 +2875,7 @@ def api_save_album():
         return jsonify({"status": "error", "message": "Not authorized with Spotify"}), 401
 
     try:
-        sp = spotipy.Spotify(auth=token_info.get("access_token"))
+        sp = spotipy.Spotify(auth=token_info.get("access_token"), requests_timeout=15)
         # If album_id is missing or None, search Spotify for it using album_name and artist_name
         if not album_id or album_id == "None":
             if not album_name:
@@ -2928,6 +2932,9 @@ def api_save_album():
             pass
 
         return jsonify({"status": "success", "message": f"'{album_meta.get('name')}' saved to library successfully!"})
+    except requests.exceptions.Timeout:
+        logger.warning("Spotify API timeout while saving album %s for user %s", album_id or album_name, user_id)
+        return jsonify({"status": "error", "message": "Spotify API request timed out. Please try again in a few moments."}), 504
     except Exception as e:
         logger.error("Error saving album %s for %s: %s", album_id or album_name, user_id, str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
