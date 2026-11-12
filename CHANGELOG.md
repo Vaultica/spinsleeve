@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.2] — 2026-11-12
+### 🎧 Unowned Crate Artwork Enrichment, Save Timeout Resilience, Roadmap Documentation & Dev Login Fallback (`APP-07`)
+* **What:**
+  - **Unowned Album Artwork Enrichment (`APP-07`):** Implemented two-tier on-the-fly Spotify API artwork enrichment (batch `sp.albums` + `sp.search` fallback) for Unowned Crate items, resolving missing album cover renderings.
+  - **Save Read Timeout & Graceful Exception Handling:** Added explicit `requests_timeout=15` and robust 504 gateway timeout exception handling for Spotify unowned album save calls.
+  - **Documentation & Roadmap Navigation:** Added a hyperlinked Table of Contents to `PROJECT_ROADMAP_AND_SPECS.md` and corrected the in-app roadmap template (`ROADMAP_HTML_TEMPLATE`) to accurately reflect upcoming backlog items (`APP-14`, `APP-16`).
+  - **Local Dev Login Fallback:** Added `SpotifyClientCredentials` fallback support for `/dev/login` local test sessions.
+* **Why:**
+  - Eliminates artwork rendering gaps in the Unowned Crate (`APP-07`), protects against slow Spotify API response dropouts during library saves, and maintains pristine, hyperlinked project documentation.
+* **How:**
+  - Updated `src/report_v2/app.py`, `PROJECT_ROADMAP_AND_SPECS.md`, and `CHANGELOG.md`. Verified 65/65 unit tests pass successfully and deployed to Cloud Run (Revision `spotify-dashboard-beta-00045-clg`).
+
+---
+
 ## [v2.6.1] — 2026-11-11
 ### 📚 Semantic Liner Notes & Description Classification for Crate Digger Relevance (`APP-16`)
 * **What:**

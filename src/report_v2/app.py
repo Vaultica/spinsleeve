@@ -65,8 +65,8 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09, v2.6.1)
-APP_VERSION = "v2.6.1"
+# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09, v2.6.2)
+APP_VERSION = "v2.6.2"
 
 
 @app.context_processor
