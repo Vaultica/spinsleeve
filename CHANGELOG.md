@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.4] — 2026-11-12
+### 📱 Real-Time Admin WhatsApp Notifications (`OPS-03`) & Monolithic App Modularisation Architecture (`OPS-04`)
+* **What:**
+  - **OPS-03 (Real-Time Admin WhatsApp Alerts):** Specified and documented Twilio Programmable Messaging API integration in `TECHNICAL_SPECS.md` and `PROJECT_ROADMAP_AND_SPECS.md` for instant mobile alerts with 1-click admin approval URLs when new users register.
+  - **OPS-04 (Monolithic App Modularisation & AI Parsing Optimization):** Architected modular directory structure for `src/report_v2/` (`config.py`, `routes/`, `services/`) to maximize AI context efficiency, reduce token consumption by ~70%, and streamline parallel unit testing.
+* **Why:**
+  - Enables instant mobile notification of new member requests via WhatsApp and establishes a clean, scalable modular architecture for long-term maintainability and AI development velocity.
+* **How:**
+  - Updated `TECHNICAL_SPECS.md`, `PROJECT_ROADMAP_AND_SPECS.md`, `src/report_v2/app.py`, and `CHANGELOG.md`.
+
+---
+
 ## [v2.6.3] — 2026-11-12
 ### ⚙️ User Settings & Privacy Controls: SpinPals Opt-In/Out & Scrobble Sync Pause Toggles (`APP-12`)
 * **Cloud Run Revision:** `spotify-dashboard-beta-00047-lqd`

@@ -171,11 +171,16 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
-### `OPS-03`: Instant Admin Notifications for User Join Requests
-* **Technical Objective:** Push real-time mobile notifications when a new user signs in for the first time.
-* **Webhook Payload & Architecture:**
-  - Triggered in `src/report_v2/app.py` inside the OAuth callback (`/beta/callback`) when a new `User` entity is written with `is_approved=False`.
-  - Service: Telegram Bot API (`https://api.telegram.org/bot<TOKEN>/sendMessage`).
+### `OPS-03`: Instant Admin Notifications for User Join Requests (Twilio WhatsApp API)
+* **Technical Objective:** Push real-time mobile WhatsApp notifications when a new user signs in for the first time (`is_approved=False`).
+* **Architecture & Flow:**
+  - Triggered in `src/report_v2/app.py` inside the OAuth callback (`/beta/callback`) upon initial Datastore `User` entity creation with `is_approved=False`.
+  - Service: Twilio Programmable Messaging API (`https://api.twilio.com`).
+  - Required Environment Secrets / Cloud Run Env Vars:
+    - `TWILIO_ACCOUNT_SID`
+    - `TWILIO_AUTH_TOKEN`
+    - `TWILIO_WHATSAPP_SENDER` (e.g., `whatsapp:+14155238886`)
+    - `ADMIN_WHATSAPP_RECIPIENT` (e.g., `whatsapp:+<admin_number>`)
   - Message Template:
     ```text
     🔔 New SpinSleeve Collector Request!
@@ -184,6 +189,30 @@ All new features and architectural changes must strictly adhere to these verifie
     • Email: {email}
     👉 1-Click Approval: https://spinsleeve.cc/admin
     ```
+
+---
+
+### `OPS-04`: Monolithic App Modularisation & AI Parsing Optimization
+* **Technical Objective:** Decompose monolithic `src/report_v2/app.py` (~7,736 lines) into modular components (`config.py`, `services/`, `routes/`) to maximize AI context efficiency, reduce token consumption by ~70%, and enable fast parallel unit testing.
+* **Target Architecture & Directory Structure:**
+  ```text
+  src/report_v2/
+  ├── app.py                 # Thin WSGI entrypoint (< 150 lines: app init, blueprints, error handlers)
+  ├── config.py              # Environment variables, GCP project IDs, constants
+  ├── routes/
+  │   ├── __init__.py
+  │   ├── auth.py            # OAuth callbacks, session cookies, logout, avatar picker
+  │   ├── crate.py           # Virtual crate browsing, pagination, filtering, unowned crate
+  │   ├── pals.py            # SpinPals Lounge, compatibility matching, borrow recs
+  │   └── telemetry.py       # Scrobbles, play counts, album spin calculations, historical sync
+  └── services/
+      ├── bigquery.py        # SQL queries, materialization, telemetry aggregation
+      ├── datastore.py       # Token vaults, user metadata, entity caches
+      └── spotify.py         # Web API client, token refresh logic
+  ```
+* **Testing & Regression Protocol:**
+  - **Representative Data Fixtures:** Test modularized query and data services against local JSON / Pandas test fixtures mirroring production `playback_history` and `user_saved_albums`.
+  - **Automated Unit & Smoke Test Suite:** Execute `.venv/bin/python3 -m unittest discover tests` to verify zero regressions across multi-tenant tenancy isolation, session cookies (`__session`), and NaN sanitization.
 
 ---
 

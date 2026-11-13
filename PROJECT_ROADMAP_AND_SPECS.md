@@ -286,13 +286,13 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `OPS-03`: Real-Time Admin Alerts for User Join Requests
+#### `OPS-03`: Real-Time Admin Alerts for User Join Requests (Twilio WhatsApp API)
 * **Problem:**  
   When an uninvited user logs in for the first time, their account sits in `PENDING` state until the admin happens to inspect the Admin Control Deck.
 * **Solution:**  
-  Instant notifications pushed directly to Serge whenever a new Spotify user authenticates:
-  - **Channels:** Telegram Bot API webhook or Discord Webhook.
-  - **Payload:** User display name, Spotify ID, email, profile avatar, and a 1-click approval URL:
+  Instant WhatsApp notifications pushed directly to Serge whenever a new Spotify user authenticates:
+  - **Service:** Twilio Programmable Messaging API (`whatsapp:+...`).
+  - **Payload:** User display name, Spotify ID, email, and a 1-click approval URL:
     ```text
     📢 New SpinSleeve Member Request!
     • Name: Charlie Watts
@@ -797,7 +797,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`INFRA-03`** | Sub-100ms Multi-Tier Caching & Materialization | Infrastructure | 6–8h | Cloud Datastore, BigQuery, sessionStorage, Flask | **High:** Eliminates 2–4s tab-switching latency; drops catalog response times to <25ms with $0 new cloud costs. |
 | **`OPS-01`** | CI/CD GitHub Actions & Protected Master | DevOps | 6–8h | GitHub Actions, Workload Identity Federation, Pytest | **High:** Eliminates manual terminal deployments and prevents untested regressions. |
 | **`OPS-02`** | Observability, Alerting & Health Monitoring | DevOps | 4–6h | Cloud Monitoring, Alert Policies, `/healthz` | **Medium:** Automated 5xx failure detection and resource saturation alerts. |
-| **`OPS-03`** | Real-Time Admin Alerts for Join Requests | DevOps | 3–4h | Telegram Bot API / Discord Webhook, Cloud Run | **Medium:** Instant 1-click mobile approvals for new friends. |
+| **`OPS-03`** | Real-Time Admin Alerts for Join Requests | DevOps | 3–4h | Twilio WhatsApp API, Cloud Run | **Medium:** Instant 1-click mobile approvals for new friends. |
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A/B Splits | Core App | 4–6h | Spotify Web API, Jinja2, Tailwind CSS | **Medium:** Completes tactile physical record feel with track-level auditioning. |
 | **`APP-02`** | Apple Music Library Onboarding (Phase 7) | Core App | 16–24h | MusicKit JS v3, Apple Developer Key (.p8), BigQuery | **Massive:** Bypasses Spotify allowlist limits and expands to Apple Music collectors. |
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
