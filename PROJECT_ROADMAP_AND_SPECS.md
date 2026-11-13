@@ -146,7 +146,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8 hours | Medium |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City (Bandsintown API) | Core App | 6–8 hours | Medium |
 | **`APP-11`** | Collector’s Inscriptions: Personal Album Ratings & Archival Notes | Core App | 5–7 hours | Low–Med |
-| **`APP-12`** | Header Profile Dropdown, User Settings & Community Action Center | Core App | 3–4 hours | Low |
+| **`APP-12`** | ✅ ~~Header Profile Dropdown, User Settings & Community Action Center~~ | Core App | 3–4 hours | Completed (`v2.6.3`): SpinPals opt-in/out and Scrobble Sync Pause toggles, backend sync pause guard. |
 | **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Automated Ingestion~~ | Core App | 6–8 hours | Completed (`v2.5.0`: Revision `00034-6lq`) |
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16 hours | Medium |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30 hours | Medium–High |
@@ -809,7 +809,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-09`** | Granular Track-Level Telemetry & Audio Archive | Core App | 6–8h | BigQuery SQL, Spotify Web API, Tailwind CSS, JavaScript | **Medium:** Granular track-level playback history, dynamic genre filtering, 30s needle-drop previews, and relative timestamps. |
 | **`APP-10`** | Local Gig Radar: Top Artists Live in Your City | Core App | 6–8h | Bandsintown API, DICE Deep-Links, BigQuery SQL, Flask, Tailwind CSS | **High:** Connects vinyl listening telemetry to live concerts in the user's city with 1-click DICE checkout. |
 | **`APP-11`** | Collector’s Inscriptions & Ratings | Core App | 5–7h | Cloud Datastore, BigQuery, Jinja2, Tailwind CSS | **High:** Personal 5-star ratings, handwritten liner notes, and dual OLTP/BigQuery storage for taste analysis. |
-| **`APP-12`** | Header Profile Dropdown, User Settings & Community Action Center | Core App | 3–4h | Flask, Jinja2, Tailwind CSS | **Low:** SpinPals opt-in toggles, display name editing, and scrobble pause controls. |
+| **`APP-12`** | ✅ ~~Header Profile Dropdown, User Settings & Community Action Center~~ | Core App | 3–4h | Flask, Jinja2, Tailwind CSS | ✅ **Completed** (`v2.6.3`, Revision `00047-lqd`): SpinPals opt-in/out and Scrobble Sync Pause toggles, backend sync pause pipeline guard. |
 | **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Ingestion~~ | Core App | 6–8h | Python, BigQuery, Jinja2 | ✅ **Completed** (`v2.5.0`: Revision `00034-6lq`): Extended and legacy GDPR JSON/ZIP streaming history ingestion with QA table reconciliation and UI settings integration. |
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16h | Flask REST JSON API, Firebase CDN Reverse Proxy | **Medium:** Decouples Flask monolithic templates into clean REST endpoints and Firebase CDN proxy. |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30h | SwiftUI, Swift, Spotify OAuth PKCE | **High:** Native iOS app with Spotify OAuth PKCE authentication and 33⅓ RPM crate browsing. |

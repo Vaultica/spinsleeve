@@ -278,6 +278,10 @@ def run_pipeline():
             logger.warning("Skipping user '%s' (%s): No refresh token stored in Datastore.", user_id, display_name)
             continue
 
+        if user.get("sync_paused", False):
+            logger.info("Skipping user '%s' (%s): Scrobble sync is paused by user.", user_id, display_name)
+            continue
+
         logger.info("------------------------------------------------------------")
         logger.info("Processing user: %s (%s)", display_name, user_id)
 

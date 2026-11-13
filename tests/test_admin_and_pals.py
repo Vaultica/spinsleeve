@@ -165,6 +165,21 @@ class TestAdminAndPalsFeatures(unittest.TestCase):
         self.assertIn("ACTIVE", rendered)
         self.assertIn("DISABLED", rendered)
 
+    def test_user_settings_sync_pause_and_pals(self):
+        """Verify that user settings dropdown includes SpinPals opt-in and Scrobble Sync Pause controls."""
+        context = {
+            **self.dummy_context,
+            "user": {"display_name": "Serge", "user_id": "sergebou", "avatar_url": "", "pals_opt_in": True, "sync_paused": False},
+            "is_admin": True,
+            "is_impersonating": False
+        }
+        t = jinja2.Template(BETA_EXPLORER_HTML)
+        rendered = t.render(**context)
+        self.assertIn("palsOptInStatusBadge", rendered)
+        self.assertIn("syncPauseStatusBadge", rendered)
+        self.assertIn("toggleUserSyncPause", rendered)
+        self.assertIn("toggleUserPalsOptIn", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()

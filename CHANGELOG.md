@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.3] — 2026-11-12
+### ⚙️ User Settings & Privacy Controls: SpinPals Opt-In/Out & Scrobble Sync Pause Toggles (`APP-12`)
+* **Cloud Run Revision:** `spotify-dashboard-beta-00047-lqd`
+* **What:**
+  - **APP-12 (User Settings & Privacy Controls):** Implemented interactive user settings controls in the avatar settings dropdown across all views (`Library`, `Crate Digger`, `Analytics`, `SpinPals`), featuring 1-click toggles for SpinPals directory participation (`pals_opt_in`) and Scrobble Sync Pause (`sync_paused`).
+  - **Backend Pipeline Sync Pause Guard:** Added explicit pipeline execution guard in `src/pipeline_v2/sync.py` (`if user.get("sync_paused", False): continue`) to respect user scrobble sync pause preferences during automated background ingestion cycles.
+  - **Session & State Synchronization:** Updated OAuth callback (`callback`), admin assumption (`admin_assume`), and admin revert (`admin_revert`) flows to preserve `sync_paused` state across sessions.
+  - **Unit Testing Coverage:** Added comprehensive unit test coverage (`test_user_settings_sync_pause_and_pals` in `tests/test_admin_and_pals.py`) verifying correct UI rendering of sync pause and SpinPals status badges.
+* **Why:**
+  - Empowers users with granular privacy and synchronization controls, allowing them to temporarily pause scrobble background syncing or opt out of the SpinPals community directory on demand.
+* **How:**
+  - Updated `src/report_v2/app.py`, `src/pipeline_v2/sync.py`, `tests/test_admin_and_pals.py`, `PROJECT_ROADMAP_AND_SPECS.md`, and `CHANGELOG.md`. Verified all unit tests pass successfully and deployed to Cloud Run (Revision `00047-lqd`).
+
+---
+
 ## [v2.6.2] — 2026-11-12
 ### 🎧 Unowned Crate Artwork Enrichment, Save Timeout Resilience, Avatar Sizing Polish & ROI Matrix (`APP-07`, `POLISH`)
 * **What:**

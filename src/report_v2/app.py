@@ -65,8 +65,8 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09, v2.6.2)
-APP_VERSION = "v2.6.2"
+# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09, v2.6.3)
+APP_VERSION = "v2.6.3"
 
 
 @app.context_processor
@@ -2645,6 +2645,7 @@ def callback():
         session["custom_avatar_id"] = user.get("custom_avatar_id", "")
         session["role"] = user.get("role", "user")
         session["pals_opt_in"] = bool(user.get("pals_opt_in", False))
+        session["sync_paused"] = bool(user.get("sync_paused", False))
         if is_admin:
             session["admin_user_id"] = spotify_id
         session["is_impersonating"] = False
@@ -2703,6 +2704,7 @@ def admin_assume(target_id):
     session["custom_avatar_id"] = user.get("custom_avatar_id", "")
     session["role"] = user.get("role", "user")
     session["pals_opt_in"] = bool(user.get("pals_opt_in", False))
+    session["sync_paused"] = bool(user.get("sync_paused", False))
     session["is_impersonating"] = (target_id not in ADMIN_USER_IDS)
 
     # Invalidate in-memory caches for this user
@@ -2737,6 +2739,7 @@ def admin_revert():
     session["custom_avatar_id"] = admin_user.get("custom_avatar_id", "")
     session["role"] = "admin"
     session["pals_opt_in"] = True
+    session["sync_paused"] = bool(admin_user.get("sync_paused", False))
     session["is_impersonating"] = False
 
     logger.info("Admin %s reverted back to admin profile", real_admin)
@@ -2816,6 +2819,24 @@ def api_toggle_user_pals():
         client.put(user)
         session["pals_opt_in"] = new_val
         return jsonify({"status": "success", "pals_opt_in": new_val})
+    return jsonify({"status": "error", "message": "User not found"}), 404
+
+
+@app.route("/api/user/toggle-sync-pause", methods=["POST"])
+@app.route("/beta/api/user/toggle-sync-pause", methods=["POST"])
+def api_toggle_user_sync_pause():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    client = get_datastore_client()
+    key = client.key("User", user_id)
+    user = client.get(key)
+    if user:
+        new_val = not user.get("sync_paused", False)
+        user["sync_paused"] = new_val
+        client.put(user)
+        session["sync_paused"] = new_val
+        return jsonify({"status": "success", "sync_paused": new_val})
     return jsonify({"status": "error", "message": "User not found"}), 404
 
 
@@ -3248,6 +3269,13 @@ EXPLORER_HTML = """
                                 <span class="span-left flex items-center gap-2">🤝 Opt-in SpinPals</span>
                                 <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <button type="button" onclick="toggleUserSyncPause()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-amber-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">⏸️ Sync Pause</span>
+                                <span id="syncPauseStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.sync_paused %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.sync_paused %}Paused{% else %}Active{% endif %}
                                 </span>
                             </button>
                             <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
@@ -4197,6 +4225,48 @@ EXPLORER_HTML = """
             }
         }
 
+        async function toggleUserPalsOptIn() {
+            try {
+                const res = await fetch('/api/user/toggle-pals', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('palsOptInStatusBadge');
+                    if (badge) {
+                        if (data.pals_opt_in) {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                        } else {
+                            badge.textContent = 'Inactive';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle pals opt-in:', err);
+            }
+        }
+
+        async function toggleUserSyncPause() {
+            try {
+                const res = await fetch('/api/user/toggle-sync-pause', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('syncPauseStatusBadge');
+                    if (badge) {
+                        if (data.sync_paused) {
+                            badge.textContent = 'Paused';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        } else {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle sync pause:', err);
+            }
+        }
+
         async function selectAvatarPreset(presetId, e) {
             if (e) e.stopPropagation();
             const statusEl = document.querySelector('.avatarSaveStatus');
@@ -4405,6 +4475,13 @@ RECOMMEND_HTML = """
                                 <span class="flex items-center gap-2">🤝 Opt-in SpinPals</span>
                                 <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <button type="button" onclick="toggleUserSyncPause()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-amber-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">⏸️ Sync Pause</span>
+                                <span id="syncPauseStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.sync_paused %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.sync_paused %}Paused{% else %}Active{% endif %}
                                 </span>
                             </button>
                             <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
@@ -5404,6 +5481,48 @@ RECOMMEND_HTML = """
             }
         }
 
+        async function toggleUserPalsOptIn() {
+            try {
+                const res = await fetch('/api/user/toggle-pals', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('palsOptInStatusBadge');
+                    if (badge) {
+                        if (data.pals_opt_in) {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                        } else {
+                            badge.textContent = 'Inactive';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle pals opt-in:', err);
+            }
+        }
+
+        async function toggleUserSyncPause() {
+            try {
+                const res = await fetch('/api/user/toggle-sync-pause', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('syncPauseStatusBadge');
+                    if (badge) {
+                        if (data.sync_paused) {
+                            badge.textContent = 'Paused';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        } else {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle sync pause:', err);
+            }
+        }
+
         async function selectAvatarPreset(presetId, e) {
             if (e) e.stopPropagation();
             const statusEl = document.querySelector('.avatarSaveStatus');
@@ -5631,6 +5750,13 @@ ANALYTICS_HTML = """
                                 <span class="flex items-center gap-2">🤝 Opt-in SpinPals</span>
                                 <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <button type="button" onclick="toggleUserSyncPause()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-amber-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">⏸️ Sync Pause</span>
+                                <span id="syncPauseStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.sync_paused %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.sync_paused %}Paused{% else %}Active{% endif %}
                                 </span>
                             </button>
                             <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
@@ -6360,6 +6486,48 @@ ANALYTICS_HTML = """
             }
         }
 
+        async function toggleUserPalsOptIn() {
+            try {
+                const res = await fetch('/api/user/toggle-pals', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('palsOptInStatusBadge');
+                    if (badge) {
+                        if (data.pals_opt_in) {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                        } else {
+                            badge.textContent = 'Inactive';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle pals opt-in:', err);
+            }
+        }
+
+        async function toggleUserSyncPause() {
+            try {
+                const res = await fetch('/api/user/toggle-sync-pause', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('syncPauseStatusBadge');
+                    if (badge) {
+                        if (data.sync_paused) {
+                            badge.textContent = 'Paused';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        } else {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle sync pause:', err);
+            }
+        }
+
         async function selectAvatarPreset(presetId, e) {
             if (e) e.stopPropagation();
             const statusEl = document.querySelector('.avatarSaveStatus');
@@ -6657,6 +6825,13 @@ PALS_HTML = """
                                 <span class="flex items-center gap-2">🤝 Opt-in SpinPals</span>
                                 <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
                                     {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <button type="button" onclick="toggleUserSyncPause()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-amber-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">⏸️ Sync Pause</span>
+                                <span id="syncPauseStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.sync_paused %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.sync_paused %}Paused{% else %}Active{% endif %}
                                 </span>
                             </button>
                             <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
@@ -7443,6 +7618,48 @@ PALS_HTML = """
                     statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
                     statusEl.textContent = `Error: Network failure`;
                 }
+            }
+        }
+
+        async function toggleUserPalsOptIn() {
+            try {
+                const res = await fetch('/api/user/toggle-pals', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('palsOptInStatusBadge');
+                    if (badge) {
+                        if (data.pals_opt_in) {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                        } else {
+                            badge.textContent = 'Inactive';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle pals opt-in:', err);
+            }
+        }
+
+        async function toggleUserSyncPause() {
+            try {
+                const res = await fetch('/api/user/toggle-sync-pause', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('syncPauseStatusBadge');
+                    if (badge) {
+                        if (data.sync_paused) {
+                            badge.textContent = 'Paused';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        } else {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle sync pause:', err);
             }
         }
 
