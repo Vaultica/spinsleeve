@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.5] — 2026-11-12
+### 🛠️ Config Module Rename (`app_config.py`), Dockerfile Bundling Fix & Post-Deployment Curl Health Verification
+* **What:**
+  - **Config Module Rename & Gemignore Conflict Resolution:** Renamed `config.py` to `app_config.py` to bypass `.geminiignore` file exclusion conflicts and ensure reliable container building.
+  - **Dockerfile Bundling Fix:** Updated `src/report_v2/Dockerfile` to explicitly copy `app_config.py`, `routes/`, `services/`, and `templates/` for the modular Flask app factory.
+  - **Post-Deployment Automated Health Verification:** Added automated post-deployment `curl` health verification steps to the `@deploy_assistant` subagent protocol.
+* **Why:**
+  - Resolves `ModuleNotFoundError: No module named 'config'` during Cloud Run service startup, prevents container build omissions, and guarantees immediate post-deployment availability checking.
+* **How:**
+  - Renamed `config.py` to `app_config.py`, updated all internal imports, updated `src/report_v2/Dockerfile`, updated `.gemini/agents/deploy_assistant.md`, bumped `APP_VERSION` to `v2.6.5`, and updated release ledgers.
+
+---
+
 ## [v2.6.4] — 2026-11-12
 ### 📱 Real-Time Admin WhatsApp Notifications (`OPS-03`) & Monolithic App Modularisation (`OPS-04`)
 * **What:**

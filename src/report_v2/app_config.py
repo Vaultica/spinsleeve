@@ -10,7 +10,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("spinsleeve_v2")
 
-APP_VERSION = "v2.6.4"
+APP_VERSION = "v2.6.5"
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
 DATASET_V2 = "spotify_v2"
 PLAYBACK_HISTORY_TABLE = os.getenv("PLAYBACK_HISTORY_TABLE", f"{PROJECT_ID}.{DATASET_V2}.playback_history")
