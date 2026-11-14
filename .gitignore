@@ -58,6 +58,7 @@ local_settings.py
 # Flask stuff:
 instance/
 .webassets-cache
+src/report_v2/templates/clean_*.html
 
 # Scrapy stuff:
 .scrapy

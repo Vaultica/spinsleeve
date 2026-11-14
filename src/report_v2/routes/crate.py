@@ -220,3 +220,40 @@ def beta_recommend():
         brand_icon=ICON_A_SVG,
         gatefold_icon=ICON_GATEFOLD_SVG
     )
+
+
+@crate_bp.route("/beta/clean-explore")
+@login_required
+def clean_explore_hub():
+    """Design exploration hub linking to clean prototypes."""
+    return render_template('clean_hub.html', user=session)
+
+
+@crate_bp.route("/beta/clean-explore/spotify")
+@login_required
+def clean_explore_spotify():
+    """Option A: Spotify Modern Native clean library prototype."""
+    user_id = session["user_id"]
+    from services.catalog import fetch_user_album_data
+    data = fetch_user_album_data(user_id)
+    return render_template('clean_spotify.html', albums=data["albums"], user=session)
+
+
+@crate_bp.route("/beta/clean-explore/glass")
+@login_required
+def clean_explore_glass():
+    """Option B: Audiophile Glass clean library prototype."""
+    user_id = session["user_id"]
+    from services.catalog import fetch_user_album_data
+    data = fetch_user_album_data(user_id)
+    return render_template('clean_glass.html', albums=data["albums"], user=session)
+
+
+@crate_bp.route("/beta/clean-explore/bento")
+@login_required
+def clean_explore_bento():
+    """Option C: Bento Editorial clean library prototype."""
+    user_id = session["user_id"]
+    from services.catalog import fetch_user_album_data
+    data = fetch_user_album_data(user_id)
+    return render_template('clean_bento.html', albums=data["albums"], user=session)
