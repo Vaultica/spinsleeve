@@ -436,3 +436,71 @@ GOOGLE_APPLICATION_CREDENTIALS=~/Projects/spotify/cpb100-267aa5b92aa7.json \
 GOOGLE_APPLICATION_CREDENTIALS=~/Projects/spotify/cpb100-267aa5b92aa7.json \
   ./.venv/bin/python manage_users.py revoke <spotify_id>
 ```
+
+---
+
+## 11. Cost Optimization & Artifact Registry Management
+
+To prevent high GCP billing costs from continuous container vulnerability scanning and accumulating unused image layers, apply the following configurations.
+
+### A. Disable Vulnerability Scanning
+Continuous vulnerability scanning of container images in Artifact Registry can accumulate significant Container Analysis API and scanning charges. Disable it on repositories where compliance scanning is not required:
+
+```bash
+gcloud artifacts repositories update spotify-repo \
+    --location=europe-west2 \
+    --project=secret-compass-181513 \
+    --disable-vulnerability-scanning
+```
+
+### B. Configure Automated Cleanup & Retention Policies
+To automatically purge old image versions and untagged images, define a cleanup policy JSON file (`cleanup-policy.json` using object-based action types):
+
+```json
+[
+  {
+    "name": "delete-untagged-images",
+    "action": {
+      "type": "Delete"
+    },
+    "condition": {
+      "tagState": "UNTAGGED",
+      "olderThan": "1d"
+    }
+  },
+  {
+    "name": "keep-recent-tagged-versions",
+    "action": {
+      "type": "Keep"
+    },
+    "mostRecentVersions": {
+      "keepCount": 3
+    }
+  }
+]
+```
+
+### C. Managing & Applying Cleanup Policies
+- **View active cleanup policies:**
+  ```bash
+  gcloud artifacts repositories list-cleanup-policies spotify-repo \
+      --location=europe-west2 \
+      --project=secret-compass-181513
+  ```
+
+- **Preview cleanup actions (dry run):**
+  ```bash
+  gcloud artifacts repositories set-cleanup-policies spotify-repo \
+      --location=europe-west2 \
+      --project=secret-compass-181513 \
+      --policy=cleanup-policy.json \
+      --dry-run
+  ```
+
+- **Apply cleanup policy live:**
+  ```bash
+  gcloud artifacts repositories set-cleanup-policies spotify-repo \
+      --location=europe-west2 \
+      --project=secret-compass-181513 \
+      --policy=cleanup-policy.json
+  ```

@@ -102,7 +102,7 @@ ENV/
 .mypy_cache/
 
 # this project
-config.py
+/config.py
 StreamingHistory*.json
 Audio_Streaming_History_*.json
 *streaming_history*.json
