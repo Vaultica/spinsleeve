@@ -151,34 +151,42 @@ def beta_pals(pal_id=None):
         return render_template_string(PALS_LOCKED_HTML, brand_icon=ICON_A_SVG, user=session)
 
     from app import fetch_pals_directory, compute_pal_compatibility, PALS_HTML
-    pals = fetch_pals_directory(current_user_id)
+    pals_directory = fetch_pals_directory(current_user_id)
 
-    selected_pal = None
-    borrow_recommendations = []
-    pal_albums = []
-    pal_top_genres = []
-    pal_compatibility = None
-    horizon = request.args.get("horizon", "30d")
+    other_pals = [p for p in pals_directory if not p["is_self"]]
+    if not other_pals:
+        return render_template_string("""
+            <body style="background:#0c0f12; color:#fff; font-family:sans-serif; padding:40px; text-align:center;">
+                <div style="max-width:440px; margin:40px auto; background:#14181f; border:1px solid #374151; padding:30px; border-radius:24px;">
+                    <h2 style="font-size:20px; font-weight:bold; margin-bottom:10px;">No Other Pals in the Lounge Yet</h2>
+                    <p style="color:#9ca3af; font-size:13px; line-height:1.6;">Once more friends are approved and opted in, you'll see acoustic compatibility, shared records, and borrow picks here!</p>
+                    <a href="/beta/" style="display:inline-block; margin-top:20px; background:#1DB954; color:#000; padding:10px 20px; border-radius:12px; font-weight:bold; font-size:13px; text-decoration:none;">Return to Library</a>
+                </div>
+            </body>
+        """)
 
+    target_pal = None
     if pal_id:
-        selected_pal = next((p for p in pals if p["spotify_id"] == pal_id), None)
-        if selected_pal:
-            pal_data = compute_pal_compatibility(current_user_id, pal_id, horizon=horizon)
-            borrow_recommendations = pal_data["borrow_recommendations"]
-            pal_albums = pal_data["pal_albums"]
-            pal_top_genres = pal_data["pal_top_genres"]
-            pal_compatibility = pal_data["compatibility"]
+        target_pal = next((p for p in other_pals if p["spotify_id"] == pal_id), None)
+    if not target_pal:
+        target_pal = other_pals[0]
+
+    horizon = request.args.get("horizon", "30d").lower()
+    if horizon not in ("30d", "all_time"):
+        horizon = "30d"
+
+    pal_data = compute_pal_compatibility(current_user_id, target_pal["spotify_id"], horizon=horizon)
 
     return render_template_string(
         PALS_HTML,
-        pals=pals,
-        selected_pal=selected_pal,
-        borrow_recommendations=borrow_recommendations,
-        pal_albums=pal_albums,
-        pal_top_genres=pal_top_genres,
-        pal_compatibility=pal_compatibility,
-        horizon=horizon,
         user=session,
+        pals=pals_directory,
+        selected_pal=pal_data["pal"],
+        compatibility=pal_data["compatibility"],
+        top_borrow=pal_data["top_borrow"],
+        shared_albums=pal_data["shared_albums"],
+        pal_crate=pal_data["pal_full_crate"],
+        horizon=horizon,
         brand_icon=ICON_A_SVG,
         gatefold_icon=ICON_GATEFOLD_SVG
     )
