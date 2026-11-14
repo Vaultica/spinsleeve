@@ -1,3 +1,10 @@
+"""
+SpinSleeve V2 Authentication Blueprint (`routes/auth.py`)
+-------------------------------------------------------
+Encapsulates Flask Blueprint routes for Spotify OAuth login, callbacks,
+session security decorators (@login_required, @admin_required), logout,
+and zero-lockout admin impersonation / revert actions.
+"""
 import datetime
 import logging
 from functools import wraps

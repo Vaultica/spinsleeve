@@ -1,3 +1,9 @@
+"""
+SpinSleeve V2 Configuration & Constants Module (`config.py`)
+------------------------------------------------------------
+Defines project settings, GCP environment variables, Secret Manager accessors,
+brand SVGs (rotating 33 RPM vinyl platter), and Music Legend avatar presets.
+"""
 import os
 import logging
 from google.cloud import secretmanager

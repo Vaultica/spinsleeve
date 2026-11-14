@@ -1,3 +1,9 @@
+"""
+SpinSleeve V2 BigQuery Service Module (`services/bigquery.py`)
+--------------------------------------------------------------
+Manages BigQuery client connections, table materialization (INFRA-03a),
+and robust safe data parsing helpers (safe_int, safe_float, safe_str).
+"""
 import pandas as pd
 from google.cloud import bigquery
 from config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger

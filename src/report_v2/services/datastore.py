@@ -1,3 +1,10 @@
+"""
+SpinSleeve V2 Cloud Datastore Service Module (`services/datastore.py`)
+--------------------------------------------------------------------
+Manages Cloud Datastore client connections and gzipped document store caching
+for user catalogs (`UserCatalogCache`), pal compatibility (`PalCompatibilityCache`),
+and listening telemetry (`UserAnalyticsCache`).
+"""
 import time
 import json
 import gzip
