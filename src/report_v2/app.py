@@ -1,3 +1,10 @@
+"""
+SpinSleeve V2 Core Application Entrypoint (`app.py`)
+---------------------------------------------------
+Main Flask WSGI application entrypoint. Initializes the Flask application,
+configures session cookies for Firebase Hosting, registers modular blueprints
+(auth, crate, analytics, pals, admin), and serves templates.
+"""
 import os
 import sys
 # Ensure src is in python path for pipeline_v2 imports

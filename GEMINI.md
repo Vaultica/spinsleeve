@@ -38,6 +38,8 @@ This file is automatically loaded by Gemini CLI at the start of every session in
    - `fetch_pals_directory()` strictly filters for `pals_opt_in == True`. Non-opted-in users receive `PALS_LOCKED_HTML` when accessing `/pals`.
 7. **Brand Identity & Favicons:**
    - All headers and browser tabs feature the original 33⅓ RPM rotating vinyl platter SVG (`ICON_A_SVG`) with CSS keyframes, served dynamically via `/favicon.svg`.
+8. **Mandatory Python Module Headers:**
+   - Every Python file (`.py`) created or refactored MUST include a professional module header docstring at the top of the file describing its architectural purpose, responsibilities, and key exports.
 
 ---
 
