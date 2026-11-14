@@ -123,7 +123,13 @@ def beta_index():
         return render_template('landing.html', brand_icon=ICON_A_SVG, showcase_albums=showcase_albums)
 
     user_id = session["user_id"]
-    force_refresh = request.args.get("refresh") in ("1", "true")
+    force_refresh = request.args.get("refresh") in ("1", "true") or request.args.get("clear_cache") in ("1", "true")
+    if force_refresh:
+        try:
+            ds_client = get_datastore_client()
+            ds_client.delete(ds_client.key("UserCatalogCache", user_id))
+        except Exception:
+            pass
     from services.catalog import fetch_user_album_data, fetch_unowned_album_data
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
     unowned_albums = fetch_unowned_album_data(user_id)

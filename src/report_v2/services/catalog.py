@@ -26,10 +26,10 @@ def fetch_landing_showcase_albums():
     try:
         bq_client = bigquery.Client(project=PROJECT_ID)
         query = f"""
-        SELECT album_id, album_name, artist_name, image_url, release_year
+        SELECT album_id, album_name, album_artist_name, album_image_url, release_year
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
-        WHERE image_url IS NOT NULL AND image_url != ''
-        GROUP BY album_id, album_name, artist_name, image_url, release_year
+        WHERE album_image_url IS NOT NULL AND album_image_url != ''
+        GROUP BY album_id, album_name, album_artist_name, album_image_url, release_year
         ORDER BY RAND()
         LIMIT 12
         """
@@ -39,8 +39,8 @@ def fetch_landing_showcase_albums():
             albums.append({
                 "album_id": safe_str(row.get("album_id")),
                 "album_name": safe_str(row.get("album_name")),
-                "artist_name": safe_str(row.get("artist_name")),
-                "image": safe_str(row.get("image_url")),
+                "artist_name": safe_str(row.get("album_artist_name")),
+                "image": safe_str(row.get("album_image_url")),
                 "year": safe_str(row.get("release_year"))
             })
         return albums
@@ -105,6 +105,53 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
         ds_cached = get_catalog_from_datastore(user_id)
         if ds_cached:
+            cached_albums = ds_cached.get("albums", [])
+            for a in cached_albums:
+                if "album_image_url" not in a and "image" in a:
+                    a["album_image_url"] = a["image"]
+                elif "image" not in a and "album_image_url" in a:
+                    a["image"] = a["album_image_url"]
+
+                if "album_artist_name" not in a and "artist_name" in a:
+                    a["album_artist_name"] = a["artist_name"]
+                elif "artist_name" not in a and "album_artist_name" in a:
+                    a["artist_name"] = a["album_artist_name"]
+
+                if "album_genres" not in a and "genres" in a:
+                    a["album_genres"] = a["genres"]
+                elif "genres" not in a and "album_genres" in a:
+                    a["genres"] = a["album_genres"]
+
+                if "album_track_plays" not in a and "total_plays" in a:
+                    a["album_track_plays"] = a["total_plays"]
+                elif "total_plays" not in a and "album_track_plays" in a:
+                    a["total_plays"] = a["album_track_plays"]
+
+                if "album_description" not in a and "summary" in a:
+                    a["album_description"] = a["summary"]
+                elif "summary" not in a and "album_description" in a:
+                    a["summary"] = a["album_description"]
+
+            if "kpis" not in ds_cached:
+                tot_alb = len(cached_albums)
+                p_alb = sum(1 for a in cached_albums if a.get("total_plays", 0) > 0 or a.get("album_track_plays", 0) > 0)
+                p_alb_30d = sum(1 for a in cached_albums if a.get("play_count_30d", 0) > 0 or a.get("album_track_plays_30d", 0) > 0)
+                unp_alb = tot_alb - p_alb
+                tot_plays = sum(a.get("total_plays", 0) or a.get("album_track_plays", 0) for a in cached_albums)
+                tot_plays_30d = sum(a.get("play_count_30d", 0) or a.get("album_track_plays_30d", 0) for a in cached_albums)
+                pct_exp = round((p_alb / tot_alb * 100), 1) if tot_alb > 0 else 0.0
+                top_a = max(cached_albums, key=lambda x: x.get("total_plays", 0) or x.get("album_track_plays", 0)) if cached_albums else None
+                ds_cached["kpis"] = {
+                    "total_albums": tot_alb,
+                    "played_albums": p_alb,
+                    "played_albums_30d": p_alb_30d,
+                    "unplayed_albums": unp_alb,
+                    "pct_explored": pct_exp,
+                    "total_plays": tot_plays,
+                    "total_plays_30d": tot_plays_30d,
+                    "top_album": top_a["album_name"] if top_a and (top_a.get("total_plays", 0) > 0 or top_a.get("album_track_plays", 0) > 0) else None,
+                    "top_album_plays": top_a.get("total_plays", 0) or top_a.get("album_track_plays", 0) if top_a else 0
+                }
             _user_album_cache[user_id] = ds_cached
             _user_album_cache_time[user_id] = now
             return ds_cached
@@ -113,12 +160,12 @@ def fetch_user_album_data(user_id, force_refresh=False):
         bq_client = bigquery.Client(project=PROJECT_ID)
         query = f"""
         SELECT 
-            album_id, album_name, artist_name, image_url, release_year, 
-            genres, total_plays, play_count_30d, normalized_play_score,
-            gatefold_summary, pitchfork_score, discogs_rating, genres_tag, styles_tag, preview_url
+            album_id, album_name, album_artist_name, album_image_url, release_year, 
+            album_genres, album_track_plays, album_plays, album_track_plays_30d, album_plays_30d,
+            album_tracks_total, album_description, personnel, pitchfork_score, discogs_rating, enriched_styles
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         WHERE user_id = @user_id
-        ORDER BY play_count_30d DESC, total_plays DESC
+        ORDER BY album_plays_30d DESC, album_plays DESC
         """
         job_config = bigquery.QueryJobConfig(
             query_parameters=[bigquery.ScalarQueryParameter("user_id", "STRING", user_id)]
@@ -129,33 +176,89 @@ def fetch_user_album_data(user_id, force_refresh=False):
         genre_counter = Counter()
 
         for _, row in df.iterrows():
-            genres_str = safe_str(row.get("genres"), "")
+            genres_str = safe_str(row.get("album_genres"), "")
             if genres_str:
                 for g in genres_str.split(","):
                     g_clean = g.strip().title()
                     if g_clean:
                         genre_counter[g_clean] += 1
 
+            aid = safe_str(row.get("album_id"))
+            aname = safe_str(row.get("album_name"), "Unknown Album")
+            arname = safe_str(row.get("album_artist_name"), "Unknown Artist")
+            img_url = safe_str(row.get("album_image_url"))
+            r_year = safe_str(row.get("release_year"), "2024")
+            tr_plays = safe_int(row.get("album_track_plays"), 0)
+            alb_plays = safe_float(row.get("album_plays"), 0.0)
+            tr_plays_30d = safe_int(row.get("album_track_plays_30d"), 0)
+            alb_plays_30d = safe_float(row.get("album_plays_30d"), 0.0)
+            tr_total = safe_int(row.get("album_tracks_total"), 0)
+            desc = safe_str(row.get("album_description"))
+            pers = safe_str(row.get("personnel"))
+            pf = safe_str(row.get("pitchfork_score"))
+            disc_rat = safe_float(row.get("discogs_rating"), 0.0)
+            styles_str = safe_str(row.get("enriched_styles"))
+            has_gf = bool(desc or pers)
+
             albums.append({
-                "album_id": safe_str(row.get("album_id")),
-                "album_name": safe_str(row.get("album_name"), "Unknown Album"),
-                "artist_name": safe_str(row.get("artist_name"), "Unknown Artist"),
-                "image": safe_str(row.get("image_url")),
-                "year": safe_str(row.get("release_year"), "2024"),
+                "album_id": aid,
+                "album_name": aname,
+                "album_artist_name": arname,
+                "album_image_url": img_url,
+                "release_year": r_year,
+                "album_genres": genres_str,
+                "album_track_plays": tr_plays,
+                "album_plays": alb_plays,
+                "album_track_plays_30d": tr_plays_30d,
+                "album_plays_30d": alb_plays_30d,
+                "album_tracks_total": tr_total,
+                "album_description": desc,
+                "personnel": pers,
+                "pitchfork_score": pf,
+                "discogs_rating": disc_rat,
+                "enriched_styles": styles_str,
+                "album_url": f"https://open.spotify.com/album/{aid}" if aid else "",
+                "has_gatefold": has_gf,
+                "image": img_url,
+                "artist_name": arname,
+                "year": r_year,
                 "genres": genres_str,
-                "total_plays": safe_int(row.get("total_plays"), 0),
-                "play_count_30d": safe_int(row.get("play_count_30d"), 0),
-                "normalized_play_score": safe_float(row.get("normalized_play_score"), 1.0),
-                "summary": safe_str(row.get("gatefold_summary")),
-                "pitchfork": safe_str(row.get("pitchfork_score")),
-                "discogs": safe_float(row.get("discogs_rating"), 0.0),
-                "genres_tag": safe_str(row.get("genres_tag")),
-                "styles_tag": safe_str(row.get("styles_tag")),
-                "preview_url": safe_str(row.get("preview_url"))
+                "total_plays": tr_plays,
+                "play_count_30d": tr_plays_30d,
+                "normalized_play_score": alb_plays,
+                "summary": desc,
+                "pitchfork": pf,
+                "discogs": disc_rat,
+                "styles_tag": styles_str,
+                "preview_url": ""
             })
 
+        total_albums = len(albums)
+        played_albums = sum(1 for a in albums if a["total_plays"] > 0)
+        played_albums_30d = sum(1 for a in albums if a["play_count_30d"] > 0)
+        unplayed_albums = total_albums - played_albums
+        total_plays = sum(a["total_plays"] for a in albums)
+        total_plays_30d = sum(a["play_count_30d"] for a in albums)
+        pct_explored = round((played_albums / total_albums * 100), 1) if total_albums > 0 else 0.0
+
+        top_album = max(albums, key=lambda x: x["total_plays"]) if albums else None
+        top_album_name = top_album["album_name"] if top_album and top_album["total_plays"] > 0 else None
+        top_album_plays = top_album["total_plays"] if top_album and top_album["total_plays"] > 0 else 0
+
+        kpis = {
+            "total_albums": total_albums,
+            "played_albums": played_albums,
+            "played_albums_30d": played_albums_30d,
+            "unplayed_albums": unplayed_albums,
+            "pct_explored": pct_explored,
+            "total_plays": total_plays,
+            "total_plays_30d": total_plays_30d,
+            "top_album": top_album_name,
+            "top_album_plays": top_album_plays
+        }
+
         top_genres = [g for g, count in genre_counter.most_common(10)]
-        payload = {"albums": albums, "top_genres": top_genres}
+        payload = {"albums": albums, "top_genres": top_genres, "kpis": kpis}
 
         save_catalog_to_datastore(user_id, payload)
         _user_album_cache[user_id] = payload

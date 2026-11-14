@@ -6,16 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [v2.6.5] — 2026-11-12
-### 🛠️ Config Module Rename (`app_config.py`), Dockerfile Bundling Fix & Post-Deployment Curl Health Verification
+## [v2.6.5] — 2026-11-14
+### 🛠️ Config Module Rename (`app_config.py`), Dockerfile Bundling Fix, `/recommend` Internal Server Error Fix & Schema Column Alignment
 * **What:**
   - **Config Module Rename & Gemignore Conflict Resolution:** Renamed `config.py` to `app_config.py` to bypass `.geminiignore` file exclusion conflicts and ensure reliable container building.
   - **Dockerfile Bundling Fix:** Updated `src/report_v2/Dockerfile` to explicitly copy `app_config.py`, `routes/`, `services/`, and `templates/` for the modular Flask app factory.
+  - **`/recommend` Internal Server Error & Datastore Cache Fallback Fix:** Fixed `KeyError: 'kpis'` / 500 errors when loading catalog data from Cloud Datastore cache by dynamically generating default KPI metrics and ensuring fallback field mappings (`album_image_url` <-> `image`, `album_artist_name` <-> `artist_name`, `album_genres` <-> `genres`, `album_track_plays` <-> `total_plays`, `album_description` <-> `summary`).
+  - **Materialized Schema Column Alignment:** Updated `src/report_v2/services/catalog.py` to correctly map materialized table column names (`album_image_url`, `album_artist_name`, `album_genres`, `album_track_plays`, `album_plays`, `album_description`) across all library and crate digger views.
+  - **Cache Clearing Parameter (`?clear_cache=1`):** Added support for `?clear_cache=1` (alongside `?refresh=1`) to force-invalidate the user catalog cache in Cloud Datastore and BigQuery.
   - **Post-Deployment Automated Health Verification:** Added automated post-deployment `curl` health verification steps to the `@deploy_assistant` subagent protocol.
 * **Why:**
-  - Resolves `ModuleNotFoundError: No module named 'config'` during Cloud Run service startup, prevents container build omissions, and guarantees immediate post-deployment availability checking.
+  - Resolves `ModuleNotFoundError: No module named 'config'`, prevents `/recommend` 500 errors on Datastore cache hits, fixes library grid display issues due to schema column mismatches, and guarantees immediate post-deployment availability checking.
 * **How:**
-  - Renamed `config.py` to `app_config.py`, updated all internal imports, updated `src/report_v2/Dockerfile`, updated `.gemini/agents/deploy_assistant.md`, bumped `APP_VERSION` to `v2.6.5`, and updated release ledgers.
+  - Renamed `config.py` to `app_config.py`, updated `src/report_v2/services/catalog.py`, `src/report_v2/routes/crate.py`, `src/report_v2/Dockerfile`, added unit tests in `tests/test_crate_digger_polish.py`, bumped `APP_VERSION` to `v2.6.5`, and updated release ledgers.
 
 ---
 

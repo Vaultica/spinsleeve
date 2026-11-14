@@ -89,6 +89,16 @@ class TestCrateDiggerPolish(unittest.TestCase):
         self.assertEqual(spin_count, 1, "Should have exactly one Spin Again button (de-duplicated from header)")
         self.assertIn('<span>🎲</span> Spin Again', BETA_RECOMMEND_HTML)
 
+    def test_recommend_route_renders_without_key_error(self):
+        """Verify that visiting /recommend via Flask test client succeeds (200 OK) with valid kpis payload."""
+        from report_v2.app import app
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["user_id"] = "test_user"
+                sess["display_name"] = "Test User"
+            res = client.get("/recommend", follow_redirects=True)
+            self.assertEqual(res.status_code, 200)
+
 
 if __name__ == "__main__":
     unittest.main()
