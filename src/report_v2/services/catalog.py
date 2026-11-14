@@ -270,3 +270,38 @@ def fetch_unowned_album_data(user_id, horizon="all"):
     except Exception as e:
         logger.error("Error fetching unowned albums for %s: %s", user_id, e)
         return []
+
+
+def compute_normalized_album_plays(track_plays, tracks_total, is_30d=False):
+    """
+    Computes normalized complete album spins, display badge string, and hover tooltip (APP-05 & APP-06).
+    """
+    try:
+        tp = float(track_plays) if track_plays is not None else 0.0
+        tt = int(tracks_total) if tracks_total is not None and int(tracks_total) > 0 else 0
+    except (ValueError, TypeError):
+        tp = 0.0
+        tt = 0
+
+    period_label = "in last 30 days " if is_30d else ""
+    badge_suffix = " (30D)" if is_30d else ""
+
+    if tp <= 0:
+        return 0.0, "💤 Never Played", f"Never played (0 plays){' in last 30 days' if is_30d else ''}"
+
+    if tt > 0:
+        norm_plays = round(tp / tt, 1)
+        if norm_plays.is_integer():
+            norm_plays = int(norm_plays)
+        tooltip = f"Estimated complete album spins {period_label}based on {int(tp) if tp.is_integer() else tp} track plays across {tt} tracks".strip()
+    else:
+        norm_plays = int(tp) if tp.is_integer() else tp
+        period_name = "30-day track plays" if is_30d else "Total track plays"
+        tooltip = f"{period_name}: {int(tp) if tp.is_integer() else tp} (track count unavailable)"
+
+    if norm_plays == 1:
+        display_badge = f"🔥 1 Play{badge_suffix}"
+    else:
+        display_badge = f"🔥 {norm_plays} Plays{badge_suffix}"
+
+    return norm_plays, display_badge, tooltip

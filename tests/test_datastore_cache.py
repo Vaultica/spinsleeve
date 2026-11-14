@@ -57,7 +57,7 @@ class TestDatastoreCatalogCache(unittest.TestCase):
         decompressed = json.loads(gzip.decompress(compressed).decode("utf-8"))
         self.assertEqual(decompressed, sample_catalog)
 
-    @patch("report_v2.app.get_datastore_client")
+    @patch("services.datastore.get_datastore_client")
     def test_save_and_get_catalog_mocked(self, mock_ds_client_func):
         mock_ds = MagicMock()
         mock_ds_client_func.return_value = mock_ds
@@ -97,7 +97,7 @@ class TestDatastoreCatalogCache(unittest.TestCase):
         self.assertIsNotNone(retrieved)
         self.assertEqual(retrieved["albums"][0]["album_name"], "In Rainbows")
 
-    @patch("report_v2.app.get_datastore_client")
+    @patch("services.datastore.get_datastore_client")
     def test_get_catalog_expired_returns_none(self, mock_ds_client_func):
         mock_ds = MagicMock()
         mock_ds_client_func.return_value = mock_ds
@@ -113,8 +113,8 @@ class TestDatastoreCatalogCache(unittest.TestCase):
         result = get_catalog_from_datastore("expired_user")
         self.assertIsNone(result)
 
-    @patch("report_v2.app.get_catalog_from_datastore")
-    @patch("report_v2.app.bigquery.Client")
+    @patch("services.catalog.get_catalog_from_datastore")
+    @patch("services.catalog.bigquery.Client")
     def test_fetch_user_album_data_tier2_cache_hit(self, mock_bq_client_class, mock_get_ds_catalog):
         mock_get_ds_catalog.return_value = {
             "albums": [{"album_name": "OK Computer", "album_plays_display": "🔥 10 Plays"}],

@@ -42,11 +42,13 @@ graph TD
 
 ## 3. Project File Map
 
-* **`src/report_v2/app.py`:** Production multi-tenant Flask application (`Library Explorer`, `Crate Digger`, `Analytics`, `SpinPals`, and `Admin Control Deck`).
+* **`src/report_v2/app.py`:** Lean Flask application factory and entrypoint.
+* **`src/report_v2/routes/`:** Modular Flask route blueprints (`auth.py`, `crate.py`, `analytics.py`, `pals.py`, `admin.py`).
+* **`src/report_v2/services/`:** Core business logic and data services (`catalog.py`, `analytics.py`, `pals.py`, `datastore.py`, `bigquery.py`, `avatars.py`, `spotify.py`).
 * **`src/pipeline_v2/sync.py`:** Automated multi-tenant synchronization engine ingesting plays and saved albums into BigQuery.
 * **`src/pipeline_v2/enrich.py`:** V2 album metadata scraper enriching records with 12" gatefold archival liner notes.
 * **`manage_users.py`:** Administrative CLI tool for managing user approvals and permissions.
-* **`INFRA_RUNBOOK.md` & `TECHNICAL_SPECS.md`:** Comprehensive infrastructure runbooks and technical specifications.
+* **`INFRASTRUCTURE_RUNBOOK.md` & `TECHNICAL_SPECS.md`:** Comprehensive infrastructure runbooks and technical specifications.
 
 ---
 
