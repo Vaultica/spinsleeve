@@ -6,7 +6,7 @@ whitelist pre-approvals, SpinPals opt-in toggles, and user management.
 """
 import datetime
 import logging
-from flask import Blueprint, render_template_string, request, redirect, session
+from flask import Blueprint, render_template, request, redirect, session
 from google.cloud import datastore
 
 from config import ADMIN_USER_IDS, ICON_A_SVG, logger
@@ -33,8 +33,7 @@ def admin_panel():
                     client.put(u)
                 except Exception as e:
                     logger.warning("Could not persist pals_opt_in for admin %s: %s", uid, e)
-    from app import ADMIN_HTML_TEMPLATE
-    return render_template_string(ADMIN_HTML_TEMPLATE, users=users, brand_icon=ICON_A_SVG)
+    return render_template('admin.html', users=users, brand_icon=ICON_A_SVG)
 
 
 @admin_bp.route("/admin/toggle/<spotify_id>", methods=["POST"])

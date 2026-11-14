@@ -6,7 +6,7 @@ Unowned Crate ("You Should Save These") API, and 1-click album saving (`/api/sav
 """
 import datetime
 import logging
-from flask import Blueprint, render_template_string, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session
 import spotipy
 from google.cloud import bigquery
 
@@ -118,18 +118,18 @@ def api_save_album():
 @crate_bp.route("/beta/")
 def beta_index():
     if "user_id" not in session:
-        from app import fetch_landing_showcase_albums, LANDING_PAGE_HTML
+        from services.catalog import fetch_landing_showcase_albums
         showcase_albums = fetch_landing_showcase_albums()
-        return render_template_string(LANDING_PAGE_HTML, brand_icon=ICON_A_SVG, showcase_albums=showcase_albums)
+        return render_template('landing.html', brand_icon=ICON_A_SVG, showcase_albums=showcase_albums)
 
     user_id = session["user_id"]
     force_refresh = request.args.get("refresh") in ("1", "true")
-    from app import fetch_user_album_data, fetch_unowned_album_data, EXPLORER_HTML
+    from services.catalog import fetch_user_album_data, fetch_unowned_album_data
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
     unowned_albums = fetch_unowned_album_data(user_id)
 
-    return render_template_string(
-        EXPLORER_HTML,
+    return render_template(
+        'explorer.html',
         albums=data["albums"],
         unowned_albums=unowned_albums,
         top_genres=data["top_genres"],

@@ -1,0 +1,941 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinSleeve - {{ user.display_name }}'s Analytics</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
+        .card-bg { background-color: #14181f; }
+        .active-pill { background-color: #1DB954; color: #000; font-weight: 700; }
+        .inactive-pill { background-color: #1b2127; color: #9ca3af; border: 1px solid #28323c; }
+        .inactive-pill:hover { background-color: #28323c; color: #fff; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        .flatpickr-calendar { background: #14181f !important; border: 1px solid #374151 !important; border-radius: 1rem !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5) !important; }
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1DB954 !important; border-color: #1DB954 !important; color: #000 !important; font-weight: bold !important; }
+        .flatpickr-day.inRange { background: rgba(29, 185, 84, 0.2) !important; border-color: transparent !important; color: #fff !important; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Persistent Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 flex-shrink-0">
+                        {{ brand_icon | safe }}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-3xl font-extrabold tracking-tight">
+                            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
+                        </h1>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">ANALYTICS</span>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Deep listening telemetry, taste velocity &amp; acoustic habits for {{ user.display_name }}</p>
+            </div>
+
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+                <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Library
+                </a>
+                <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                </a>
+                <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    SpinPals
+                </a>
+            </nav>
+
+            <!-- User Status & Quick Audio Toggle -->
+            <div class="flex flex-wrap items-center gap-3">
+                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
+                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
+                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
+                </button>
+                {% if is_admin %}
+                <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
+                    ⚙️ Admin
+                </a>
+                {% endif %}
+                <div class="relative flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5" id="userProfileWidget">
+                    <button type="button" onclick="toggleAvatarDropdown(event)"
+                            class="relative w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 hover:border-emerald-400 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0 focus:outline-none"
+                            title="Click for settings & avatar picker">
+                        <img class="headerUserAvatarImg w-full h-full object-cover" src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}">
+                    </button>
+
+                    <!-- Avatar & Settings Dropdown Menu (POLISH-08) -->
+                    <div class="avatarPickerDropdown hidden absolute right-0 top-full mt-2 w-72 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
+                            <div>
+                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">User Settings</span>
+                                <p class="text-[10px] text-gray-400">{{ user.display_name }}'s Crate &amp; Lounge</p>
+                            </div>
+                            <button type="button" onclick="closeAvatarDropdown(event)" class="text-gray-400 hover:text-white text-xs p-1 leading-none font-bold">&times;</button>
+                        </div>
+
+                        <div class="space-y-2 mb-3 pb-3 border-b border-gray-800">
+                            <button type="button" onclick="toggleUserPalsOptIn()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">🤝 Opt-in SpinPals</span>
+                                <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <button type="button" onclick="toggleUserSyncPause()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-amber-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">⏸️ Sync Pause</span>
+                                <span id="syncPauseStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.sync_paused %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.sync_paused %}Paused{% else %}Active{% endif %}
+                                </span>
+                            </button>
+                            <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
+                            <button type="button" onclick="document.getElementById('historyUploadInput').click()"
+                                    class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition">
+                                📂 Import History (.json / .zip)
+                            </button>
+                            <div id="historyUploadStatus" class="hidden text-[10px] text-center font-bold text-amber-400 pt-1"></div>
+                            <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
+                                🚪 Logout ({{ user.display_name }})
+                            </a>
+                        </div>
+
+                        <div class="mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Music Legend Persona</span>
+                        </div>
+                        <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
+                            <button type="button" onclick="selectAvatarPreset('spotify', event)"
+                                    class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
+                                    {% if user.spotify_avatar_url %}
+                                    <img src="{{ user.spotify_avatar_url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <span class="text-xs">🟢</span>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs font-bold text-white truncate group-hover:text-emerald-400">Spotify Profile</div>
+                                    <div class="text-[10px] text-gray-400 truncate">Default Spotify photo</div>
+                                </div>
+                                {% if not user.custom_avatar_id %}
+                                <span class="text-emerald-400 text-xs font-bold shrink-0">✓</span>
+                                {% endif %}
+                            </button>
+
+                            {% if avatar_presets %}
+                            {% for preset in avatar_presets %}
+                            <button type="button" onclick="selectAvatarPreset('{{ preset.id }}', event)"
+                                    class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if user.custom_avatar_id == preset.id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
+                                    <img src="/avatar/{{ preset.id }}.svg" alt="{{ preset.name }}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs font-bold text-white truncate group-hover:text-emerald-400">{{ preset.name }}</div>
+                                    <div class="text-[10px] text-gray-400 truncate">{{ preset.badge }} {{ preset.era }} • {{ preset.desc }}</div>
+                                </div>
+                                {% if user.custom_avatar_id == preset.id %}
+                                <span class="text-emerald-400 text-xs font-bold shrink-0">✓</span>
+                                {% endif %}
+                            </button>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <div class="avatarSaveStatus hidden mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-emerald-400">
+                            ✓ Persona saved!
+                        </div>
+                    </div>
+
+                    <span class="text-xs font-bold text-white">{{ user.display_name }}</span>
+                    {% if is_impersonating %}
+                    <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
+                        <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        
+
+        <!-- Filter Control Bar -->
+        <div class="card-bg p-4 rounded-2xl border border-gray-800 mb-6 shadow-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1">Period:</span>
+                <button onclick="setRange('1d')" id="btn-1d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">Last 24h</button>
+                <button onclick="setRange('7d')" id="btn-7d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">7 Days</button>
+                <button onclick="setRange('30d')" id="btn-30d" class="active-pill px-3 py-1.5 rounded-lg text-xs transition">30 Days</button>
+                <button onclick="setRange('60d')" id="btn-60d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">60 Days</button>
+                <button onclick="setRange('90d')" id="btn-90d" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">90 Days</button>
+                <button onclick="setRange('year')" id="btn-year" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">This Year</button>
+                <button onclick="setRange('all')" id="btn-all" class="inactive-pill px-3 py-1.5 rounded-lg text-xs transition">All Time</button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="relative flex items-center">
+                    <input type="text" id="calendarPicker" placeholder="📅 Pick custom dates..."
+                           class="bg-[#0c0f12] border border-gray-700/80 hover:border-emerald-500/60 focus:border-[#1DB954] rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none transition cursor-pointer w-48 shadow-inner font-medium">
+                </div>
+
+                <div class="relative">
+                    <select id="genreSelect" onchange="onFilterChange()" class="bg-[#0c0f12] border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954] appearance-none pr-7">
+                        <option value="all">All Genres</option>
+                        {% for g in top_genres %}
+                        <option value="{{ g }}">{{ g.title() }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 text-xs">▼</div>
+                </div>
+
+                <div id="loadingSpinner" class="hidden">
+                    <div class="w-4 h-4 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 KPI SUMMARY TILES -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Albums Explored</p>
+                <div class="mt-2">
+                    <p id="kpiAlbums" class="text-3xl font-black text-white">--</p>
+                    <p id="kpiAlbumsSub" class="text-[11px] text-gray-400 mt-1">-- fresh / -- repeat</p>
+                </div>
+            </div>
+
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Stream Events</p>
+                <div class="mt-2">
+                    <p id="kpiTracks" class="text-3xl font-black text-white">--</p>
+                    <p id="kpiTracksSub" class="text-[11px] text-gray-400 mt-1">Individual track plays</p>
+                </div>
+            </div>
+
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Listening Time</p>
+                <div class="mt-2">
+                    <p id="kpiTime" class="text-3xl font-black text-[#1DB954]">--</p>
+                    <p id="kpiTimeSub" class="text-[11px] text-gray-400 mt-1">Est. at ~3.5 min/track</p>
+                </div>
+            </div>
+
+            <div class="card-bg p-4 rounded-2xl border border-gray-800 shadow-sm flex items-center gap-3">
+                <div class="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-gray-900 border border-gray-800 shadow">
+                    <img id="kpiTopImage" src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80" alt="Top Album" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Top Album</p>
+                    <h4 id="kpiTopTitle" class="text-sm font-bold text-white truncate mt-0.5">--</h4>
+                    <p id="kpiTopArtist" class="text-xs text-gray-400 truncate">--</p>
+                    <p id="kpiTopPlays" class="text-[11px] text-[#1DB954] font-bold mt-0.5">-- plays</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 1: PLAYS OVER TIME & DISCOVERY VELOCITY -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="lg:col-span-2 card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Daily Listening Activity</h3>
+                        <p class="text-xs text-gray-400">Track play volume across the selected window</p>
+                    </div>
+                    <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                        Activity Stream
+                    </span>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="timeSeriesChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Taste Velocity</h3>
+                        <p class="text-xs text-gray-400">Fresh Discoveries vs. Catalog Repeats</p>
+                    </div>
+                </div>
+                <div class="relative h-56 w-full flex items-center justify-center">
+                    <canvas id="discoveryChart"></canvas>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-800 text-center text-xs">
+                    <div>
+                        <span class="text-emerald-400 font-bold block" id="freshPct">--%</span>
+                        <span class="text-gray-400 text-[11px]" id="freshCount">-- Fresh</span>
+                    </div>
+                    <div>
+                        <span class="text-amber-400 font-bold block" id="repeatPct">--%</span>
+                        <span class="text-gray-400 text-[11px]" id="repeatCount">-- Repeat</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 2: TOP 10 ALBUMS, ARTISTS, AND TRACKS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col">
+                <div class="flex items-center justify-between mb-3.5">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>💿</span> Top 10 Albums
+                    </h3>
+                </div>
+                <div id="topAlbumsList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll"></div>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col">
+                <div class="flex items-center justify-between mb-3.5">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🎤</span> Top 10 Artists
+                    </h3>
+                </div>
+                <div class="relative flex-1 min-h-[380px] w-full">
+                    <canvas id="artistChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col">
+                <div class="flex items-center justify-between mb-3.5">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🎵</span> Top 10 Tracks
+                    </h3>
+                </div>
+                <div id="topTracksList" class="space-y-2 flex-1 overflow-y-auto max-h-[440px] pr-1 custom-scroll"></div>
+            </div>
+        </div>
+
+        <!-- ROW 3: RELEASE ERA & GENRE ECOSYSTEM -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>⏳</span> Release Era "Time Machine"
+                        </h3>
+                        <p class="text-xs text-gray-400">Listening volume by original album release decade</p>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="eraChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>🎷</span> Genre Ecosystem
+                        </h3>
+                        <p class="text-xs text-gray-400">Distribution of top music styles</p>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="genreChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 4: THE LISTENING CLOCK (Heatmap) -->
+        <div class="card-bg p-5 rounded-2xl border border-gray-800 shadow-md mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-800/80 mb-4 gap-2">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🕒</span> The "Listening Clock" Heatmap
+                    </h3>
+                    <p class="text-xs text-gray-400">Acoustic rhythm: Play intensity across hour of the day (00:00–23:00) and day of the week</p>
+                </div>
+                <div class="flex items-center gap-1.5 text-[10px] text-gray-400">
+                    <span>Less</span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#161c22]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#0e4429]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#006d32]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#26a641]"></span>
+                    <span class="w-2.5 h-2.5 rounded bg-[#39d353]"></span>
+                    <span>More</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto pb-2">
+                <div class="min-w-[680px]">
+                    <div class="flex items-center pl-12 pr-2 mb-1.5 text-[10px] font-mono text-gray-500">
+                        {% for h in range(24) %}
+                        <div class="flex-1 text-center">{{ "%02d" % h }}</div>
+                        {% endfor %}
+                    </div>
+                    <div id="heatmapGrid" class="space-y-1.5"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRange = '30d';
+        let customStart = null;
+        let customEnd = null;
+        let fpInstance = null;
+
+        let timeSeriesChartInstance = null;
+        let discoveryChartInstance = null;
+        let artistChartInstance = null;
+        let eraChartInstance = null;
+        let genreChartInstance = null;
+
+        const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+        function setRange(range) {
+            currentRange = range;
+            customStart = null;
+            customEnd = null;
+            if (fpInstance) fpInstance.clear();
+
+            ['1d', '7d', '30d', '60d', '90d', 'year', 'all'].forEach(r => {
+                const btn = document.getElementById(`btn-${r}`);
+                if (btn) {
+                    btn.className = (r === range)
+                        ? 'active-pill px-3 py-1.5 rounded-lg text-xs transition'
+                        : 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
+                }
+            });
+
+            loadAnalytics();
+        }
+
+        function onFilterChange() {
+            loadAnalytics();
+        }
+
+        async function loadAnalytics() {
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) spinner.classList.remove('hidden');
+
+            const genre = document.getElementById('genreSelect').value;
+            let url = `/beta/api/analytics?range=${encodeURIComponent(currentRange)}&genre=${encodeURIComponent(genre)}`;
+            if (customStart && customEnd) {
+                url += `&start=${encodeURIComponent(customStart)}&end=${encodeURIComponent(customEnd)}`;
+            }
+            if (window.location.search.includes('refresh=1') || window.location.search.includes('refresh=true')) {
+                url += '&refresh=1';
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                renderDashboard(data);
+            } catch (err) {
+                console.error("Failed to load analytics:", err);
+            } finally {
+                if (spinner) spinner.classList.add('hidden');
+            }
+        }
+
+        function renderDashboard(data) {
+            document.getElementById('kpiAlbums').textContent = (data.kpis.total_albums || 0).toLocaleString();
+            document.getElementById('kpiAlbumsSub').textContent = `${data.discovery_vs_repeat.fresh_albums} fresh / ${data.discovery_vs_repeat.repeat_albums} repeat`;
+            document.getElementById('kpiTracks').textContent = (data.kpis.total_tracks || 0).toLocaleString();
+            document.getElementById('kpiTime').textContent = data.kpis.listening_time || '0h 0m';
+
+            if (data.kpis.top_album) {
+                document.getElementById('kpiTopImage').src = data.kpis.top_album.image;
+                document.getElementById('kpiTopTitle').textContent = data.kpis.top_album.name;
+                document.getElementById('kpiTopArtist').textContent = data.kpis.top_album.artist;
+                document.getElementById('kpiTopPlays').textContent = `${data.kpis.top_album.plays} plays`;
+            } else {
+                document.getElementById('kpiTopTitle').textContent = 'None';
+                document.getElementById('kpiTopArtist').textContent = '--';
+                document.getElementById('kpiTopPlays').textContent = '0 plays';
+            }
+
+            renderTimeSeries(data.time_series);
+            renderDiscovery(data.discovery_vs_repeat);
+            renderTopAlbums(data.top_albums);
+            renderTopArtists(data.top_artists);
+            renderTopTracks(data.top_tracks);
+            renderEras(data.eras);
+            renderGenres(data.genres);
+            renderHeatmap(data.heatmap);
+        }
+
+        function renderTimeSeries(series) {
+            const ctx = document.getElementById('timeSeriesChart').getContext('2d');
+            if (timeSeriesChartInstance) timeSeriesChartInstance.destroy();
+
+            const labels = series.map(s => s.date.slice(5));
+            const values = series.map(s => s.plays);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 240);
+            gradient.addColorStop(0, 'rgba(29, 185, 84, 0.4)');
+            gradient.addColorStop(1, 'rgba(29, 185, 84, 0.0)');
+
+            timeSeriesChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Plays',
+                        data: values,
+                        borderColor: '#1DB954',
+                        backgroundColor: gradient,
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#1DB954',
+                        pointRadius: values.length > 30 ? 0 : 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderDiscovery(disc) {
+            const ctx = document.getElementById('discoveryChart').getContext('2d');
+            if (discoveryChartInstance) discoveryChartInstance.destroy();
+
+            document.getElementById('freshPct').textContent = `${disc.fresh_pct}%`;
+            document.getElementById('freshCount').textContent = `${disc.fresh_albums} Fresh Albums`;
+            document.getElementById('repeatPct').textContent = `${disc.repeat_pct}%`;
+            document.getElementById('repeatCount').textContent = `${disc.repeat_albums} Repeat Albums`;
+
+            discoveryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Fresh Discoveries', 'Catalog Repeats'],
+                    datasets: [{
+                        data: [disc.fresh_plays, disc.repeat_plays],
+                        backgroundColor: ['#10b981', '#f59e0b'],
+                        borderColor: '#14181f',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 }, boxWidth: 12 } }
+                    }
+                }
+            });
+        }
+
+        function renderTopAlbums(albums) {
+            const container = document.getElementById('topAlbumsList');
+            if (!albums || albums.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 py-6 text-center">No albums played in this period.</p>';
+                return;
+            }
+            const maxPlays = albums[0].plays || 1;
+            container.innerHTML = albums.map((a, i) => `
+                <div class="flex items-center gap-3 p-2 rounded-xl bg-black/25 border border-gray-800/60 hover:border-gray-700 transition">
+                    <span class="text-xs font-bold text-gray-500 w-4 text-center">${i + 1}</span>
+                    <div class="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-900 border border-gray-800 shadow">
+                        <img src="${a.image}" alt="${a.name}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h5 class="text-xs font-bold text-white truncate">${a.name}</h5>
+                        <p class="text-[11px] text-gray-400 truncate">${a.artist}</p>
+                        <div class="w-full bg-gray-800/80 h-1 rounded-full overflow-hidden mt-1.5">
+                            <div class="bg-[#1DB954] h-full rounded-full" style="width: ${(a.plays / maxPlays) * 100}%"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs font-black text-[#1DB954] px-2 py-0.5 rounded-lg bg-[#1DB954]/10 border border-[#1DB954]/20 shrink-0">
+                        ${a.plays}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function renderTopArtists(artists) {
+            const ctx = document.getElementById('artistChart').getContext('2d');
+            if (artistChartInstance) artistChartInstance.destroy();
+
+            artistChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: artists.map(a => a.name),
+                    datasets: [{
+                        label: 'Plays',
+                        data: artists.map(a => a.plays),
+                        backgroundColor: 'rgba(29, 185, 84, 0.85)',
+                        borderColor: '#1DB954',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } }, beginAtZero: true },
+                        y: { grid: { display: false }, ticks: { color: '#e5e7eb', font: { size: 11, weight: 'bold' } } }
+                    }
+                }
+            });
+        }
+
+        function renderTopTracks(tracks) {
+            const container = document.getElementById('topTracksList');
+            if (!tracks || tracks.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 py-6 text-center">No tracks played in this period.</p>';
+                return;
+            }
+            container.innerHTML = tracks.map((t, i) => `
+                <div class="flex items-center gap-2.5 p-2 rounded-xl bg-black/25 border border-gray-800/60 hover:border-gray-700 transition">
+                    <span class="text-xs font-bold text-gray-500 w-4 text-center">${i + 1}</span>
+                    <div class="flex-1 min-w-0">
+                        <h5 class="text-xs font-bold text-white truncate">${t.title}</h5>
+                        <p class="text-[11px] text-gray-400 truncate">${t.artist} • <span class="text-gray-500">${t.album}</span></p>
+                    </div>
+                    <span class="text-[11px] font-bold text-gray-300 px-2 py-0.5 rounded-md bg-gray-800 border border-gray-700 shrink-0">
+                        ${t.plays} plays
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function renderEras(eras) {
+            const ctx = document.getElementById('eraChart').getContext('2d');
+            if (eraChartInstance) eraChartInstance.destroy();
+
+            eraChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: eras.map(e => e.era),
+                    datasets: [{
+                        label: 'Plays',
+                        data: eras.map(e => e.plays),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#e5e7eb', font: { size: 11, weight: 'bold' } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderGenres(genres) {
+            const ctx = document.getElementById('genreChart').getContext('2d');
+            if (genreChartInstance) genreChartInstance.destroy();
+
+            const palette = ['#1DB954', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#eab308', '#14b8a6'];
+
+            genreChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: genres.map(g => g.genre),
+                    datasets: [{
+                        data: genres.map(g => g.plays),
+                        backgroundColor: palette.slice(0, genres.length),
+                        borderColor: '#14181f',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#9ca3af', font: { size: 10 }, boxWidth: 10 } }
+                    }
+                }
+            });
+        }
+
+        function renderHeatmap(matrix) {
+            const container = document.getElementById('heatmapGrid');
+            if (!container || !matrix) return;
+
+            let maxVal = 1;
+            for (let r of matrix) {
+                for (let v of r) {
+                    if (v > maxVal) maxVal = v;
+                }
+            }
+
+            container.innerHTML = matrix.map((row, dIdx) => {
+                const dayName = dayNames[dIdx];
+                const cells = row.map((count, hIdx) => {
+                    let bg = '#161c22';
+                    if (count > 0) {
+                        const ratio = count / maxVal;
+                        if (ratio < 0.25) bg = '#0e4429';
+                        else if (ratio < 0.5) bg = '#006d32';
+                        else if (ratio < 0.75) bg = '#26a641';
+                        else bg = '#39d353';
+                    }
+                    const hourStr = `${hIdx.toString().padStart(2, '0')}:00`;
+                    return `
+                        <div class="flex-1 h-5 rounded-sm transition-all hover:scale-125 cursor-pointer"
+                             style="background-color: ${bg};"
+                             title="${dayName} ${hourStr} - ${count} plays">
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-10 text-[10px] font-mono text-gray-400 font-bold text-right pr-2">${dayName}</span>
+                        <div class="flex-1 flex items-center gap-1">
+                            ${cells}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let isAudioEnabled = localStorage.getItem('spinAudioEnabled') !== 'false';
+        function toggleHoverAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            localStorage.setItem('spinAudioEnabled', isAudioEnabled);
+            const btnText = document.getElementById('audioText');
+            const btnIcon = document.getElementById('audioIcon');
+            if (isAudioEnabled) {
+                if (btnText) btnText.innerText = 'Hover Audio: ON';
+                if (btnIcon) btnIcon.innerText = '🔊';
+            } else {
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!isAudioEnabled) {
+                const btnText = document.getElementById('audioText');
+                const btnIcon = document.getElementById('audioIcon');
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
+            fpInstance = flatpickr("#calendarPicker", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "M j, Y",
+                maxDate: "today",
+                onClose: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2) {
+                        customStart = instance.formatDate(selectedDates[0], "Y-m-d");
+                        customEnd = instance.formatDate(selectedDates[1], "Y-m-d");
+                        currentRange = 'custom';
+
+                        ['1d', '7d', '30d', '60d', '90d', 'year', 'all'].forEach(r => {
+                            const btn = document.getElementById(`btn-${r}`);
+                            if (btn) btn.className = 'inactive-pill px-3 py-1.5 rounded-lg text-xs transition';
+                        });
+
+                        loadAnalytics();
+                    }
+                }
+            });
+
+            loadAnalytics();
+        });
+
+        /* Avatar Persona Picker Handlers (APP-04) */
+        function toggleAvatarDropdown(e) {
+            if (e) e.stopPropagation();
+            const d = document.querySelector('.avatarPickerDropdown');
+            if (d) d.classList.toggle('hidden');
+        }
+
+        function closeAvatarDropdown(e) {
+            if (e) e.stopPropagation();
+            const d = document.querySelector('.avatarPickerDropdown');
+            if (d) d.classList.add('hidden');
+        }
+
+        document.addEventListener('click', function(e) {
+            const d = document.querySelector('.avatarPickerDropdown');
+            if (d && !d.classList.contains('hidden')) {
+                if (!d.contains(e.target)) {
+                    d.classList.add('hidden');
+                }
+            }
+        });
+
+        async function uploadHistoryFiles(e) {
+            if (e) e.stopPropagation();
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const statusEl = document.getElementById('historyUploadStatus');
+            if (statusEl) {
+                statusEl.className = "text-[10px] text-center font-bold text-amber-400 pt-1";
+                statusEl.textContent = `Uploading & parsing ${files.length} file(s)...`;
+                statusEl.classList.remove('hidden');
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const resp = await fetch('/api/user/upload-history', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (resp.ok && data.status === 'success') {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-emerald-400 pt-1";
+                        statusEl.textContent = `✓ ${data.message}`;
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                        statusEl.textContent = `Error: ${data.message || 'Upload failed'}`;
+                    }
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                if (statusEl) {
+                    statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                    statusEl.textContent = `Error: Network failure`;
+                }
+            }
+        }
+
+        async function toggleUserPalsOptIn() {
+            try {
+                const res = await fetch('/api/user/toggle-pals', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('palsOptInStatusBadge');
+                    if (badge) {
+                        if (data.pals_opt_in) {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                        } else {
+                            badge.textContent = 'Inactive';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle pals opt-in:', err);
+            }
+        }
+
+        async function toggleUserSyncPause() {
+            try {
+                const res = await fetch('/api/user/toggle-sync-pause', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('syncPauseStatusBadge');
+                    if (badge) {
+                        if (data.sync_paused) {
+                            badge.textContent = 'Paused';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        } else {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle sync pause:', err);
+            }
+        }
+
+        async function selectAvatarPreset(presetId, e) {
+            if (e) e.stopPropagation();
+            const statusEl = document.querySelector('.avatarSaveStatus');
+            if (statusEl) {
+                statusEl.innerText = "⏳ Saving...";
+                statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-amber-400";
+                statusEl.classList.remove('hidden');
+            }
+
+            try {
+                const resp = await fetch('/api/user/avatar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({avatar_id: presetId})
+                });
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    const avatarImgs = document.querySelectorAll('.headerUserAvatarImg');
+                    avatarImgs.forEach(img => {
+                        if (data.avatar_url) img.src = data.avatar_url;
+                    });
+                    if (statusEl) {
+                        statusEl.innerText = "✓ Persona saved!";
+                        statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-emerald-400";
+                    }
+                    const list = document.querySelector('.avatarOptionsList');
+                    if (list) {
+                        const buttons = list.querySelectorAll('button');
+                        buttons.forEach(btn => {
+                            btn.classList.remove('bg-emerald-500/10', 'border-emerald-500/30');
+                            const check = btn.querySelector('.text-emerald-400.text-xs');
+                            if (check) check.remove();
+                        });
+                        const clickedBtn = e ? e.currentTarget : null;
+                        if (clickedBtn) {
+                            clickedBtn.classList.add('bg-emerald-500/10', 'border-emerald-500/30');
+                            const span = document.createElement('span');
+                            span.className = 'text-emerald-400 text-xs font-bold shrink-0';
+                            span.innerText = '✓';
+                            clickedBtn.appendChild(span);
+                        }
+                    }
+                    setTimeout(() => {
+                        closeAvatarDropdown();
+                    }, 500);
+                } else {
+                    if (statusEl) {
+                        statusEl.innerText = "❌ Error saving persona";
+                        statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-rose-400";
+                    }
+                }
+            } catch (err) {
+                console.error("Avatar error:", err);
+                if (statusEl) {
+                    statusEl.innerText = "❌ Network error";
+                    statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-rose-400";
+                }
+            }
+        }
+    </script>
+</body>
+</html>

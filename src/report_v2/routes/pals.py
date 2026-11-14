@@ -6,7 +6,7 @@ acoustic compatibility matching, music legend avatar picker (`/api/user/avatar`)
 and user privacy/sync pause toggles.
 """
 import logging
-from flask import Blueprint, render_template_string, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session
 from google.cloud import datastore
 
 from config import ADMIN_USER_IDS, ICON_A_SVG, ICON_GATEFOLD_SVG, AVATAR_PRESETS, logger
@@ -147,10 +147,9 @@ def beta_pals(pal_id=None):
 
     pals_opt_in = curr_user and curr_user.get("pals_opt_in", False)
     if not is_admin_direct and not pals_opt_in:
-        from app import PALS_LOCKED_HTML
-        return render_template_string(PALS_LOCKED_HTML, brand_icon=ICON_A_SVG, user=session)
+        return render_template('pals_locked.html', brand_icon=ICON_A_SVG, user=session)
 
-    from app import fetch_pals_directory, compute_pal_compatibility, PALS_HTML
+    from app import fetch_pals_directory, compute_pal_compatibility
     pals_directory = fetch_pals_directory(current_user_id)
 
     other_pals = [p for p in pals_directory if not p["is_self"]]
@@ -177,8 +176,8 @@ def beta_pals(pal_id=None):
 
     pal_data = compute_pal_compatibility(current_user_id, target_pal["spotify_id"], horizon=horizon)
 
-    return render_template_string(
-        PALS_HTML,
+    return render_template(
+        'pals.html',
         user=session,
         pals=pals_directory,
         selected_pal=pal_data["pal"],

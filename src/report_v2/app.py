@@ -39,7 +39,7 @@ from routes.admin import admin_bp
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("spinsleeve_v2")
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 app.register_blueprint(auth_bp)
 app.register_blueprint(crate_bp)
 app.register_blueprint(analytics_bp)

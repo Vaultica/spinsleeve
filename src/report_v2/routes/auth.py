@@ -8,7 +8,7 @@ and zero-lockout admin impersonation / revert actions.
 import datetime
 import logging
 from functools import wraps
-from flask import Blueprint, render_template_string, request, redirect, session
+from flask import Blueprint, render_template, request, redirect, session
 import spotipy
 from google.cloud import datastore, bigquery
 
@@ -44,8 +44,7 @@ def admin_required(f):
 def login():
     if "user_id" in session:
         return redirect("/")
-    from app import LANDING_PAGE_HTML
-    return render_template_string(LANDING_PAGE_HTML, brand_icon=ICON_A_SVG)
+    return render_template('landing.html', brand_icon=ICON_A_SVG)
 
 
 @auth_bp.route("/roadmap")
@@ -53,8 +52,7 @@ def login():
 @auth_bp.route("/roadmap/")
 @auth_bp.route("/beta/roadmap/")
 def public_roadmap():
-    from app import ROADMAP_HTML_TEMPLATE
-    return render_template_string(ROADMAP_HTML_TEMPLATE, brand_icon=ICON_A_SVG)
+    return render_template('roadmap.html', brand_icon=ICON_A_SVG)
 
 
 @auth_bp.route("/auth")
@@ -129,8 +127,7 @@ def callback():
             ds_client.put(user)
 
         if not user.get("is_approved"):
-            from app import PENDING_HTML_TEMPLATE
-            return render_template_string(PENDING_HTML_TEMPLATE, user=user)
+            return render_template('pending.html', user=user)
 
         session["user_id"] = spotify_id
         session["display_name"] = display_name

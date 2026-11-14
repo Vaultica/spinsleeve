@@ -5,7 +5,7 @@ Encapsulates Flask Blueprint routes for listening telemetry, analytics page (`/a
 and JSON telemetry endpoints (`/api/analytics`).
 """
 import logging
-from flask import Blueprint, render_template_string, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session
 
 from config import ICON_A_SVG, logger
 from routes.auth import login_required
@@ -19,16 +19,14 @@ analytics_bp = Blueprint("analytics", __name__)
 def beta_analytics():
     user_id = session["user_id"]
     force_refresh = request.args.get("refresh") in ("1", "true")
-    from app import _user_analytics_cache, _user_analytics_cache_time, fetch_user_album_data, ANALYTICS_HTML
+    from services.analytics import invalidate_user_analytics_cache
+    from services.catalog import fetch_user_album_data
     if force_refresh:
-        keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
-        for k in keys_to_del:
-            _user_analytics_cache.pop(k, None)
-            _user_analytics_cache_time.pop(k, None)
+        invalidate_user_analytics_cache(user_id)
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
 
-    return render_template_string(
-        ANALYTICS_HTML,
+    return render_template(
+        'analytics.html',
         top_genres=data["top_genres"],
         user=session,
         brand_icon=ICON_A_SVG

@@ -1,0 +1,1191 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinSleeve - {{ user.display_name }}'s Library</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0c0f12; color: #f3f4f6; }
+        .card-bg { background-color: #14181f; }
+        .serif-title { font-family: 'Playfair Display', serif; }
+        .sleeve-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6); }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        @keyframes soundWave { 0%, 100% { height: 4px; } 50% { height: 16px; } }
+        .wave-bar { animation: soundWave 1.2s ease-in-out infinite; }
+        .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Persistent Header -->
+        <header class="flex flex-col lg:flex-row lg:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 flex-shrink-0">
+                        {{ brand_icon | safe }}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-3xl font-extrabold tracking-tight">
+                            <span class="text-white">Spin</span><span class="text-[#1DB954]">Sleeve</span>
+                        </h1>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-500/30" title="SpinSleeve {{ app_version }}">{{ app_version }}</span>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Multi-tenant edition • Personal vinyl crate &amp; gatefold archive</p>
+            </div>
+
+            <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            
+
+                        <!-- Top-Level Navigation Tabs -->
+            <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+                <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Library
+                </a>
+                <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                </a>
+                <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    SpinPals
+                </a>
+            </nav>
+
+            <!-- User Status & Quick Audio Toggle -->
+            <div class="flex flex-wrap items-center gap-3">
+                <button id="audioToggleBtn" onclick="toggleHoverAudio()"
+                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white flex items-center gap-1.5 transition">
+                    <span id="audioIcon">🔊</span> <span id="audioText">Hover Audio: ON</span>
+                </button>
+                {% if is_admin %}
+                <a href="/beta/admin" class="text-xs font-semibold text-gray-300 bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition border border-gray-700">
+                    ⚙️ Admin
+                </a>
+                {% endif %}
+                <div class="relative flex items-center gap-2 bg-[#14181f] border border-gray-800 rounded-xl px-3 py-1.5" id="userProfileWidget">
+                    <button type="button" onclick="toggleAvatarDropdown(event)"
+                            class="relative w-6 h-6 rounded-full overflow-hidden bg-gray-800 border border-gray-700 hover:border-emerald-400 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0 focus:outline-none"
+                            title="Click for settings & avatar picker">
+                        <img class="headerUserAvatarImg w-full h-full object-cover" src="{{ user.avatar_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" alt="{{ user.display_name }}">
+                    </button>
+
+                    <!-- Avatar & Settings Dropdown Menu (POLISH-08) -->
+                    <div class="avatarPickerDropdown hidden absolute right-0 top-full mt-2 w-72 bg-[#14181f] border border-gray-700/80 rounded-2xl shadow-2xl p-3 z-50 text-left backdrop-blur-xl">
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
+                            <div>
+                                <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400">User Settings</span>
+                                <p class="text-[10px] text-gray-400">{{ user.display_name }}'s Crate &amp; Lounge</p>
+                            </div>
+                            <button type="button" onclick="closeAvatarDropdown(event)" class="text-gray-400 hover:text-white text-xs p-1 leading-none font-bold">&times;</button>
+                        </div>
+
+                        <div class="space-y-2 mb-3 pb-3 border-b border-gray-800">
+                            <button type="button" onclick="toggleUserPalsOptIn()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-emerald-500/40 transition text-xs font-semibold text-white">
+                                <span class="span-left flex items-center gap-2">🤝 Opt-in SpinPals</span>
+                                <span id="palsOptInStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.pals_opt_in %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.pals_opt_in %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </button>
+                            <button type="button" onclick="toggleUserSyncPause()"
+                                    class="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-amber-500/40 transition text-xs font-semibold text-white">
+                                <span class="flex items-center gap-2">⏸️ Sync Pause</span>
+                                <span id="syncPauseStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if user.sync_paused %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-gray-800 text-gray-400{% endif %}">
+                                    {% if user.sync_paused %}Paused{% else %}Active{% endif %}
+                                </span>
+                            </button>
+                            <input type="file" id="historyUploadInput" accept=".json,.zip" multiple class="hidden" onchange="uploadHistoryFiles(event)">
+                            <button type="button" onclick="document.getElementById('historyUploadInput').click()"
+                                    class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition">
+                                📂 Import History (.json / .zip)
+                            </button>
+                            <div id="historyUploadStatus" class="hidden text-[10px] text-center font-bold text-amber-400 pt-1"></div>
+                            <a href="/beta/logout" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition">
+                                🚪 Logout ({{ user.display_name }})
+                            </a>
+                        </div>
+
+                        <div class="mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Music Legend Persona</span>
+                        </div>
+                        <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar avatarOptionsList">
+                            <button type="button" onclick="selectAvatarPreset('spotify', event)"
+                                    class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if not user.custom_avatar_id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center shrink-0">
+                                    {% if user.spotify_avatar_url %}
+                                    <img src="{{ user.spotify_avatar_url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <span class="text-xs">🟢</span>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs font-bold text-white truncate group-hover:text-emerald-400">Spotify Profile</div>
+                                    <div class="text-[10px] text-gray-400 truncate">Default Spotify photo</div>
+                                </div>
+                                {% if not user.custom_avatar_id %}
+                                <span class="text-emerald-400 text-xs font-bold shrink-0">✓</span>
+                                {% endif %}
+                            </button>
+
+                            {% if avatar_presets %}
+                            {% for preset in avatar_presets %}
+                            <button type="button" onclick="selectAvatarPreset('{{ preset.id }}', event)"
+                                    class="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-gray-800/80 transition group border border-transparent hover:border-gray-700 {% if user.custom_avatar_id == preset.id %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
+                                <div class="w-11 h-11 rounded-full bg-gray-800 border border-gray-700 overflow-hidden shrink-0 shadow-sm">
+                                    <img src="/avatar/{{ preset.id }}.svg" alt="{{ preset.name }}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs font-bold text-white truncate group-hover:text-emerald-400">{{ preset.name }}</div>
+                                    <div class="text-[10px] text-gray-400 truncate">{{ preset.badge }} {{ preset.era }} • {{ preset.desc }}</div>
+                                </div>
+                                {% if user.custom_avatar_id == preset.id %}
+                                <span class="text-emerald-400 text-xs font-bold shrink-0">✓</span>
+                                {% endif %}
+                            </button>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <div class="avatarSaveStatus hidden mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-emerald-400">
+                            ✓ Persona saved!
+                        </div>
+                    </div>
+
+                    <a href="/beta/logout" class="text-xs font-bold text-white hover:text-emerald-400 transition" title="Click to logout">{{ user.display_name }}</a>
+                    {% if is_impersonating %}
+                    <div class="flex items-center gap-1 border-l border-gray-800 pl-2 ml-1">
+                        <span class="text-[10px] text-amber-400 font-bold">👑 Assuming: {{ user.display_name }}</span>
+                        <a href="/beta/admin/revert" class="text-[10px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-2 py-0.5 rounded transition" title="Exit assumed view and revert to Admin">↩ Revert</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        
+
+        <!-- Hardware-Inspired Segmented Sub-Tab Control Deck under Library (POLISH-08) -->
+        <div class="flex items-center p-1 bg-[#080a0c] rounded-xl border border-gray-800 shadow-inner mb-6 w-fit">
+            <button id="savedVinylTabBtn" onclick="switchCrateTab('saved')"
+                    class="px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-gradient-to-r from-emerald-500/20 to-teal-500/25 text-emerald-300 border border-emerald-500/30 shadow-sm">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                <span>My Saved Vinyl</span>
+                <span class="bg-emerald-500/30 text-emerald-200 text-[10px] font-mono px-1.5 py-0.5 rounded-full">{{ albums|length }}</span>
+            </button>
+            <a href="/beta/recommend" id="diggerTabBtn"
+               class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                <span>Crate Digger</span>
+            </a>
+            <button id="unownedVinylTabBtn" onclick="switchCrateTab('unowned')"
+                    class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                <span>You Should Save These</span>
+                <span class="bg-amber-500/20 text-amber-300 text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-amber-500/30" id="unownedCountBadge">{{ (unowned_albums or [])|length }}</span>
+            </button>
+        </div>
+
+        <!-- Saved Vinyl View Container -->
+        <div id="savedVinylView">
+            <!-- Filter Controls Toolbar -->
+            <div class="card-bg p-4 rounded-xl border border-gray-800 mb-6 shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-center">
+                    <div class="relative lg:col-span-2">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Search your albums or artists..."
+                               class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#1DB954] transition"
+                               oninput="onFilterChange()">
+                    </div>
+
+                    <div>
+                        <select id="genreSelect" onchange="onFilterChange()"
+                                class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
+                            <option value="all">All Genres</option>
+                            {% for g in top_genres %}
+                            <option value="{{ g }}">{{ g.title() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <select id="sortSelect" onchange="onFilterChange()"
+                                class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
+                            <option value="plays_30d_desc">🔥 Heavy Rotation (Last 30 Days)</option>
+                            <option value="plays_desc">Most Played (All Time)</option>
+                            <option value="plays_asc">Least Played / Unplayed</option>
+                            <option value="added_desc">Recently Added</option>
+                            <option value="year_desc">Release Year (Newest)</option>
+                            <option value="artist_asc">Artist (A-Z)</option>
+                            <option value="artist_albums_desc">Artist (A-Z), Albums (Year desc)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Album Grid -->
+            <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+
+            <div id="loadMoreTrigger" class="text-center py-10">
+                <span class="text-xs text-gray-500">Showing <span id="displayedCount">0</span> of <span id="totalMatchCount">0</span> albums</span>
+            </div>
+        </div>
+
+        <!-- Unowned Stream Discoveries View Container (APP-07) -->
+        <div id="unownedVinylView" class="hidden">
+            <div class="card-bg p-4 rounded-xl border border-gray-800 mb-6 shadow-sm space-y-3">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">🔍</span>
+                        <input type="text" id="unownedSearchInput" placeholder="Search unowned streamed albums or artists..."
+                               class="w-full bg-[#0c0f12] border border-gray-800 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-amber-400 transition"
+                               oninput="onUnownedFilterChange()">
+                    </div>
+                    <!-- Time Horizon Selector (APP-07) -->
+                    <div class="flex items-center gap-1.5 bg-[#0c0f12] p-1 rounded-xl border border-gray-800">
+                        <button onclick="changeUnownedHorizon('30d')" id="unownedHorizon-30d" class="px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition">Last 30 Days</button>
+                        <button onclick="changeUnownedHorizon('90d')" id="unownedHorizon-90d" class="px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition">Last 90 Days</button>
+                        <button onclick="changeUnownedHorizon('all')" id="unownedHorizon-all" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/30">All Time</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="unownedAlbumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+
+            <div class="text-center py-10">
+                <span class="text-xs text-gray-500">Showing <span id="unownedDisplayedCount">0</span> unowned stream-discovered albums</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pinned Preview Toast -->
+    <div id="previewToast" class="fixed bottom-6 right-6 z-40 bg-[#161a22]/95 border border-emerald-500/30 rounded-2xl p-3.5 shadow-2xl backdrop-blur-md flex items-center gap-3.5 max-w-sm transition-all duration-300 translate-y-28 opacity-0 pointer-events-none">
+        <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+            <div class="flex items-end gap-0.5 h-3">
+                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+            </div>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p id="toastTrack" class="text-xs font-bold text-white truncate">Preview Snippet</p>
+            <p id="toastArtist" class="text-[11px] text-gray-400 truncate">--</p>
+        </div>
+        <button onclick="stopPreview()" class="text-gray-400 hover:text-white p-1 text-sm font-bold">&times;</button>
+    </div>
+
+    <!-- 12" Gatefold Modal Markup -->
+    <div id="gatefoldModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6" onclick="onModalBackdropClick(event)">
+        <div class="relative w-full max-w-5xl bg-[#14181f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[88vh] md:h-[640px]" onclick="event.stopPropagation()">
+            <!-- LEFT PANEL: 12" Vinyl Jacket (Desktop) / Compact Header (Mobile <110px) -->
+            <div class="w-full md:w-5/12 bg-black/40 p-3 sm:p-4 md:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-800/80 shrink-0">
+                <!-- Mobile Compact Header (<md: <110px height without scrolling) -->
+                <div class="md:hidden flex items-center justify-between gap-3 w-full">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg border border-gray-800 shrink-0">
+                            <img id="modalCoverMobile" src="" class="w-full h-full object-cover" alt="Album Cover">
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[9px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase inline-block mb-0.5">12" Gatefold</span>
+                            <h3 id="modalTitleMobile" class="text-sm font-bold text-white truncate leading-snug">--</h3>
+                            <p id="modalArtistMobile" class="text-xs font-semibold text-emerald-400 truncate">--</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a id="modalSpotifyLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Play on Spotify" class="w-8 h-8 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
+                        </a>
+                        <a id="modalAppleMusicLinkMobile" href="#" target="_blank" rel="noopener noreferrer" title="Listen on Apple Music" class="w-8 h-8 rounded-full bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 flex items-center justify-center transition shadow">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </a>
+                        <button onclick="closeGatefold()" class="w-8 h-8 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-lg font-bold transition">&times;</button>
+                    </div>
+                </div>
+
+                <!-- Desktop Full Jacket (>md) -->
+                <div class="hidden md:flex w-full justify-between items-center mb-3">
+                    <span class="text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold uppercase">12" Gatefold Edition</span>
+                </div>
+                <div class="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto mx-auto shrink-0">
+                    <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
+                </div>
+                <div class="hidden md:flex w-full mt-4 flex-col gap-2">
+                    <a id="modalSpotifyLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
+                        <span>Play on Spotify</span>
+                    </a>
+                    <a id="modalAppleMusicLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#fc3c44]/15 hover:bg-[#fc3c44]/25 text-[#fc3c44] border border-[#fc3c44]/30 font-bold text-xs flex items-center justify-center gap-2 transition shadow">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        <span>Open in Apple Music</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Gatefold Liner Notes, Audio Scrubber & Archival Review Badges -->
+            <div class="w-full md:w-7/12 p-3 sm:p-4 md:p-6 flex flex-col justify-between overflow-y-auto custom-scroll flex-1">
+                <div>
+                    <!-- Audio Scrubber & Player Bar -->
+                    <div id="gatefoldAudioBar" class="mb-4 p-3 rounded-2xl bg-black/40 border border-gray-800 flex flex-col gap-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <button id="gatefoldPlayBtn" onclick="toggleModalAudioPlayback()"
+                                        class="w-9 h-9 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center shrink-0 transition shadow-lg">
+                                    <span id="gatefoldPlayIcon" class="text-xs">▶</span>
+                                </button>
+                                <div class="min-w-0">
+                                    <p id="gatefoldAudioTrack" class="text-xs font-bold text-white truncate">30-Second Audio Preview</p>
+                                    <p id="gatefoldAudioSubtext" class="text-[10px] text-gray-400">iTunes Audio Snippet</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span id="gatefoldAudioTime" class="text-[10px] font-mono text-gray-400">0:00 / 0:30</span>
+                                <div id="gatefoldWaveform" class="hidden items-end gap-0.5 h-3.5 pr-1">
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                    <span class="w-0.5 bg-[#1DB954] wave-bar"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Scrubber Track -->
+                        <div id="gatefoldScrubber" class="relative w-full bg-gray-800/80 hover:bg-gray-700/80 h-2 rounded-full overflow-hidden cursor-pointer transition-colors"
+                             onpointerdown="seekGatefoldAudio(event)">
+                            <div id="gatefoldProgressBar" class="h-full bg-[#1DB954] rounded-full w-0 transition-[width] duration-100 pointer-events-none"></div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Title & Artist (md:flex) -->
+                    <div class="hidden md:flex items-start justify-between gap-4 mb-2">
+                        <div>
+                            <h3 id="modalTitle" class="text-xl md:text-2xl font-black text-white leading-tight">--</h3>
+                            <p id="modalArtist" class="text-sm font-semibold text-emerald-400 mt-0.5">--</p>
+                        </div>
+                        <button onclick="closeGatefold()" class="text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
+                    </div>
+
+                    <!-- Archival Badges with External Deep Links -->
+                    <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
+
+                    <!-- Liner Notes & Personnel -->
+                    <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
+                        <div id="modalDescriptionSection">
+                            <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Album Narrative &amp; Critical Reception</h4>
+                            <p id="modalDescription" class="italic text-gray-300">--</p>
+                        </div>
+                        <div id="modalPersonnelSection">
+                            <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Production &amp; Personnel Credits</h4>
+                            <div id="modalPersonnel" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-gray-400"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer with Meta Info and SpinSleeve Verified -->
+                <div class="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
+                    <span id="modalMetaInfo">--</span>
+                    <span class="text-emerald-500 font-mono font-semibold flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        SpinSleeve Verified
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ALL_ALBUMS = {{ albums | tojson }};
+        const UNOWNED_ALBUMS = {{ (unowned_albums or []) | tojson }};
+        let filteredAlbums = [...ALL_ALBUMS];
+        let filteredUnowned = [...UNOWNED_ALBUMS];
+        let displayLimit = 48;
+
+        let hoverTimer = null;
+        let activeAudio = new Audio();
+        let currentHoverKey = null;
+        let isAudioEnabled = localStorage.getItem('spinAudioEnabled') !== 'false';
+        let isModalOpen = false;
+        let currentModalAlbum = null;
+        const previewUrlCache = new Map();
+
+        activeAudio.volume = 0.75;
+        activeAudio.addEventListener('ended', () => {
+            hidePreviewToast();
+            updateModalPlayIcon(false);
+        });
+
+        function toggleHoverAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            localStorage.setItem('spinAudioEnabled', isAudioEnabled);
+            const btnText = document.getElementById('audioText');
+            const btnIcon = document.getElementById('audioIcon');
+            if (isAudioEnabled) {
+                if (btnText) btnText.innerText = 'Hover Audio: ON';
+                if (btnIcon) btnIcon.innerText = '🔊';
+            } else {
+                stopPreview();
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
+        }
+
+        function onCardHover(artist, album, spotifyUrl, cardEl) {
+            if (!isAudioEnabled || isModalOpen) return;
+            const key = `${artist.toLowerCase()}::${album.toLowerCase()}`;
+            currentHoverKey = key;
+
+            if (hoverTimer) clearTimeout(hoverTimer);
+
+            hoverTimer = setTimeout(async () => {
+                if (currentHoverKey !== key) return;
+
+                let data = previewUrlCache.get(key);
+                if (!data) {
+                    try {
+                        const res = await fetch(`/beta/api/preview?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`);
+                        data = await res.json();
+                        previewUrlCache.set(key, data);
+                    } catch (e) {
+                        return;
+                    }
+                }
+
+                if (currentHoverKey !== key) return;
+
+                if (data && data.preview_url) {
+                    activeAudio.src = data.preview_url;
+                    activeAudio.play().then(() => {
+                        showPreviewToast(artist, album, data.track_name || 'Preview Snippet', data.apple_music_url, spotifyUrl);
+                        const pulse = cardEl.querySelector('.audio-pulse');
+                        if (pulse) pulse.classList.remove('hidden');
+                    }).catch(e => {});
+                }
+            }, 350);
+        }
+
+        function onCardLeave(cardEl) {
+            if (hoverTimer) clearTimeout(hoverTimer);
+            if (isModalOpen) return;
+            currentHoverKey = null;
+            stopPreview();
+            if (cardEl) {
+                const pulse = cardEl.querySelector('.audio-pulse');
+                if (pulse) pulse.classList.add('hidden');
+            }
+        }
+
+        function stopPreview() {
+            activeAudio.pause();
+            activeAudio.currentTime = 0;
+            hidePreviewToast();
+            document.querySelectorAll('.audio-pulse').forEach(el => el.classList.add('hidden'));
+            updateModalPlayIcon(false);
+        }
+
+        function showPreviewToast(artist, album, track, appleUrl, spotifyUrl) {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            document.getElementById('toastTrack').innerText = track;
+            document.getElementById('toastArtist').innerText = `${artist} • ${album}`;
+            toast.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }
+
+        function hidePreviewToast() {
+            const toast = document.getElementById('previewToast');
+            if (!toast) return;
+            toast.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+        }
+
+        function getAlbumPlayBadge(a) {
+            const sortEl = document.getElementById("sortSelect");
+            const is30d = sortEl && sortEl.value === "plays_30d_desc";
+            const trackPlays = is30d ? (Number(a.album_track_plays_30d) || 0) : (Number(a.album_track_plays) || 0);
+            const tracksTotal = Number(a.album_tracks_total) || 0;
+
+            if (is30d && a.album_plays_display_30d && a.album_plays_tooltip_30d) {
+                const colorClass = trackPlays > 0 ? 'text-amber-400 font-black' : 'text-gray-400 font-bold';
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip_30d}">${a.album_plays_display_30d}</div>`;
+            } else if (!is30d && a.album_plays_display && a.album_plays_tooltip) {
+                const colorClass = trackPlays > 0 ? 'text-emerald-400 font-black' : 'text-gray-400 font-bold';
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip}">${a.album_plays_display}</div>`;
+            }
+
+            if (trackPlays === 0) {
+                let isNew = false;
+                if (a.added_at) {
+                    try {
+                        const dt = new Date(a.added_at);
+                        const now = new Date();
+                        const diffDays = (now - dt) / (1000 * 60 * 60 * 24);
+                        if (diffDays <= 14) isNew = true;
+                    } catch(e) {}
+                }
+                const label = isNew ? "✨ Newly Added" : "💤 Never Played";
+                const tooltip = isNew ? "Newly added album (0 plays)" : "Never played (0 plays)";
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] text-gray-400 font-bold select-none" title="${tooltip}">${label}</div>`;
+            }
+
+            let decimalPlays = trackPlays;
+            let tooltip = '';
+            if (tracksTotal > 0) {
+                decimalPlays = Math.round((trackPlays / tracksTotal) * 10) / 10;
+                tooltip = is30d
+                    ? `Estimated complete album spins in last 30 days based on ${trackPlays} track plays across ${tracksTotal} tracks`
+                    : `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
+            } else {
+                tooltip = is30d
+                    ? `30-day track plays: ${trackPlays} (track count unavailable)`
+                    : `Total track plays: ${trackPlays} (track count unavailable)`;
+            }
+            const dispVal = Number.isInteger(decimalPlays) ? decimalPlays : decimalPlays;
+            const suffix = is30d ? ' (30D)' : '';
+            const label = `🔥 ${dispVal} ${dispVal === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
+            const colorClass = trackPlays > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
+            return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
+        }
+
+        function renderUnownedGrid() {
+            const grid = document.getElementById("unownedAlbumGrid");
+            const toShow = filteredUnowned;
+            document.getElementById("unownedDisplayedCount").innerText = toShow.length;
+            const badge = document.getElementById("unownedCountBadge");
+            if (badge) badge.innerText = UNOWNED_ALBUMS.length;
+
+            if (toShow.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-16 text-center text-gray-500 text-sm">No unowned stream-discovered albums found. You have saved everything you spin!</div>';
+                return;
+            }
+
+            grid.innerHTML = toShow.map(a => `
+                <div class="group relative flex flex-col cursor-pointer"
+                     onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_url}', this)"
+                     onmouseleave="onCardLeave(this)">
+                    <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border-2 border-dashed border-amber-500/40 group-hover:border-amber-400/70 shadow-[0_10px_25px_-5px_rgba(245,158,11,0.15)] transition duration-300 group-hover:scale-[1.03] relative flex items-center justify-center">
+                        ${a.album_image_url && a.album_image_url.startsWith('http') ? `
+                            <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition">
+                        ` : `
+                            <div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-950/40 via-gray-900 to-gray-950 p-4 text-center">
+                                <div class="w-14 h-14 mb-2 text-amber-400 opacity-90">
+                                    {{ brand_icon | safe }}
+                                </div>
+                                <span class="text-[10px] font-bold text-amber-300 tracking-wider uppercase px-2 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/30">Unowned Crate</span>
+                            </div>
+                        `}
+
+                        <div class="absolute top-2 left-2 bg-amber-500/20 text-amber-300 backdrop-blur-md rounded-lg px-2 py-0.5 border border-amber-500/30 text-[10px] font-bold select-none flex items-center gap-1 shadow">
+                            ✨ Streamed
+                        </div>
+
+                        <div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] text-amber-200 select-none">
+                            🔥 ${a.play_count} ${a.play_count === 1 ? 'Play' : 'Plays'}
+                        </div>
+
+                        <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                        </div>
+
+                        <div class="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition flex justify-center">
+                            <button onclick="saveAlbumToLibrary('${(a.album_id||'').replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_artist_name.replace(/'/g, "\\'")}', event)" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-1.5 rounded-xl shadow transition flex items-center gap-1.5">
+                                ➕ Save to Library
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 px-0.5">
+                        <h4 class="text-xs font-bold text-white truncate group-hover:text-amber-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                        <p class="text-[11px] text-gray-400 truncate" title="${a.album_artist_name}">${a.album_artist_name}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Last played: ${a.last_played_at ? a.last_played_at.substring(0,10) : 'Recent'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function onUnownedFilterChange() {
+            const query = document.getElementById("unownedSearchInput").value.toLowerCase().trim();
+            filteredUnowned = UNOWNED_ALBUMS.filter(a => {
+                return !query || a.album_name.toLowerCase().includes(query) || a.album_artist_name.toLowerCase().includes(query);
+            });
+            renderUnownedGrid();
+        }
+
+        async function saveAlbumToLibrary(albumId, albumName, artistName, event) {
+            if (event) event.stopPropagation();
+            const displayName = albumName ? `"${albumName}"` : "this album";
+            if (!confirm(`Add ${displayName} to your Spotify saved library and permanent vinyl crate?`)) return;
+
+            try {
+                const res = await fetch("/api/save-album", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ album_id: albumId, album_name: albumName, artist_name: artistName })
+                });
+                const data = await res.json();
+                if (data.status === "success") {
+                    alert(data.message || "Album successfully added to your library! Refreshing view...");
+                    window.location.reload();
+                } else {
+                    alert("Error: " + (data.message || "Failed to save album"));
+                }
+            } catch (e) {
+                alert("Network error while saving album.");
+            }
+        }
+
+        let currentUnownedHorizon = 'all';
+
+        async function changeUnownedHorizon(horizon) {
+            currentUnownedHorizon = horizon;
+            ['30d', '90d', 'all'].forEach(h => {
+                const btn = document.getElementById(`unownedHorizon-${h}`);
+                if (!btn) return;
+                if (h === horizon) {
+                    btn.className = "px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                } else {
+                    btn.className = "px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition";
+                }
+            });
+
+            try {
+                const res = await fetch(`/api/unowned-albums?horizon=${horizon}`);
+                const data = await res.json();
+                if (data.status === "success") {
+                    UNOWNED_ALBUMS.length = 0;
+                    UNOWNED_ALBUMS.push(...data.unowned);
+                    filteredUnowned = [...UNOWNED_ALBUMS];
+                    renderUnownedGrid();
+                }
+            } catch(e) {
+                console.error("Error fetching unowned albums horizon:", e);
+            }
+        }
+
+        function switchCrateTab(tab) {
+            const savedView = document.getElementById("savedVinylView");
+            const unownedView = document.getElementById("unownedVinylView");
+            const savedBtn = document.getElementById("savedVinylTabBtn");
+            const unownedBtn = document.getElementById("unownedVinylTabBtn");
+
+            if (tab === 'saved') {
+                savedView.classList.remove("hidden");
+                unownedView.classList.add("hidden");
+                savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow";
+                unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2";
+            } else {
+                savedView.classList.add("hidden");
+                unownedView.classList.remove("hidden");
+                unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2 shadow";
+                savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2";
+                renderUnownedGrid();
+            }
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById("albumGrid");
+            const toShow = filteredAlbums.slice(0, displayLimit);
+            document.getElementById("displayedCount").innerText = toShow.length;
+            document.getElementById("totalMatchCount").innerText = filteredAlbums.length;
+
+            if (toShow.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-16 text-center text-gray-500 text-sm">No albums match your search filters.</div>';
+                return;
+            }
+
+            grid.innerHTML = toShow.map(a => `
+                <div class="group relative flex flex-col cursor-pointer"
+                     onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_url}', this)"
+                     onmouseleave="onCardLeave(this)"
+                     onclick='openGatefold(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
+                    <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-800/80 sleeve-shadow transition duration-300 group-hover:scale-[1.03] group-hover:border-gray-700 relative">
+                        <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover">
+                        ${a.has_gatefold ? `
+                            <div class="absolute top-2 left-2 bg-black/75 backdrop-blur-md rounded-lg p-1.5 border border-white/10 shadow" title="12\" Gatefold Liner Notes Available">
+                                {{ gatefold_icon | safe }}
+                            </div>
+                        ` : ''}
+                        ${getAlbumPlayBadge(a)}
+                        <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 px-0.5">
+                        <h4 class="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                        <p class="text-[11px] text-gray-400 truncate" title="${a.album_artist_name}">${a.album_artist_name}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">${a.release_year || ''}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function onFilterChange() {
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
+            const genre = document.getElementById("genreSelect").value.toLowerCase();
+            const sort = document.getElementById("sortSelect").value;
+
+            filteredAlbums = ALL_ALBUMS.filter(a => {
+                const matchQ = !query || a.album_name.toLowerCase().includes(query) || a.album_artist_name.toLowerCase().includes(query);
+                const matchG = genre === "all" || (a.album_genres && a.album_genres.toLowerCase().includes(genre));
+                return matchQ && matchG;
+            });
+
+            if (sort === "plays_30d_desc") {
+                filteredAlbums.sort((a,b) => {
+                    const normB = b.album_normalized_plays_30d !== undefined ? Number(b.album_normalized_plays_30d) : (b.album_tracks_total ? Math.floor((b.album_track_plays_30d||0)/b.album_tracks_total) : (b.album_track_plays_30d||0));
+                    const normA = a.album_normalized_plays_30d !== undefined ? Number(a.album_normalized_plays_30d) : (a.album_tracks_total ? Math.floor((a.album_track_plays_30d||0)/a.album_tracks_total) : (a.album_track_plays_30d||0));
+                    return (normB - normA) || ((b.album_track_plays_30d||0) - (a.album_track_plays_30d||0)) || ((b.album_track_plays||0) - (a.album_track_plays||0));
+                });
+            } else if (sort === "plays_desc") {
+                filteredAlbums.sort((a,b) => {
+                    const normB = b.album_normalized_plays !== undefined ? Number(b.album_normalized_plays) : (b.album_tracks_total ? Math.floor((b.album_track_plays||0)/b.album_tracks_total) : (b.album_track_plays||0));
+                    const normA = a.album_normalized_plays !== undefined ? Number(a.album_normalized_plays) : (a.album_tracks_total ? Math.floor((a.album_track_plays||0)/a.album_tracks_total) : (a.album_track_plays||0));
+                    return (normB - normA) || ((b.album_track_plays||0) - (a.album_track_plays||0));
+                });
+            } else if (sort === "plays_asc") {
+                filteredAlbums.sort((a,b) => {
+                    const normB = b.album_normalized_plays !== undefined ? Number(b.album_normalized_plays) : (b.album_tracks_total ? Math.floor((b.album_track_plays||0)/b.album_tracks_total) : (b.album_track_plays||0));
+                    const normA = a.album_normalized_plays !== undefined ? Number(a.album_normalized_plays) : (a.album_tracks_total ? Math.floor((a.album_track_plays||0)/a.album_tracks_total) : (a.album_track_plays||0));
+                    return (normA - normB) || ((a.album_track_plays||0) - (b.album_track_plays||0));
+                });
+            }
+            else if (sort === "added_desc") filteredAlbums.sort((a,b) => (b.added_at||"").localeCompare(a.added_at||""));
+            else if (sort === "year_desc") filteredAlbums.sort((a,b) => (b.release_year||0) - (a.release_year||0));
+            else if (sort === "artist_asc") filteredAlbums.sort((a,b) => (a.album_artist_name||"").localeCompare(b.album_artist_name||""));
+            else if (sort === "artist_albums_desc") {
+                filteredAlbums.sort((a, b) => {
+                    const artistA = (a.album_artist_name || "").toLowerCase();
+                    const artistB = (b.album_artist_name || "").toLowerCase();
+                    const cmp = artistA.localeCompare(artistB);
+                    if (cmp !== 0) return cmp;
+                    const yearA = parseInt(a.release_year) || 0;
+                    const yearB = parseInt(b.release_year) || 0;
+                    return yearB - yearA;
+                });
+            }
+
+            displayLimit = 48;
+            renderGrid();
+        }
+
+        async function openGatefold(album) {
+            isModalOpen = true;
+            currentModalAlbum = album;
+
+            // Desktop elements
+            const coverEl = document.getElementById("modalCover");
+            if (coverEl) coverEl.src = album.album_image_url;
+            const titleEl = document.getElementById("modalTitle");
+            if (titleEl) titleEl.innerText = album.album_name;
+            const artistEl = document.getElementById("modalArtist");
+            if (artistEl) artistEl.innerText = album.album_artist_name;
+            const spotEl = document.getElementById("modalSpotifyLink");
+            if (spotEl) spotEl.href = album.album_url;
+
+            // Mobile compact elements (<110px header)
+            const coverMob = document.getElementById("modalCoverMobile");
+            if (coverMob) coverMob.src = album.album_image_url;
+            const titleMob = document.getElementById("modalTitleMobile");
+            if (titleMob) titleMob.innerText = album.album_name;
+            const artistMob = document.getElementById("modalArtistMobile");
+            if (artistMob) artistMob.innerText = album.album_artist_name;
+            const spotMob = document.getElementById("modalSpotifyLinkMobile");
+            if (spotMob) spotMob.href = album.album_url;
+
+            // Apple Music deep links
+            const appleMusicUrl = `https://music.apple.com/search?term=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+            const appleEl = document.getElementById("modalAppleMusicLink");
+            if (appleEl) appleEl.href = appleMusicUrl;
+            const appleMob = document.getElementById("modalAppleMusicLinkMobile");
+            if (appleMob) appleMob.href = appleMusicUrl;
+
+            const key = `${album.album_artist_name.toLowerCase()}::${album.album_name.toLowerCase()}`;
+            if (!activeAudio.paused && currentHoverKey === key) {
+                updateModalPlayIcon(true);
+                updateModalProgress();
+            } else {
+                updateModalPlayIcon(false);
+                resetModalProgress();
+            }
+
+            let pData = previewUrlCache.get(key);
+            if (!pData) {
+                try {
+                    const res = await fetch(`/beta/api/preview?artist=${encodeURIComponent(album.album_artist_name)}&album=${encodeURIComponent(album.album_name)}`);
+                    pData = await res.json();
+                    previewUrlCache.set(key, pData);
+                } catch(e){}
+            }
+            if (pData && pData.track_name) {
+                document.getElementById('gatefoldAudioTrack').innerText = pData.track_name;
+            } else {
+                document.getElementById('gatefoldAudioTrack').innerText = '30-Second Audio Preview';
+            }
+
+            const scoresContainer = document.getElementById("modalScores");
+            scoresContainer.innerHTML = '';
+            if (album.pitchfork_score) {
+                const pfUrl = album.pitchfork_url || `https://pitchfork.com/search/?query=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${pfUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Review on Pitchfork"
+                       class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Pitchfork ${album.pitchfork_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.discogs_rating) {
+                const discUrl = album.discogs_url || `https://www.discogs.com/search/?q=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}&type=release`;
+                const votes = album.discogs_votes ? ` (${album.discogs_votes.toLocaleString()} votes)` : '';
+                scoresContainer.innerHTML += `
+                    <a href="${discUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View Pressings on Discogs${votes}"
+                       class="px-2.5 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Discogs ${album.discogs_rating} ★</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.metacritic_score) {
+                const mcUrl = `https://www.metacritic.com/search/${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}/?page=1&category=1`;
+                scoresContainer.innerHTML += `
+                    <a href="${mcUrl}" target="_blank" rel="noopener noreferrer"
+                       title="View on Metacritic"
+                       class="px-2.5 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Metacritic ${album.metacritic_score}</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+            if (album.wikipedia_url || album.album_description) {
+                const wikiUrl = album.wikipedia_url || `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(album.album_artist_name + ' ' + album.album_name)}`;
+                scoresContainer.innerHTML += `
+                    <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer"
+                       title="Read Wikipedia Article"
+                       class="px-2.5 py-1 bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 hover:text-white border border-gray-600/30 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 transition shadow-sm">
+                        <span>Wikipedia</span>
+                        <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>`;
+            }
+
+            const descEl = document.getElementById("modalDescription");
+            descEl.innerText = album.album_description || "No archival liner notes found for this release yet.";
+
+            const personnelEl = document.getElementById("modalPersonnel");
+            if (album.personnel && album.personnel.length > 0) {
+                personnelEl.innerHTML = album.personnel.map(p => `<div>• ${p}</div>`).join('');
+                document.getElementById("modalPersonnelSection").classList.remove("hidden");
+            } else {
+                document.getElementById("modalPersonnelSection").classList.add("hidden");
+            }
+
+            document.getElementById("modalMetaInfo").innerText = `${album.release_year || 'Unknown Year'} • ${album.album_tracks_total || 0} tracks • ${album.album_track_plays || 0} total plays`;
+            document.getElementById("gatefoldModal").classList.remove("hidden");
+        }
+
+        async function toggleModalAudioPlayback() {
+            if (!currentModalAlbum) return;
+            const key = `${currentModalAlbum.album_artist_name.toLowerCase()}::${currentModalAlbum.album_name.toLowerCase()}`;
+
+            if (!activeAudio.paused && currentHoverKey === key) {
+                activeAudio.pause();
+                updateModalPlayIcon(false);
+                return;
+            }
+
+            let data = previewUrlCache.get(key);
+            if (!data) {
+                try {
+                    const res = await fetch(`/beta/api/preview?artist=${encodeURIComponent(currentModalAlbum.album_artist_name)}&album=${encodeURIComponent(currentModalAlbum.album_name)}`);
+                    data = await res.json();
+                    previewUrlCache.set(key, data);
+                } catch(e) { return; }
+            }
+
+            if (data && data.preview_url) {
+                currentHoverKey = key;
+                activeAudio.src = data.preview_url;
+                activeAudio.play().then(() => {
+                    updateModalPlayIcon(true);
+                    updateModalProgress();
+                }).catch(e => {});
+            }
+        }
+
+        function seekGatefoldAudio(e) {
+            if (!activeAudio || !activeAudio.duration || isNaN(activeAudio.duration) || activeAudio.duration <= 0) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clickX = clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
+            activeAudio.currentTime = pct * activeAudio.duration;
+            updateModalProgress();
+        }
+
+        function updateModalProgress() {
+            const cur = activeAudio.currentTime || 0;
+            const dur = (activeAudio.duration && !isNaN(activeAudio.duration) && activeAudio.duration > 0) ? activeAudio.duration : 30;
+            const pct = Math.min(100, Math.max(0, (cur / dur) * 100));
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = `${pct}%`;
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) {
+                const curSec = Math.floor(cur);
+                const durSec = Math.floor(dur);
+                timeEl.innerText = `0:${curSec < 10 ? '0' : ''}${curSec} / 0:${durSec < 10 ? '0' : ''}${durSec}`;
+            }
+        }
+
+        function resetModalProgress() {
+            const pBar = document.getElementById('gatefoldProgressBar');
+            if (pBar) pBar.style.width = '0%';
+            const timeEl = document.getElementById('gatefoldAudioTime');
+            if (timeEl) timeEl.innerText = '0:00 / 0:30';
+        }
+
+        activeAudio.addEventListener('timeupdate', () => {
+            if (isModalOpen) updateModalProgress();
+        });
+        activeAudio.addEventListener('ended', () => {
+            resetModalProgress();
+        });
+
+        function updateModalPlayIcon(isPlaying) {
+            const icon = document.getElementById('gatefoldPlayIcon');
+            const wave = document.getElementById('gatefoldWaveform');
+            if (!icon || !wave) return;
+            if (isPlaying) {
+                icon.innerText = '❚❚';
+                wave.classList.remove('hidden');
+                wave.classList.add('flex');
+            } else {
+                icon.innerText = '▶';
+                wave.classList.remove('flex');
+                wave.classList.add('hidden');
+            }
+        }
+
+        function closeGatefold() {
+            isModalOpen = false;
+            currentModalAlbum = null;
+            document.getElementById("gatefoldModal").classList.add("hidden");
+            stopPreview();
+            resetModalProgress();
+        }
+
+        function onModalBackdropClick(e) {
+            closeGatefold();
+        }
+
+        /* Avatar Persona Picker Handlers (APP-04) */
+        function toggleAvatarDropdown(e) {
+            if (e) e.stopPropagation();
+            const d = document.querySelector('.avatarPickerDropdown');
+            if (d) d.classList.toggle('hidden');
+        }
+
+        function closeAvatarDropdown(e) {
+            if (e) e.stopPropagation();
+            const d = document.querySelector('.avatarPickerDropdown');
+            if (d) d.classList.add('hidden');
+        }
+
+        document.addEventListener('click', function(e) {
+            const d = document.querySelector('.avatarPickerDropdown');
+            if (d && !d.classList.contains('hidden')) {
+                if (!d.contains(e.target)) {
+                    d.classList.add('hidden');
+                }
+            }
+        });
+
+        async function uploadHistoryFiles(e) {
+            if (e) e.stopPropagation();
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const statusEl = document.getElementById('historyUploadStatus');
+            if (statusEl) {
+                statusEl.className = "text-[10px] text-center font-bold text-amber-400 pt-1";
+                statusEl.textContent = `Uploading & parsing ${files.length} file(s)...`;
+                statusEl.classList.remove('hidden');
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const resp = await fetch('/api/user/upload-history', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (resp.ok && data.status === 'success') {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-emerald-400 pt-1";
+                        statusEl.textContent = `✓ ${data.message}`;
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    if (statusEl) {
+                        statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                        statusEl.textContent = `Error: ${data.message || 'Upload failed'}`;
+                    }
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                if (statusEl) {
+                    statusEl.className = "text-[10px] text-center font-bold text-rose-400 pt-1";
+                    statusEl.textContent = `Error: Network failure`;
+                }
+            }
+        }
+
+        async function toggleUserPalsOptIn() {
+            try {
+                const res = await fetch('/api/user/toggle-pals', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('palsOptInStatusBadge');
+                    if (badge) {
+                        if (data.pals_opt_in) {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                        } else {
+                            badge.textContent = 'Inactive';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle pals opt-in:', err);
+            }
+        }
+
+        async function toggleUserSyncPause() {
+            try {
+                const res = await fetch('/api/user/toggle-sync-pause', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const badge = document.getElementById('syncPauseStatusBadge');
+                    if (badge) {
+                        if (data.sync_paused) {
+                            badge.textContent = 'Paused';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                        } else {
+                            badge.textContent = 'Active';
+                            badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to toggle sync pause:', err);
+            }
+        }
+
+        async function selectAvatarPreset(presetId, e) {
+            if (e) e.stopPropagation();
+            const statusEl = document.querySelector('.avatarSaveStatus');
+            if (statusEl) {
+                statusEl.innerText = "⏳ Saving...";
+                statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-amber-400";
+                statusEl.classList.remove('hidden');
+            }
+
+            try {
+                const resp = await fetch('/api/user/avatar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({avatar_id: presetId})
+                });
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    const avatarImgs = document.querySelectorAll('.headerUserAvatarImg');
+                    avatarImgs.forEach(img => {
+                        if (data.avatar_url) img.src = data.avatar_url;
+                    });
+                    if (statusEl) {
+                        statusEl.innerText = "✓ Persona saved!";
+                        statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-emerald-400";
+                    }
+                    const list = document.querySelector('.avatarOptionsList');
+                    if (list) {
+                        const buttons = list.querySelectorAll('button');
+                        buttons.forEach(btn => {
+                            btn.classList.remove('bg-emerald-500/10', 'border-emerald-500/30');
+                            const check = btn.querySelector('.text-emerald-400.text-xs');
+                            if (check) check.remove();
+                        });
+                        const clickedBtn = e ? e.currentTarget : null;
+                        if (clickedBtn) {
+                            clickedBtn.classList.add('bg-emerald-500/10', 'border-emerald-500/30');
+                            const span = document.createElement('span');
+                            span.className = 'text-emerald-400 text-xs font-bold shrink-0';
+                            span.innerText = '✓';
+                            clickedBtn.appendChild(span);
+                        }
+                    }
+                    setTimeout(() => {
+                        closeAvatarDropdown();
+                    }, 500);
+                } else {
+                    if (statusEl) {
+                        statusEl.innerText = "❌ Error saving persona";
+                        statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-rose-400";
+                    }
+                }
+            } catch (err) {
+                console.error("Avatar error:", err);
+                if (statusEl) {
+                    statusEl.innerText = "❌ Network error";
+                    statusEl.className = "avatarSaveStatus mt-2 pt-2 border-t border-gray-800 text-[10px] text-center font-bold text-rose-400";
+                }
+            }
+        }
+
+        window.addEventListener("scroll", () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                if (displayLimit < filteredAlbums.length) {
+                    displayLimit += 36;
+                    renderGrid();
+                }
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            onFilterChange();
+            if (!isAudioEnabled) {
+                const btnText = document.getElementById('audioText');
+                const btnIcon = document.getElementById('audioIcon');
+                if (btnText) btnText.innerText = 'Hover Audio: MUTED';
+                if (btnIcon) btnIcon.innerText = '🔇';
+            }
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            if (tab === 'unowned') {
+                switchCrateTab('unowned');
+            } else if (tab === 'saved') {
+                switchCrateTab('saved');
+            }
+        });
+    </script>
+</body>
+</html>
