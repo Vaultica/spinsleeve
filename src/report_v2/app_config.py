@@ -75,6 +75,19 @@ ICON_GATEFOLD_SVG = """<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 te
   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
 </svg>"""
 
+ICON_FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <circle cx="48" cy="52" r="46" fill="#0C0F12" stroke="#1DB954" stroke-width="4"/>
+  <circle cx="48" cy="52" r="40" fill="#1DB954"/>
+  <path d="M30 40c9-2.5 19-1.5 27 3" stroke="#0C0F12" stroke-width="5" stroke-linecap="round"/>
+  <path d="M33 49c8-1.8 16-1 22 2.5" stroke="#0C0F12" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M36 58c6-1.2 12-0.5 17 2" stroke="#0C0F12" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="48" cy="52" r="6" fill="#0C0F12"/>
+  <circle cx="86" cy="14" r="9" fill="#181D22" stroke="#9CA3AF" stroke-width="3"/>
+  <circle cx="86" cy="14" r="4" fill="#1DB954"/>
+  <path d="M83 19 L66 62 L52 68" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="43" y="63" width="11" height="8" rx="2" fill="#1DB954"/>
+</svg>"""
+
 AVATAR_PRESETS = [
     {"id": "beethoven", "name": "Ludwig van Beethoven", "era": "Classical", "badge": "🎹", "desc": "Romantic & classical titan"},
     {"id": "chet_baker", "name": "Chet Baker", "era": "Cool Jazz", "badge": "🎺", "desc": "West Coast jazz noir"},

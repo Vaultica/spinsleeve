@@ -15,7 +15,7 @@ import logging
 from flask import Flask, session, Response
 from google.cloud import secretmanager, bigquery
 
-from app_config import APP_VERSION, PROJECT_ID, ICON_A_SVG, ICON_GATEFOLD_SVG, ADMIN_USER_IDS, AVATAR_PRESETS
+from app_config import APP_VERSION, PROJECT_ID, ICON_A_SVG, ICON_GATEFOLD_SVG, ICON_FAVICON_SVG, ADMIN_USER_IDS, AVATAR_PRESETS
 from services.avatars import AVATAR_SVGS
 from routes.auth import auth_bp
 from routes.crate import crate_bp
@@ -115,7 +115,7 @@ def inject_globals():
 @app.route("/favicon.svg")
 @app.route("/favicon.ico")
 def favicon():
-    return Response(ICON_A_SVG, mimetype="image/svg+xml")
+    return Response(ICON_FAVICON_SVG, mimetype="image/svg+xml")
 
 
 if __name__ == "__main__":
