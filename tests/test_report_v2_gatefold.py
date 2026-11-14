@@ -77,6 +77,15 @@ class TestReportV2Gatefold(unittest.TestCase):
                 for token in links_tokens:
                     self.assertIn(token, html, f"Missing archival/link token '{token}' in {name}")
 
+    def test_personnel_list_parsing(self):
+        # Simulate catalog parsing logic for personnel strings
+        raw_personnel = "Carrie Smith (3) (Art Direction) • Beth Bird (Artwork)"
+        personnel_list = [p.strip() for p in raw_personnel.split(" • ") if p.strip()]
+        self.assertIsInstance(personnel_list, list)
+        self.assertEqual(len(personnel_list), 2)
+        self.assertEqual(personnel_list[0], "Carrie Smith (3) (Art Direction)")
+        self.assertEqual(personnel_list[1], "Beth Bird (Artwork)")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,6 +6,7 @@ landing showcase albums, and initial user synchronization on first login.
 """
 import time
 import datetime
+import json
 import logging
 from collections import Counter
 import pandas as pd
@@ -194,7 +195,18 @@ def fetch_user_album_data(user_id, force_refresh=False):
             alb_plays_30d = safe_float(row.get("album_plays_30d"), 0.0)
             tr_total = safe_int(row.get("album_tracks_total"), 0)
             desc = safe_str(row.get("album_description"))
-            pers = safe_str(row.get("personnel"))
+            raw_personnel = row.get("personnel")
+            personnel_list = []
+            if isinstance(raw_personnel, list):
+                personnel_list = raw_personnel
+            elif isinstance(raw_personnel, str) and raw_personnel.strip():
+                try:
+                    personnel_list = json.loads(raw_personnel)
+                except Exception:
+                    personnel_list = [p.strip() for p in raw_personnel.split(" • ") if p.strip()]
+                    if len(personnel_list) <= 1:
+                        personnel_list = [p.strip() for p in raw_personnel.split(",") if p.strip()]
+            pers = personnel_list
             pf = safe_str(row.get("pitchfork_score"))
             disc_rat = safe_float(row.get("discogs_rating"), 0.0)
             styles_str = safe_str(row.get("enriched_styles"))

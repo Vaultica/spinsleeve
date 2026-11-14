@@ -707,11 +707,11 @@
                 return;
             }
 
-            grid.innerHTML = toShow.map(a => `
+            grid.innerHTML = toShow.map((a, index) => `
                 <div class="group relative flex flex-col cursor-pointer"
                      onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_url}', this)"
                      onmouseleave="onCardLeave(this)"
-                     onclick='openGatefold(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
+                     onclick='openGatefold(filteredAlbums[${index}])'>
                     <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-800/80 sleeve-shadow transition duration-300 group-hover:scale-[1.03] group-hover:border-gray-700 relative">
                         <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover">
                         ${a.has_gatefold ? `

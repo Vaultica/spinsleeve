@@ -6,6 +6,8 @@ Unowned Crate ("You Should Save These") API, and 1-click album saving (`/api/sav
 """
 import datetime
 import logging
+import urllib.parse
+import requests
 from flask import Blueprint, render_template, request, jsonify, session
 import spotipy
 from google.cloud import bigquery
@@ -16,6 +18,61 @@ from services.datastore import get_datastore_client
 from services.spotify import get_token_for_user
 
 crate_bp = Blueprint("crate", __name__)
+
+_preview_cache = {}
+
+
+@crate_bp.route("/api/preview")
+@crate_bp.route("/beta/api/preview")
+def api_preview():
+    """
+    On-demand iTunes audio preview & Apple Music direct URL lookup.
+    Cached in-memory to provide instantaneous repeated responses.
+    """
+    artist = request.args.get("artist", "").strip()
+    album = request.args.get("album", "").strip()
+    if not artist and not album:
+        return jsonify({"status": "error", "message": "Missing artist or album"})
+
+    key = f"{artist.lower()}::{album.lower()}"
+    if key in _preview_cache:
+        return jsonify(_preview_cache[key])
+
+    term = f"{artist} {album}"
+    try:
+        res = requests.get(
+            "https://itunes.apple.com/search",
+            params={"term": term, "entity": "song", "limit": 1},
+            timeout=3.5
+        )
+        data = res.json()
+        if data.get("resultCount", 0) > 0:
+            result = data["results"][0]
+            am_url = result.get("collectionViewUrl") or result.get("trackViewUrl")
+            payload = {
+                "status": "success",
+                "preview_url": result.get("previewUrl"),
+                "apple_music_url": am_url,
+                "track_name": result.get("trackName", "Preview Snippet")
+            }
+        else:
+            payload = {
+                "status": "not_found",
+                "preview_url": None,
+                "apple_music_url": f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}",
+                "track_name": None
+            }
+    except Exception as e:
+        payload = {
+            "status": "error",
+            "message": str(e),
+            "preview_url": None,
+            "apple_music_url": f"https://music.apple.com/us/search?term={urllib.parse.quote(term)}",
+            "track_name": None
+        }
+
+    _preview_cache[key] = payload
+    return jsonify(payload)
 
 
 @crate_bp.route("/api/unowned-albums")

@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 import logging
 
-from flask import Flask, session
+from flask import Flask, session, Response
 from google.cloud import secretmanager, bigquery
 
 from app_config import APP_VERSION, PROJECT_ID, ICON_A_SVG, ICON_GATEFOLD_SVG, ADMIN_USER_IDS, AVATAR_PRESETS
@@ -110,6 +110,12 @@ def inject_globals():
         "avatar_presets": AVATAR_PRESETS,
         "avatar_svgs": AVATAR_SVGS
     }
+
+
+@app.route("/favicon.svg")
+@app.route("/favicon.ico")
+def favicon():
+    return Response(ICON_A_SVG, mimetype="image/svg+xml")
 
 
 if __name__ == "__main__":

@@ -9,10 +9,23 @@ from app_config import SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, logger
 from services.datastore import get_datastore_client
 
 
-def get_oauth_client(request_obj):
+def get_oauth_client(request_obj=None):
     """Builds a SpotifyOAuth client with a dynamic callback URL based on incoming request."""
-    scheme = "https" if (request_obj.is_secure or request_obj.headers.get("X-Forwarded-Proto") == "https") else "http"
-    host = request_obj.headers.get("X-Forwarded-Host") or request_obj.host
+    if request_obj is None:
+        try:
+            from flask import request as flask_request
+            request_obj = flask_request
+        except RuntimeError:
+            request_obj = None
+
+    scheme = "https"
+    host = "spinsleeve.cc"
+    if request_obj:
+        try:
+            scheme = "https" if (request_obj.is_secure or request_obj.headers.get("X-Forwarded-Proto") == "https") else "http"
+            host = request_obj.headers.get("X-Forwarded-Host") or request_obj.host
+        except Exception:
+            pass
     redirect_uri = f"{scheme}://{host}/beta/callback"
 
     scope = "user-library-read user-library-modify user-read-recently-played user-read-email user-read-private"

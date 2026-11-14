@@ -428,6 +428,8 @@
         let isAudioEnabled = localStorage.getItem('spinAudioEnabled') !== 'false';
         let isModalOpen = false;
         let currentModalAlbum = null;
+        let currentSpotlightAlbums = [];
+        let currentCandidateAlbums = [];
         const previewUrlCache = new Map();
 
         activeAudio.volume = 0.75;
@@ -735,6 +737,7 @@
         }
 
         function renderSpotlight(albums) {
+            currentSpotlightAlbums = albums;
             const container = document.getElementById('spotlightContainer');
             if (albums.length === 0) {
                 container.innerHTML = '<div class="col-span-3 py-10 text-center text-gray-500 text-xs">No records match your selected vibe & era filters. Try choosing "Any Vibe" or "Any Era".</div>';
@@ -753,7 +756,7 @@
                     <div class="card-bg border border-gray-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between hover:border-gray-700 transition relative overflow-hidden group cursor-pointer"
                          onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_url}', this)"
                          onmouseleave="onCardLeave(this)"
-                         onclick='openGatefold(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
+                         onclick='openGatefold(currentSpotlightAlbums[${i}])'>
                         <div class="absolute inset-0 bg-gradient-to-b ${badge.color} opacity-40 pointer-events-none"></div>
 
                         <div class="flex items-center justify-between mb-4 relative z-10">
@@ -788,6 +791,7 @@
         }
 
         function renderCandidatePool(albums) {
+            currentCandidateAlbums = albums;
             const grid = document.getElementById('candidatePoolGrid');
             document.getElementById('candidateSubtext').innerText = `${albums.length} more matching records`;
 
@@ -796,11 +800,11 @@
                 return;
             }
 
-            grid.innerHTML = albums.map(a => `
+            grid.innerHTML = albums.map((a, index) => `
                 <div class="group relative flex flex-col cursor-pointer"
                      onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_url}', this)"
                      onmouseleave="onCardLeave(this)"
-                     onclick='openGatefold(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
+                     onclick='openGatefold(currentCandidateAlbums[${index}])'>
                     <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-800/80 sleeve-shadow transition duration-300 group-hover:scale-[1.03] group-hover:border-gray-700 relative">
                         <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover">
                         ${a.has_gatefold ? `
