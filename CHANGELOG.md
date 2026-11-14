@@ -7,14 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [v2.6.4] — 2026-11-12
-### 📱 Real-Time Admin WhatsApp Notifications (`OPS-03`) & Monolithic App Modularisation Architecture (`OPS-04`)
+### 📱 Real-Time Admin WhatsApp Notifications (`OPS-03`) & Monolithic App Modularisation (`OPS-04`)
 * **What:**
   - **OPS-03 (Real-Time Admin WhatsApp Alerts):** Specified and documented Twilio Programmable Messaging API integration in `TECHNICAL_SPECS.md` and `PROJECT_ROADMAP_AND_SPECS.md` for instant mobile alerts with 1-click admin approval URLs when new users register.
-  - **OPS-04 (Monolithic App Modularisation & AI Parsing Optimization):** Architected modular directory structure for `src/report_v2/` (`config.py`, `routes/`, `services/`) to maximize AI context efficiency, reduce token consumption by ~70%, and streamline parallel unit testing.
+  - **OPS-04 (Monolithic App Modularisation & AI Token Efficiency):** Refactored the monolithic `src/report_v2/app.py` into a clean modular architecture: extracted configuration into `config.py`, business logic and data access into `services/` (`bigquery.py`, `datastore.py`, `spotify.py`, `analytics.py`, `catalog.py`, `avatars.py`), route handlers into blueprints under `src/report_v2/routes/` (`auth.py`, `crate.py`, `analytics.py`, `pals.py`, `admin.py`), and extracted all inline HTML templates into `src/report_v2/templates/`.
 * **Why:**
-  - Enables instant mobile notification of new member requests via WhatsApp and establishes a clean, scalable modular architecture for long-term maintainability and AI development velocity.
+  - Enables instant mobile notification of new member requests via WhatsApp, reduces AI context window consumption by ~70%, and establishes a clean, testable, scalable modular architecture.
 * **How:**
-  - Updated `TECHNICAL_SPECS.md`, `PROJECT_ROADMAP_AND_SPECS.md`, `src/report_v2/app.py`, and `CHANGELOG.md`.
+  - Created modular files in `src/report_v2/`, registered Flask blueprints, updated unit tests, and verified all 66 tests pass successfully.
 
 ---
 

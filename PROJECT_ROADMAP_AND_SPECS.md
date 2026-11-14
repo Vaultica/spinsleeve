@@ -134,7 +134,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
 | **`OPS-03`** | Real-Time Admin Alerts for User Join Requests | DevOps | 3–4 hours | Low |
-| **`OPS-04`** | Monolithic App Modularisation & AI Parsing Optimization | DevOps & Efficiency | 4–6 hours | Low–Med |
+| **`OPS-04`** | ✅ ~~Monolithic App Modularisation & AI Parsing Optimization~~ | DevOps & Efficiency | 4–6 hours | Completed (`v2.6.4`: Modularized across config, services, route blueprints) |
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A / Side B Breakdown | Core App | 4–6 hours | Low–Med |
 | **`APP-02`** | Cross-Platform Apple Music Library Onboarding (Phase 7) | Core App | 16–24 hours | Medium |
 | **`APP-03`** | In-App Feedback & Liner Notes Wishlist Collector | Core App | 5–7 hours | Low–Med |
