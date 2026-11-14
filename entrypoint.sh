@@ -4,13 +4,13 @@ set -e
 JOB_TYPE="${1:-sync}"
 PARAM_TWO="${2:-100}"
 
-echo "=== Starting SpinSleeve Pipeline Runner [Job: $JOB_TYPE] ==="
+echo "=== Starting SpinSleeve V2 Pipeline Runner [Job: $JOB_TYPE] ==="
 
 if [ "$JOB_TYPE" = "enrich" ]; then
-    echo "Running Album Metadata Enrichment (Batch size: $PARAM_TWO)..."
-    python src/functions/enrich_metadata.py --batch "$PARAM_TWO"
+    echo "Running V2 Album Metadata Enrichment (Batch size: $PARAM_TWO)..."
+    python src/pipeline_v2/enrich.py "$PARAM_TWO"
 else
-    python src/functions/main.py "$JOB_TYPE"
+    python src/pipeline_v2/sync.py
 fi
 
-echo "=== SpinSleeve Pipeline Runner Completed Successfully ==="
+echo "=== SpinSleeve V2 Pipeline Runner Completed Successfully ==="
