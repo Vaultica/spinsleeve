@@ -33,6 +33,7 @@ from config import APP_VERSION, ICON_A_SVG, ADMIN_USER_IDS, PROJECT_ID
 from routes.auth import auth_bp
 from routes.crate import crate_bp
 from routes.analytics import analytics_bp
+from routes.pals import pals_bp
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("spinsleeve_v2")
@@ -41,6 +42,7 @@ app = Flask(__name__)
 app.register_blueprint(auth_bp)
 app.register_blueprint(crate_bp)
 app.register_blueprint(analytics_bp)
+app.register_blueprint(pals_bp)
 
 # Project & Dataset settings
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
@@ -537,59 +539,7 @@ def admin_required(f):
     return decorated_function
 
 
-@app.route("/api/user/avatar", methods=["POST"])
-@app.route("/beta/api/user/avatar", methods=["POST"])
-@login_required
-def update_user_avatar():
-    """Saves user's chosen Music Legend Persona to Cloud Datastore & active session (APP-04)."""
-    data = request.get_json(silent=True) or {}
-    avatar_id = str(data.get("avatar_id", "")).strip().lower()
 
-    valid_ids = set(AVATAR_SVGS.keys()) | {"spotify", "default", ""}
-    if avatar_id not in valid_ids:
-        return jsonify({"status": "error", "message": "Invalid avatar preset"}), 400
-
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"status": "error", "message": "Not authenticated"}), 401
-
-    ds_client = get_datastore_client()
-    key = ds_client.key("User", user_id)
-    try:
-        user = ds_client.get(key)
-    except Exception as e:
-        logger.warning("[%s] Failed to fetch User from Datastore: %s", user_id, e)
-        user = None
-
-    if not user:
-        user = datastore.Entity(key=key)
-        user.update({
-            "spotify_id": user_id,
-            "display_name": session.get("display_name", user_id),
-            "is_approved": True,
-            "role": session.get("role", "user")
-        })
-
-    if avatar_id in ("spotify", "default", ""):
-        user["custom_avatar_id"] = ""
-        user["avatar_url"] = user.get("spotify_avatar_url") or session.get("spotify_avatar_url") or ""
-    else:
-        user["custom_avatar_id"] = avatar_id
-        user["avatar_url"] = f"/avatar/{avatar_id}.svg"
-
-    try:
-        ds_client.put(user)
-    except Exception as e:
-        logger.warning("[%s] Could not persist custom avatar to Datastore: %s", user_id, e)
-
-    session["custom_avatar_id"] = user.get("custom_avatar_id", "")
-    session["avatar_url"] = user.get("avatar_url", "")
-
-    return jsonify({
-        "status": "success",
-        "avatar_id": user.get("custom_avatar_id", ""),
-        "avatar_url": user.get("avatar_url", "")
-    })
 
 
 def invalidate_user_catalog_cache(user_id):
@@ -2813,40 +2763,7 @@ def admin_toggle_pals(spotify_id):
     return redirect("/admin")
 
 
-@app.route("/api/user/toggle-pals", methods=["POST"])
-@app.route("/beta/api/user/toggle-pals", methods=["POST"])
-def api_toggle_user_pals():
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
-    client = get_datastore_client()
-    key = client.key("User", user_id)
-    user = client.get(key)
-    if user:
-        new_val = not user.get("pals_opt_in", False)
-        user["pals_opt_in"] = new_val
-        client.put(user)
-        session["pals_opt_in"] = new_val
-        return jsonify({"status": "success", "pals_opt_in": new_val})
-    return jsonify({"status": "error", "message": "User not found"}), 404
 
-
-@app.route("/api/user/toggle-sync-pause", methods=["POST"])
-@app.route("/beta/api/user/toggle-sync-pause", methods=["POST"])
-def api_toggle_user_sync_pause():
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
-    client = get_datastore_client()
-    key = client.key("User", user_id)
-    user = client.get(key)
-    if user:
-        new_val = not user.get("sync_paused", False)
-        user["sync_paused"] = new_val
-        client.put(user)
-        session["sync_paused"] = new_val
-        return jsonify({"status": "success", "sync_paused": new_val})
-    return jsonify({"status": "error", "message": "User not found"}), 404
 
 
 @app.route("/admin/whitelist", methods=["POST"])

@@ -10,14 +10,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from report_v2.app import (
     app,
-    AVATAR_PRESETS,
-    AVATAR_SVGS,
     APP_VERSION,
     BETA_EXPLORER_HTML,
     BETA_RECOMMEND_HTML,
     BETA_ANALYTICS_HTML,
     BETA_PALS_HTML
 )
+from report_v2.services.avatars import AVATAR_PRESETS, AVATAR_SVGS
 
 
 class TestAvatarPersonaPicker(unittest.TestCase):
@@ -93,7 +92,7 @@ class TestAvatarPersonaPicker(unittest.TestCase):
         self.assertEqual(res.status_code, 302)
         self.assertTrue(res.headers["Location"].endswith("/login"))
 
-    @patch("report_v2.app.get_datastore_client")
+    @patch("services.datastore.get_datastore_client")
     def test_update_avatar_authenticated_success(self, mock_get_ds):
         """POST /api/user/avatar updates user's custom_avatar_id and avatar_url."""
         mock_ds = MagicMock()
@@ -123,7 +122,7 @@ class TestAvatarPersonaPicker(unittest.TestCase):
         self.assertEqual(mock_user["custom_avatar_id"], "david_bowie")
         self.assertEqual(mock_user["avatar_url"], "/avatar/david_bowie.svg")
 
-    @patch("report_v2.app.get_datastore_client")
+    @patch("services.datastore.get_datastore_client")
     def test_revert_to_spotify_avatar(self, mock_get_ds):
         """POST /api/user/avatar with 'spotify' clears custom_avatar_id."""
         mock_ds = MagicMock()
