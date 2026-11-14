@@ -42,3 +42,10 @@ You are the deployment and release guardian for **SpinSleeve** (`https://spinsle
        ```bash
        git -c core.sshCommand=ssh push origin master
        ```
+
+4. **Post-Deployment Health Verification:**
+   - After Cloud Run deployment succeeds, run an automated HTTP health check against `https://spinsleeve.cc/beta/`:
+     ```bash
+     curl -s -o /dev/null -w "%{http_code}" https://spinsleeve.cc/beta/
+     ```
+   - Confirm that the response status code is `200` or `302` (redirect to login/landing). If non-200/302, inspect Cloud Run container logs immediately.
