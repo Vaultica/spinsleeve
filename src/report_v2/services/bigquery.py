@@ -6,7 +6,7 @@ and robust safe data parsing helpers (safe_int, safe_float, safe_str).
 """
 import pandas as pd
 from google.cloud import bigquery
-from config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
+from app_config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
 
 
 def get_bigquery_client():

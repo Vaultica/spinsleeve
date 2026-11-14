@@ -12,7 +12,7 @@ from flask import Blueprint, render_template, request, redirect, session
 import spotipy
 from google.cloud import datastore, bigquery
 
-from config import PROJECT_ID, DATASET_V2, ADMIN_USER_IDS, ICON_A_SVG, logger
+from app_config import PROJECT_ID, DATASET_V2, ADMIN_USER_IDS, ICON_A_SVG, logger
 from services.datastore import get_datastore_client
 from services.spotify import get_oauth_client
 

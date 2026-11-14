@@ -10,7 +10,7 @@ import logging
 from collections import Counter
 from google.cloud import bigquery
 
-from config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
+from app_config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
 from services.datastore import get_analytics_from_datastore, save_analytics_to_datastore
 from services.bigquery import safe_str, safe_int, safe_float
 

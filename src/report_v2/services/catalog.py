@@ -12,7 +12,7 @@ import pandas as pd
 import spotipy
 from google.cloud import bigquery
 
-from config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
+from app_config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
 from services.datastore import get_datastore_client, get_catalog_from_datastore, save_catalog_to_datastore
 from services.bigquery import safe_int, safe_float, safe_str
 

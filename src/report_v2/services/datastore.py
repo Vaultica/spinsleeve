@@ -11,7 +11,7 @@ import gzip
 import datetime
 import logging
 from google.cloud import datastore
-from config import PROJECT_ID, logger
+from app_config import PROJECT_ID, logger
 
 DATASTORE_CACHE_TTL = 86400  # 24 hours
 

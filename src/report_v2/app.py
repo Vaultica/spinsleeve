@@ -15,7 +15,7 @@ import logging
 from flask import Flask, session
 from google.cloud import secretmanager, bigquery
 
-from config import APP_VERSION, PROJECT_ID, ICON_A_SVG, ICON_GATEFOLD_SVG, ADMIN_USER_IDS, AVATAR_PRESETS
+from app_config import APP_VERSION, PROJECT_ID, ICON_A_SVG, ICON_GATEFOLD_SVG, ADMIN_USER_IDS, AVATAR_PRESETS
 from services.avatars import AVATAR_SVGS
 from routes.auth import auth_bp
 from routes.crate import crate_bp

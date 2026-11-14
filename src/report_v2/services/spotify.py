@@ -5,7 +5,7 @@ Handles Spotify OAuth 2.0 PKCE client instantiation, dynamic callback URI resolu
 and offline token refreshing from Cloud Datastore.
 """
 from spotipy.oauth2 import SpotifyOAuth
-from config import SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, logger
+from app_config import SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, logger
 from services.datastore import get_datastore_client
 
 

@@ -9,7 +9,7 @@ import logging
 from flask import Blueprint, render_template, request, redirect, session
 from google.cloud import datastore
 
-from config import ADMIN_USER_IDS, ICON_A_SVG, logger
+from app_config import ADMIN_USER_IDS, ICON_A_SVG, logger
 from routes.auth import admin_required
 import services.datastore
 

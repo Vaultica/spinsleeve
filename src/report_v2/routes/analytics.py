@@ -7,7 +7,7 @@ and JSON telemetry endpoints (`/api/analytics`).
 import logging
 from flask import Blueprint, render_template, request, jsonify, session
 
-from config import ICON_A_SVG, logger
+from app_config import ICON_A_SVG, logger
 from routes.auth import login_required
 
 analytics_bp = Blueprint("analytics", __name__)

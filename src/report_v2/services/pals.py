@@ -7,7 +7,7 @@ import json
 import logging
 from google.cloud import bigquery, datastore
 
-from config import PROJECT_ID, DATASET_V2, logger
+from app_config import PROJECT_ID, DATASET_V2, logger
 from services.datastore import get_datastore_client
 from services.bigquery import safe_str, safe_int, safe_float
 

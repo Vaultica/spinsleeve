@@ -9,7 +9,7 @@ import logging
 from flask import Blueprint, render_template, request, jsonify, session
 from google.cloud import datastore
 
-from config import ADMIN_USER_IDS, ICON_A_SVG, ICON_GATEFOLD_SVG, AVATAR_PRESETS, logger
+from app_config import ADMIN_USER_IDS, ICON_A_SVG, ICON_GATEFOLD_SVG, AVATAR_PRESETS, logger
 from routes.auth import login_required
 import services.datastore
 from services.avatars import AVATAR_SVGS

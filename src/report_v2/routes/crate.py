@@ -10,7 +10,7 @@ from flask import Blueprint, render_template, request, jsonify, session
 import spotipy
 from google.cloud import bigquery
 
-from config import PROJECT_ID, DATASET_V2, ICON_A_SVG, ICON_GATEFOLD_SVG, logger
+from app_config import PROJECT_ID, DATASET_V2, ICON_A_SVG, ICON_GATEFOLD_SVG, logger
 from routes.auth import login_required
 from services.datastore import get_datastore_client
 from services.spotify import get_token_for_user
