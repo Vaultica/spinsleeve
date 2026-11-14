@@ -88,3 +88,15 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 | **`v2.6.4`** | 2026-11-12 | 14 | ~720,000 | ~10,500 | **~$0.06** | `OPS-03` Twilio WhatsApp spec; `OPS-04` Monolithic app modularisation (`app_config.py`, services, route blueprints, templates). |
 | **`v2.6.5`** | 2026-11-14 | 16 | ~730,000 | ~11,000 | **~$0.06** | `app_config.py` rename, Dockerfile bundling fix, `/recommend` Datastore cache fallback, schema alignment, `?clear_cache=1`, 60/60 tests passing. |
 | **`v2.6.5` (Closure)** | 2026-11-14 | 5 | ~220,000 | ~3,500 | **~$0.02** | Session closure protocol, release ledger sync, documentation verification, Git push. |
+
+---
+
+## 7. Agent Autonomy & Operational Workflow
+
+* **Autonomous Code & Test Modifications:** 
+  - The agent is fully authorized to edit source code (`src/`), test files (`tests/`), and configuration files directly when fulfilling user feature requests or bug fixes during active development sessions.
+* **Gated Actions (Explicit Approval Required):**
+  - **Live Deployments:** Pushing code/containers to Cloud Run (`gcloud run deploy`), Firebase Hosting, or production remotes requires explicit user sign-off.
+  - **Data Changes:** Destructive BigQuery DML operations, schema migrations, or production Datastore modifications require prior user confirmation.
+* **Validation Standard:**
+  - Every code modification must be verified by running the unit test suite (`.venv/bin/python3 -m unittest discover tests`) to ensure all tests pass successfully prior to reporting completion.
