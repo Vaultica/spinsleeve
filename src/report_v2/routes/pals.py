@@ -13,6 +13,7 @@ from config import ADMIN_USER_IDS, ICON_A_SVG, ICON_GATEFOLD_SVG, AVATAR_PRESETS
 from routes.auth import login_required
 import services.datastore
 from services.avatars import AVATAR_SVGS
+from services.pals import fetch_pals_directory, compute_pal_compatibility
 
 pals_bp = Blueprint("pals", __name__)
 
@@ -149,7 +150,6 @@ def beta_pals(pal_id=None):
     if not is_admin_direct and not pals_opt_in:
         return render_template('pals_locked.html', brand_icon=ICON_A_SVG, user=session)
 
-    from app import fetch_pals_directory, compute_pal_compatibility
     pals_directory = fetch_pals_directory(current_user_id)
 
     other_pals = [p for p in pals_directory if not p["is_self"]]
@@ -197,7 +197,6 @@ def beta_pals(pal_id=None):
 def api_pal_compatibility(pal_id):
     current_user_id = session["user_id"]
     horizon = request.args.get("horizon", "30d")
-    from app import compute_pal_compatibility
     pal_data = compute_pal_compatibility(current_user_id, pal_id, horizon=horizon)
     return jsonify({
         "status": "success",
@@ -205,3 +204,15 @@ def api_pal_compatibility(pal_id):
         "borrow_recommendations": pal_data["borrow_recommendations"],
         "horizon": horizon
     })
+
+
+@pals_bp.route("/avatar/<avatar_id>")
+@pals_bp.route("/beta/avatar/<avatar_id>")
+@pals_bp.route("/avatar/<avatar_id>.svg")
+@pals_bp.route("/beta/avatar/<avatar_id>.svg")
+def serve_avatar(avatar_id):
+    """Serves illustrated Music Legend vector SVG avatars (APP-04)."""
+    clean_id = avatar_id.replace(".svg", "").lower()
+    if clean_id not in AVATAR_SVGS:
+        return "Avatar not found", 404
+    return AVATAR_SVGS[clean_id], 200, {"Content-Type": "image/svg+xml"}

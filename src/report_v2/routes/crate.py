@@ -137,3 +137,23 @@ def beta_index():
         brand_icon=ICON_A_SVG,
         gatefold_icon=ICON_GATEFOLD_SVG
     )
+
+
+@crate_bp.route("/recommend")
+@crate_bp.route("/beta/recommend")
+@login_required
+def beta_recommend():
+    user_id = session["user_id"]
+    force_refresh = request.args.get("refresh") in ("1", "true")
+    from services.catalog import fetch_user_album_data
+    data = fetch_user_album_data(user_id, force_refresh=force_refresh)
+
+    return render_template(
+        'recommend.html',
+        albums=data["albums"],
+        top_genres=data["top_genres"],
+        kpis=data["kpis"],
+        user=session,
+        brand_icon=ICON_A_SVG,
+        gatefold_icon=ICON_GATEFOLD_SVG
+    )
