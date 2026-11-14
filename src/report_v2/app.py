@@ -31,12 +31,14 @@ from spotipy.oauth2 import SpotifyOAuth
 
 from config import APP_VERSION, ICON_A_SVG, ADMIN_USER_IDS, PROJECT_ID
 from routes.auth import auth_bp
+from routes.crate import crate_bp
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("spinsleeve_v2")
 
 app = Flask(__name__)
 app.register_blueprint(auth_bp)
+app.register_blueprint(crate_bp)
 
 # Project & Dataset settings
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
