@@ -1,8 +1,0 @@
-cron:
-- description: run instance
-  url: /vm/start
-  schedule: every day 07:00
-
-- description: terminate instance
-  url: /vm/stop
-  schedule: every day 08:00
