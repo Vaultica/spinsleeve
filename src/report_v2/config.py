@@ -1,17 +1,16 @@
 """
-SpinSleeve V2 Configuration & Constants Module (`config.py`)
-------------------------------------------------------------
-Defines project settings, GCP environment variables, Secret Manager accessors,
-brand SVGs (rotating 33 RPM vinyl platter), and Music Legend avatar presets.
+SpinSleeve V2 Application Configuration (`config.py`)
+---------------------------------------------------
+Central configuration constants, SVG brand graphics, secrets, and app versioning.
 """
+
 import os
 import logging
-from google.cloud import secretmanager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("spinsleeve_v2")
 
-# Project & Dataset settings
+APP_VERSION = "v2.6.4"
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
 DATASET_V2 = "spotify_v2"
 PLAYBACK_HISTORY_TABLE = os.getenv("PLAYBACK_HISTORY_TABLE", f"{PROJECT_ID}.{DATASET_V2}.playback_history")
@@ -23,6 +22,7 @@ def get_secret(secret_name, default=""):
     if val:
         return val.strip()
     try:
+        from google.cloud import secretmanager
         sm_client = secretmanager.SecretManagerServiceClient()
         path = f"projects/{PROJECT_ID}/secrets/{secret_name}/versions/latest"
         res = sm_client.access_secret_version(request={"name": path})
@@ -34,10 +34,6 @@ def get_secret(secret_name, default=""):
 
 SPOTIPY_CLIENT_ID = get_secret("SPOTIPY_CLIENT_ID")
 SPOTIPY_CLIENT_SECRET = get_secret("SPOTIPY_CLIENT_SECRET")
-SECRET_KEY = get_secret("FLASK_SECRET_KEY", "spinsleeve-beta-secure-session-key-2026")
-
-# Application Version (POLISH-04, POLISH-01, APP-04, POLISH-09, v2.6.4)
-APP_VERSION = "v2.6.4"
 
 # Brand Logo: Original 33 RPM Rotating Platter + Spotify Soundwaves + Tonearm
 ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
@@ -76,10 +72,9 @@ ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fi
 </svg>"""
 
 ICON_GATEFOLD_SVG = """<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
 </svg>"""
 
-# MUSIC LEGEND ILLUSTRATED AVATARS (APP-04)
 AVATAR_PRESETS = [
     {"id": "beethoven", "name": "Ludwig van Beethoven", "era": "Classical", "badge": "🎹", "desc": "Romantic & classical titan"},
     {"id": "chet_baker", "name": "Chet Baker", "era": "Cool Jazz", "badge": "🎺", "desc": "West Coast jazz noir"},
@@ -91,6 +86,6 @@ AVATAR_PRESETS = [
     {"id": "fela_kuti", "name": "Fela Kuti", "era": "Afrobeat", "badge": "🎷", "desc": "Afrobeat pioneer & activist"},
     {"id": "madonna", "name": "Madonna", "era": "80s Pop", "badge": "👑", "desc": "Queen of Pop & reinvention"},
     {"id": "amy_winehouse", "name": "Amy Winehouse", "era": "Neo-Soul", "badge": "🎤", "desc": "Camden beehive & jazz voice"},
-    {"id": "daft_punk", "name": "Daft Punk", "era": "Electronic / House", "badge": "🤖", "desc": "French touch robot duo"},
-    {"id": "nina_simone", "name": "Nina Simone", "era": "Jazz & Soul", "badge": "🎶", "desc": "High Priestess of Soul"},
+    {"id": "daft_punk", "name": "Daft Punk", "era": "French House", "badge": "🤖", "desc": "Chrome helmet electronic duo"},
+    {"id": "drake", "name": "Drake", "era": "Hip-Hop / R&B", "badge": "🦉", "desc": "Certified Lover Boy & OVO"}
 ]
