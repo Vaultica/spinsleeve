@@ -2,6 +2,7 @@ import os
 import sys
 # Ensure src is in python path for pipeline_v2 imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 import time
 import json
 import gzip
@@ -28,10 +29,14 @@ from google.cloud import bigquery, datastore, secretmanager
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
+from config import APP_VERSION, ICON_A_SVG, ADMIN_USER_IDS, PROJECT_ID
+from routes.auth import auth_bp
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("spinsleeve_v2")
 
 app = Flask(__name__)
+app.register_blueprint(auth_bp)
 
 # Project & Dataset settings
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
