@@ -20,6 +20,9 @@
         .wave-bar { animation: soundWave 1.2s ease-in-out infinite; }
         .wave-bar:nth-child(2) { animation-delay: 0.2s; }
         .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+        .pill-active { background-color: #1DB954; color: #000; font-weight: 700; }
+        .pill-inactive { background-color: #1a2027; color: #9ca3af; border: 1px solid #28323c; }
+        .pill-inactive:hover { background-color: #28323c; color: #fff; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -54,7 +57,7 @@
             
 
                         <!-- Top-Level Navigation Tabs -->
-            <nav class="hidden md:flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+            <nav class="flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner overflow-x-auto">
                 <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     Library
@@ -190,11 +193,11 @@
                 <span>My Saved Vinyl</span>
                 <span class="bg-emerald-500/30 text-emerald-200 text-[10px] font-mono px-1.5 py-0.5 rounded-full">{{ albums|length }}</span>
             </button>
-            <a href="/beta/recommend" id="diggerTabBtn"
-               class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
+            <button id="diggerTabBtn" onclick="switchCrateTab('digger')"
+                    class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
                 <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
                 <span>Crate Digger</span>
-            </a>
+            </button>
             <button id="unownedVinylTabBtn" onclick="switchCrateTab('unowned')"
                     class="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2">
                 <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
@@ -245,6 +248,104 @@
 
             <div id="loadMoreTrigger" class="text-center py-10">
                 <span class="text-xs text-gray-500">Showing <span id="displayedCount">0</span> of <span id="totalMatchCount">0</span> albums</span>
+            </div>
+        </div>
+
+        <!-- Crate Digger View Container -->
+        <div id="crateDiggerView" class="hidden">
+            <!-- Control Deck (Streamlined 2-Tier Digging Console - POLISH-01) -->
+            <div class="card-bg p-4 rounded-2xl border border-gray-800/90 mb-6 shadow-xl backdrop-blur-sm">
+                <!-- Row 1: Crate Target Focus (Single Dimension) & Shuffle -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-gray-800/70">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">1. Crate Target:</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button onclick="setTarget('heavy_30d')" id="horizonBtn-30d" class="pill-active px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Albums actively spun in the last 30 days">
+                                <span>🔥</span> Heavy Rotation (30D: {{ kpis.played_albums_30d or 0 }})
+                            </button>
+                            <button onclick="setTarget('unplayed')" id="modeBtn-discover" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Albums in your library with zero recorded plays">
+                                <span>🔍</span> Unplayed Gems ({{ kpis.unplayed_albums or 0 }})
+                            </button>
+                            <button onclick="setTarget('cold')" id="targetBtn-cold" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Played before, but not spun in the last 30 days">
+                                <span>❄️</span> Cold Shelf ({{ (kpis.played_albums - (kpis.played_albums_30d or 0)) if kpis.played_albums >= (kpis.played_albums_30d or 0) else 0 }})
+                            </button>
+                            <button onclick="setTarget('classics')" id="horizonBtn-all" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="All-time most-played favorite records">
+                                <span>⭐</span> All-Time Favorites ({{ kpis.played_albums or 0 }})
+                            </button>
+                            <button onclick="setTarget('all')" id="targetBtn-all" class="pill-inactive px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="Entire library collection">
+                                <span>🌌</span> Full Crate ({{ kpis.total_albums or 0 }})
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-3.5 py-1.5 rounded-xl transition shadow flex items-center gap-1.5" title="Reshuffle spotlight picks and candidate records">
+                            <span>🎲</span> Spin Again
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 2: Vibe & Era Filters -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-3">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Vibe:</span>
+                            <div class="flex flex-wrap gap-1" id="vibePills">
+                                <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-2.5 py-1 rounded-lg text-xs transition">Any Vibe</button>
+                                <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">🌿 Chill / Ambient</button>
+                                <button onclick="setVibe('energetic')" id="vibeBtn-energetic" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">⚡ Energetic / Rock</button>
+                                <button onclick="setVibe('mellow')" id="vibeBtn-mellow" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">☕ Mellow / Acoustic</button>
+                                <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">📻 Vintage / Classic</button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Era:</span>
+                            <div class="flex flex-wrap gap-1" id="eraPills">
+                                <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-2 py-1 rounded-lg text-xs transition">All Eras</button>
+                                <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-2 py-1 rounded-lg text-xs transition">Recent (2018+)</button>
+                                <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-2 py-1 rounded-lg text-xs transition">Modern (00s-10s)</button>
+                                <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-2 py-1 rounded-lg text-xs transition">Classic (&lt;2000)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <select id="diggerGenreSelect" onchange="onGenreSelect(this.value)"
+                                class="bg-[#0c0f12] border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954] transition">
+                            <option value="">All Genres in Library</option>
+                            {% for g in top_genres %}
+                            <option value="{{ g }}">{{ g.title() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spotlight Section (Top 3 Curated Picks) -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-black text-white flex items-center gap-2">
+                            <span>✨ Spotlight Curated Picks</span>
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Top recommendation algorithm matches based on your active target and vibe</p>
+                    </div>
+                    <span id="poolCountText" class="text-xs font-mono text-emerald-400 font-semibold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/30">0 matching records</span>
+                </div>
+                <div id="spotlightContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
+            </div>
+
+            <!-- Candidate Pool Grid -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-black text-white flex items-center gap-2">
+                            <span>🗄️ Crate Candidate Pool</span>
+                        </h3>
+                        <p id="candidateSubtext" class="text-xs text-gray-400 mt-0.5">0 more matching records</p>
+                    </div>
+                </div>
+                <div id="candidatePoolGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
         </div>
 
@@ -678,20 +779,34 @@
 
         function switchCrateTab(tab) {
             const savedView = document.getElementById("savedVinylView");
+            const diggerView = document.getElementById("crateDiggerView");
             const unownedView = document.getElementById("unownedVinylView");
             const savedBtn = document.getElementById("savedVinylTabBtn");
+            const diggerBtn = document.getElementById("diggerTabBtn");
             const unownedBtn = document.getElementById("unownedVinylTabBtn");
 
             if (tab === 'saved') {
-                savedView.classList.remove("hidden");
-                unownedView.classList.add("hidden");
-                savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow";
-                unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2";
+                if (savedView) savedView.classList.remove("hidden");
+                if (diggerView) diggerView.classList.add("hidden");
+                if (unownedView) unownedView.classList.add("hidden");
+                if (savedBtn) savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow";
+                if (diggerBtn) diggerBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+                if (unownedBtn) unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+            } else if (tab === 'digger') {
+                if (savedView) savedView.classList.add("hidden");
+                if (diggerView) diggerView.classList.remove("hidden");
+                if (unownedView) unownedView.classList.add("hidden");
+                if (diggerBtn) diggerBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow";
+                if (savedBtn) savedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+                if (unownedBtn) unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+                if (typeof runRecommender === 'function') runRecommender();
             } else {
-                savedView.classList.add("hidden");
-                unownedView.classList.remove("hidden");
-                unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2 shadow";
-                savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-900 text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 flex items-center gap-2";
+                if (savedView) savedView.classList.add("hidden");
+                if (diggerView) diggerView.classList.add("hidden");
+                if (unownedView) unownedView.classList.remove("hidden");
+                if (unownedBtn) unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2 shadow";
+                if (savedBtn) savedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+                if (diggerBtn) diggerBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
                 renderUnownedGrid();
             }
         }
@@ -765,8 +880,20 @@
                     return (normA - normB) || ((a.album_track_plays||0) - (b.album_track_plays||0));
                 });
             }
-            else if (sort === "added_desc") filteredAlbums.sort((a,b) => (b.added_at||"").localeCompare(a.added_at||""));
-            else if (sort === "year_desc") filteredAlbums.sort((a,b) => (b.release_year||0) - (a.release_year||0));
+            else if (sort === "added_desc") {
+                filteredAlbums.sort((a, b) => {
+                    const timeA = a.added_at ? new Date(a.added_at).getTime() : 0;
+                    const timeB = b.added_at ? new Date(b.added_at).getTime() : 0;
+                    return timeB - timeA;
+                });
+            }
+            else if (sort === "year_desc") {
+                filteredAlbums.sort((a, b) => {
+                    const yearA = parseInt(a.release_year) || 0;
+                    const yearB = parseInt(b.release_year) || 0;
+                    return yearB - yearA;
+                });
+            }
             else if (sort === "artist_asc") filteredAlbums.sort((a,b) => (a.album_artist_name||"").localeCompare(b.album_artist_name||""));
             else if (sort === "artist_albums_desc") {
                 filteredAlbums.sort((a, b) => {
@@ -1161,6 +1288,259 @@
             }
         }
 
+        let selectedTarget = 'heavy_30d';
+        let selectedHorizon = '30d';
+        let selectedMode = 'favorites';
+        let selectedVibe = 'all';
+        let selectedEra = 'all';
+        let selectedGenre = '';
+        let currentSeed = Math.random();
+        let currentSpotlightAlbums = [];
+        let currentCandidateAlbums = [];
+
+        const VIBES = {
+            chill: ['ambient', 'chill', 'downtempo', 'lo-fi', 'dream pop', 'slowcore', 'shoegaze', 'trip hop', 'ethereal', 'ambient pop', 'minimalism', 'idm', 'post-rock', 'bedroom pop', 'chillwave', 'drone'],
+            energetic: ['punk', 'hard rock', 'garage rock', 'alternative rock', 'grunge', 'noise rock', 'post-punk', 'electronic', 'dance', 'techno', 'house', 'hip hop', 'rap', 'club', 'breakbeat', 'big beat', 'drum and bass', 'edm', 'synthpop', 'indietronica'],
+            mellow: ['folk', 'acoustic', 'singer-songwriter', 'indie folk', 'chamber pop', 'chamber folk', 'jazz', 'bossa nova', 'quiet storm', 'americana', 'bluegrass', 'soft rock', 'chanson', 'soul'],
+            vintage: ['classic rock', 'psychedelic rock', 'blues', 'motown', 'classic soul', 'brill building', 'roots rock', 'funk', 'hard bop', 'soul jazz', 'traditional pop', 'rockabilly', 'doo-wop', 'vintage']
+        };
+
+        function setTarget(target) {
+            selectedTarget = target;
+            selectedHorizon = (target === 'heavy_30d') ? '30d' : 'all';
+            selectedMode = (target === 'unplayed') ? 'discover' : 'favorites';
+
+            ['heavy_30d', 'unplayed', 'cold', 'classics', 'all'].forEach(t => {
+                const btnId = (t === 'heavy_30d') ? 'horizonBtn-30d' :
+                              (t === 'unplayed') ? 'modeBtn-discover' :
+                              (t === 'classics') ? 'horizonBtn-all' :
+                              `targetBtn-${t}`;
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.className = (t === target ? 'pill-active' : 'pill-inactive') + ' px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0';
+                }
+            });
+            runRecommender();
+        }
+
+        function setVibe(vibe) {
+            selectedVibe = vibe;
+            ['all', 'chill', 'energetic', 'mellow', 'vintage'].forEach(v => {
+                const btn = document.getElementById(`vibeBtn-${v}`);
+                if (btn) btn.className = (v === vibe ? 'pill-active' : 'pill-inactive') + ' px-2.5 py-1 rounded-lg text-xs transition';
+            });
+            runRecommender();
+        }
+
+        function setEra(era) {
+            selectedEra = era;
+            ['all', 'recent', 'modern', 'classic'].forEach(e => {
+                const btn = document.getElementById(`eraBtn-${e}`);
+                if (btn) btn.className = (e === era ? 'pill-active' : 'pill-inactive') + ' px-2 py-1 rounded-lg text-xs transition';
+            });
+            runRecommender();
+        }
+
+        function onGenreSelect(g) {
+            selectedGenre = g.toLowerCase();
+            runRecommender();
+        }
+
+        function spinAgain() {
+            currentSeed = Math.random();
+            runRecommender();
+        }
+
+        function seededScore(album, index) {
+            let score = 50;
+            const seedFactor = Math.sin((index + 1) * 997 + currentSeed * 1000) * 20;
+            score += seedFactor;
+
+            if (selectedVibe !== 'all') {
+                const keywords = VIBES[selectedVibe] || [];
+                const gStr = (album.album_genres || '').toLowerCase();
+                const matched = keywords.filter(k => gStr.includes(k)).length;
+                score += matched * 18;
+                if (selectedVibe === 'vintage') {
+                    const y = parseInt(album.release_year) || 0;
+                    if (y > 0 && y < 1985) score += 20;
+                }
+            }
+
+            if (album.has_gatefold) score += 12;
+
+            if (selectedTarget === 'unplayed') {
+                const plays = (album.album_track_plays || 0);
+                if (plays === 0) score += 35;
+                else score -= plays * 2;
+            } else if (selectedTarget === 'cold') {
+                const playsAll = album.album_track_plays || 0;
+                score += Math.min(playsAll * 2.0, 35);
+            } else if (selectedTarget === 'heavy_30d') {
+                const plays30 = album.album_track_plays_30d || 0;
+                score += Math.min(plays30 * 4.0, 40);
+                score += Math.min((album.album_track_plays || 0) * 0.5, 10);
+            } else if (selectedTarget === 'classics') {
+                const plays = album.album_track_plays || 0;
+                score += Math.min(plays * 2.5, 35);
+            } else {
+                score += (album.album_track_plays || 0) > 0 ? 10 : 0;
+            }
+
+            return score;
+        }
+
+        function runRecommender() {
+            let pool = ALL_ALBUMS.filter(a => {
+                if (selectedTarget === 'unplayed') {
+                    if ((a.album_track_plays || 0) > 0) return false;
+                } else if (selectedTarget === 'cold') {
+                    if ((a.album_track_plays || 0) === 0) return false;
+                    if ((a.album_track_plays_30d || 0) > 0) return false;
+                } else if (selectedTarget === 'heavy_30d') {
+                    if ((a.album_track_plays_30d || 0) === 0) return false;
+                } else if (selectedTarget === 'classics') {
+                    if ((a.album_track_plays || 0) === 0) return false;
+                }
+
+                const year = parseInt(a.release_year) || 0;
+                if (selectedEra === 'recent' && year < 2018) return false;
+                if (selectedEra === 'modern' && (year < 2000 || year >= 2018)) return false;
+                if (selectedEra === 'classic' && (year <= 0 || year >= 2000)) return false;
+
+                if (selectedGenre && !(a.album_genres && a.album_genres.toLowerCase().includes(selectedGenre))) {
+                    return false;
+                }
+
+                if (selectedVibe !== 'all') {
+                    const keywords = VIBES[selectedVibe] || [];
+                    const gStr = (a.album_genres || '').toLowerCase();
+                    let hasVibe = keywords.some(k => gStr.includes(k));
+                    if (!hasVibe && selectedVibe === 'vintage') {
+                        const y = parseInt(a.release_year) || 0;
+                        if (y > 0 && y < 1985) hasVibe = true;
+                    }
+                    if (!hasVibe) return false;
+                }
+
+                return true;
+            });
+
+            if (pool.length === 0 && selectedTarget === 'heavy_30d') {
+                pool = ALL_ALBUMS.filter(a => (a.album_track_plays || 0) > 0);
+                if (pool.length === 0) pool = ALL_ALBUMS;
+            }
+
+            const countEl = document.getElementById('poolCountText');
+            if (countEl) countEl.innerText = `${pool.length.toLocaleString()} matching records in your library`;
+
+            const scored = pool.map((album, idx) => ({
+                album: album,
+                score: seededScore(album, idx)
+            })).sort((a, b) => b.score - a.score);
+
+            const topPicks = scored.slice(0, 3).map(s => s.album);
+            const remainingPool = scored.slice(3, 48).map(s => s.album);
+
+            renderSpotlight(topPicks);
+            renderCandidatePool(remainingPool);
+        }
+
+        function renderSpotlight(albums) {
+            currentSpotlightAlbums = albums;
+            const container = document.getElementById('spotlightContainer');
+            if (!container) return;
+            if (albums.length === 0) {
+                container.innerHTML = '<div class="col-span-3 py-10 text-center text-gray-500 text-xs">No records match your selected vibe & era filters. Try choosing "Any Vibe" or "Any Era".</div>';
+                return;
+            }
+
+            const badges = [
+                { icon: '🥇', label: 'Prime Selection', color: 'from-emerald-500/20 to-transparent' },
+                { icon: '🥈', label: 'Vibe Match', color: 'from-blue-500/20 to-transparent' },
+                { icon: '🥉', label: 'Hidden Gem', color: 'from-amber-500/20 to-transparent' }
+            ];
+
+            container.innerHTML = albums.map((a, i) => {
+                const badge = badges[i] || badges[0];
+                return `
+                    <div class="card-bg border border-gray-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between hover:border-gray-700 transition relative overflow-hidden group cursor-pointer"
+                         onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_url}', this)"
+                         onmouseleave="onCardLeave(this)"
+                         onclick='openGatefold(currentSpotlightAlbums[${i}])'>
+                        <div class="absolute inset-0 bg-gradient-to-b ${badge.color} opacity-40 pointer-events-none"></div>
+
+                        <div class="flex items-center justify-between mb-4 relative z-10">
+                            <span class="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                                <span>${badge.icon}</span> ${badge.label}
+                            </span>
+                            ${a.has_gatefold ? `
+                                <div class="bg-black/60 rounded-lg p-1.5 border border-white/10" title="12\" Gatefold Liner Notes Available">
+                                    {{ gatefold_icon | safe }}
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-800/80 mb-4 sleeve-shadow relative">
+                            <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            ${getAlbumPlayBadge(a)}
+                            <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
+                                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                                <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10">
+                            <h3 class="text-base font-black text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h3>
+                            <p class="text-xs font-bold text-gray-400 truncate mt-0.5">${a.album_artist_name}</p>
+                            <p class="text-[11px] text-gray-500 mt-1 truncate">${a.album_genres || 'Uncategorized'}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCandidatePool(albums) {
+            currentCandidateAlbums = albums;
+            const grid = document.getElementById('candidatePoolGrid');
+            if (!grid) return;
+            const subtext = document.getElementById('candidateSubtext');
+            if (subtext) subtext.innerText = `${albums.length} more matching records`;
+
+            if (albums.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-6 text-center text-gray-600 text-xs">No further candidate records in this pool.</div>';
+                return;
+            }
+
+            grid.innerHTML = albums.map((a, index) => `
+                <div class="group relative flex flex-col cursor-pointer"
+                     onmouseenter="onCardHover('${a.album_artist_name.replace(/'/g, "\\'")}', '${a.album_name.replace(/'/g, "\\'")}', '${a.album_url}', this)"
+                     onmouseleave="onCardLeave(this)"
+                     onclick='openGatefold(currentCandidateAlbums[${index}])'>
+                    <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-800/80 sleeve-shadow transition duration-300 group-hover:scale-[1.03] group-hover:border-gray-700 relative">
+                        <img src="${a.album_image_url}" alt="${a.album_name}" class="w-full h-full object-cover">
+                        ${a.has_gatefold ? `
+                            <div class="absolute top-2 left-2 bg-black/75 backdrop-blur-md rounded-lg p-1.5 border border-white/10 shadow" title="12\" Gatefold Liner Notes Available">
+                                {{ gatefold_icon | safe }}
+                            </div>
+                        ` : ''}
+                        ${getAlbumPlayBadge(a)}
+                        <div class="audio-pulse hidden absolute bottom-2 right-2 bg-black/80 backdrop-blur-md rounded-full px-2 py-1 flex items-end gap-0.5 h-4 border border-emerald-500/40">
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                            <span class="w-0.5 bg-emerald-400 wave-bar"></span>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 px-0.5">
+                        <h4 class="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                        <p class="text-[11px] text-gray-400 truncate" title="${a.album_artist_name}">${a.album_artist_name}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">${a.release_year || ''}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         window.addEventListener("scroll", () => {
             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
                 if (displayLimit < filteredAlbums.length) {
@@ -1180,9 +1560,12 @@
             }
             const urlParams = new URLSearchParams(window.location.search);
             const tab = urlParams.get('tab');
-            if (tab === 'unowned') {
+            const initialTab = "{{ initial_tab | default('saved') }}";
+            if (tab === 'unowned' || initialTab === 'unowned') {
                 switchCrateTab('unowned');
-            } else if (tab === 'saved') {
+            } else if (tab === 'digger' || initialTab === 'digger') {
+                switchCrateTab('digger');
+            } else {
                 switchCrateTab('saved');
             }
         });

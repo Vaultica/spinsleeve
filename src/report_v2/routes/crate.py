@@ -190,15 +190,18 @@ def beta_index():
     from services.catalog import fetch_user_album_data, fetch_unowned_album_data
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
     unowned_albums = fetch_unowned_album_data(user_id)
+    initial_tab = request.args.get("tab", "saved")
 
     return render_template(
         'explorer.html',
         albums=data["albums"],
         unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
+        kpis=data.get("kpis", {}),
         user=session,
         brand_icon=ICON_A_SVG,
-        gatefold_icon=ICON_GATEFOLD_SVG
+        gatefold_icon=ICON_GATEFOLD_SVG,
+        initial_tab=initial_tab
     )
 
 
@@ -208,17 +211,20 @@ def beta_index():
 def beta_recommend():
     user_id = session["user_id"]
     force_refresh = request.args.get("refresh") in ("1", "true")
-    from services.catalog import fetch_user_album_data
+    from services.catalog import fetch_user_album_data, fetch_unowned_album_data
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
+    unowned_albums = fetch_unowned_album_data(user_id)
 
     return render_template(
-        'recommend.html',
+        'explorer.html',
         albums=data["albums"],
+        unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
-        kpis=data["kpis"],
+        kpis=data.get("kpis", {}),
         user=session,
         brand_icon=ICON_A_SVG,
-        gatefold_icon=ICON_GATEFOLD_SVG
+        gatefold_icon=ICON_GATEFOLD_SVG,
+        initial_tab="digger"
     )
 
 

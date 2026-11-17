@@ -117,7 +117,7 @@ class TestDatastoreCatalogCache(unittest.TestCase):
     @patch("services.catalog.bigquery.Client")
     def test_fetch_user_album_data_tier2_cache_hit(self, mock_bq_client_class, mock_get_ds_catalog):
         mock_get_ds_catalog.return_value = {
-            "albums": [{"album_name": "OK Computer", "album_plays_display": "🔥 10 Plays"}],
+            "albums": [{"album_name": "OK Computer", "album_plays_display": "🔥 10 Plays", "added_at": "2024-05-12T15:30:00Z"}],
             "top_genres": ["alternative"],
             "kpis": {"total_albums": 1}
         }

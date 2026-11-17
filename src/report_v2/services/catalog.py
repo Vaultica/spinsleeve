@@ -107,6 +107,13 @@ def fetch_user_album_data(user_id, force_refresh=False):
         ds_cached = get_catalog_from_datastore(user_id)
         if ds_cached:
             cached_albums = ds_cached.get("albums", [])
+            # Schema upgrade guard: ensure cached albums have added_at populated
+            if cached_albums and ("added_at" not in cached_albums[0] or cached_albums[0].get("added_at") is None):
+                logger.info("[%s] Datastore UserCatalogCache has legacy schema (missing added_at). Refreshing from BigQuery...", user_id)
+                ds_cached = None
+
+        if ds_cached:
+            cached_albums = ds_cached.get("albums", [])
             for a in cached_albums:
                 if "album_image_url" not in a and "image" in a:
                     a["album_image_url"] = a["image"]
@@ -161,7 +168,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
         bq_client = bigquery.Client(project=PROJECT_ID)
         query = f"""
         SELECT 
-            album_id, album_name, album_artist_name, album_image_url, release_year, 
+            album_id, album_name, album_artist_name, album_image_url, release_year, added_at,
             album_genres, album_track_plays, album_plays, album_track_plays_30d, album_plays_30d,
             album_tracks_total, album_description, personnel, pitchfork_score, discogs_rating, enriched_styles
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
@@ -189,6 +196,17 @@ def fetch_user_album_data(user_id, force_refresh=False):
             arname = safe_str(row.get("album_artist_name"), "Unknown Artist")
             img_url = safe_str(row.get("album_image_url"))
             r_year = safe_str(row.get("release_year"), "2024")
+            raw_added = row.get("added_at")
+            if raw_added is not None and not (isinstance(raw_added, float) and pd.isna(raw_added)):
+                try:
+                    if hasattr(raw_added, "isoformat"):
+                        added_at_val = raw_added.isoformat()
+                    else:
+                        added_at_val = str(raw_added).strip()
+                except Exception:
+                    added_at_val = str(raw_added).strip()
+            else:
+                added_at_val = ""
             tr_plays = safe_int(row.get("album_track_plays"), 0)
             alb_plays = safe_float(row.get("album_plays"), 0.0)
             tr_plays_30d = safe_int(row.get("album_track_plays_30d"), 0)
@@ -218,6 +236,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 "album_artist_name": arname,
                 "album_image_url": img_url,
                 "release_year": r_year,
+                "added_at": added_at_val,
                 "album_genres": genres_str,
                 "album_track_plays": tr_plays,
                 "album_plays": alb_plays,
