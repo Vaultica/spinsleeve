@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.5] — 2026-11-17
+### 🛠️ INFRA-05 Tech Specs, Pipeline Dockerfile Path Fix & 100% Album Enrichment Coverage
+* **What:**
+  - **INFRA-05 Technical Specification:** Added comprehensive technical design documentation in `TECHNICAL_SPECS.md` for Zero-Cold-Start & High-Concurrency production architecture (`--min-instances=1`, 100% zero-BQ analytics/pal caching).
+  - **Cloud Run Enrichment Job Path Fix:** Resolved container path error (`can't open file '/app/enrich.py'`) in `spotify-v2-enrichment-job` by updating `src/pipeline_v2/Dockerfile` with robust multi-context fallback copying supporting both root-level and subdirectory build contexts. Successfully executed job resulting in green status (`exit(0)`).
+  - **100% Album Enrichment Verification:** Audited BigQuery enrichment progress across all multi-tenant saved libraries, confirming 2,161 / 2,161 unique saved albums (100.0%) successfully enriched with Wikipedia narratives and Discogs credits.
+* **Why:**
+  - Ensures robust zero-cold-start cloud run execution, fixes Cloud Run job failures, and documents high-concurrency caching architecture.
+* **How:**
+  - Updated `TECHNICAL_SPECS.md`, `src/pipeline_v2/Dockerfile`, successfully built, pushed, and executed the Cloud Run enrichment job, and verified 61/61 unit tests passing.
+
+---
+
 ## [v2.6.5] — 2026-11-14
 ### 🛠️ Config Module Rename (`app_config.py`), Dockerfile Bundling Fix, `/recommend` Internal Server Error Fix & Schema Column Alignment
 * **What:**

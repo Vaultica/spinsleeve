@@ -85,9 +85,9 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.6.4`** | 2026-11-12 | 14 | ~720,000 | ~10,500 | **~$0.06** | `OPS-03` Twilio WhatsApp spec; `OPS-04` Monolithic app modularisation (`app_config.py`, services, route blueprints, templates). |
 | **`v2.6.5`** | 2026-11-14 | 16 | ~730,000 | ~11,000 | **~$0.06** | `app_config.py` rename, Dockerfile bundling fix, `/recommend` Datastore cache fallback, schema alignment, `?clear_cache=1`, 60/60 tests passing. |
-| **`v2.6.5` (Closure)** | 2026-11-14 | 18 | ~720,000 | ~13,500 | **~$0.06** | Agent autonomy config, global approval mode (`auto_edit`), clean library UI prototypes (Spotify Modern Native, Audiophile Glass, Bento Editorial, Borderless Vinyl Wall), git-ignored prototype templates. |
+| **`v2.6.5` (Closure)** | 2026-11-14 | 18 | ~720,000 | ~13,500 | **~$0.06** | Agent autonomy config, global approval mode (`auto_edit`), clean library UI prototypes. |
+| **`v2.6.5` (Pipeline Fix & Specs)** | 2026-11-17 | 12 | ~500,000 | ~10,000 | **~$0.04** | `INFRA-05` technical specs (`TECHNICAL_SPECS.md`), Cloud Run pipeline Dockerfile multi-context path fix (job green status), 100% album enrichment verification (2161/2161), 61/61 tests passing. |
 
 ---
 

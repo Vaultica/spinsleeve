@@ -133,6 +133,21 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
+### `INFRA-05`: Zero-Cold-Start & High-Concurrency Production Architecture (`--min-instances=1`, 100% Zero-BQ Caching)
+* **Technical Objective:** Eliminate Cloud Run scale-to-zero cold starts and ensure sub-50ms response times at scale by maintaining warm container instances and extending Datastore document caching to analytics and social compatibility views.
+* **Component Specs:**
+  1. **Cloud Run Minimum Warm Instance (`--min-instances=1`):**
+     - Maintain at least 1 warm instance 24/7 (`1 vCPU, 512MB RAM`, ~~$5.40/mo idle cost).
+     - Eliminates cold starts (2s–4s latency penalty on scale-from-zero) and ensures Python runtime, imports, and GCP client connection pools are permanently warm in memory.
+  2. **100% Zero-BQ Analytics & Pal Caching (`INFRA-03d/e` Integration):**
+     - Extend background ingestion (`src/pipeline_v2/sync.py`) to pre-compute and store analytics heatmaps (`UserAnalyticsCache`) and pal compatibility payloads (`PalCompatibilityCache`) into Cloud Datastore documents.
+     - Live user requests fetch pre-computed JSON documents directly from Datastore with **zero BigQuery queries executed at request time**.
+  3. **Global Edge CDN Delivery (Firebase Hosting):**
+     - Serve frontend static assets, CSS bundles, and page shells globally across Firebase Hosting CDN edges.
+     - Enables instant (<20ms) page shell loading before async API hydration.
+
+---
+
 ## 3. Category: DevOps, CI/CD, Observability & Reliability (`OPS`)
 
 ### `OPS-01`: Automated GitHub Actions CI/CD Pipeline

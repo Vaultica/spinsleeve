@@ -1,6 +1,15 @@
 FROM python:3.11-slim
+
 WORKDIR /app
-COPY requirements.txt .
+
+# Ensure unbuffered logging in Cloud Run
+ENV PYTHONUNBUFFERED=1
+
+# Install Python requirements
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-COPY sync.py enrich.py ./
+
+# Copy pipeline scripts
+COPY *.py ./
+
 CMD ["python", "sync.py"]
