@@ -58,7 +58,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.6.5` (Modularized Flask blueprints, `app_config.py`, sub-100ms multi-tier Datastore caching, user privacy/sync pause toggles, NLP liner-note classification).
+* **Current Production Release:** `v2.6.6` (Canonical album sibling deduplication, telemetry fan-out elimination, admin assume session routing & logout cookie path fixes, 63/63 tests passing).
 * **Next Planned Milestone:** `Phase 7` — Cross-Platform Apple Music Library Onboarding (`APP-02`) & WhatsApp Admin Alerting (`OPS-03`).
 
 ---
@@ -85,9 +85,8 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.6.5`** | 2026-11-14 | 16 | ~730,000 | ~11,000 | **~$0.06** | `app_config.py` rename, Dockerfile bundling fix, `/recommend` Datastore cache fallback, schema alignment, `?clear_cache=1`, 60/60 tests passing. |
-| **`v2.6.5` (Closure)** | 2026-11-14 | 18 | ~720,000 | ~13,500 | **~$0.06** | Agent autonomy config, global approval mode (`auto_edit`), clean library UI prototypes. |
 | **`v2.6.5` (Pipeline Fix & Specs)** | 2026-11-17 | 12 | ~500,000 | ~10,000 | **~$0.04** | `INFRA-05` technical specs (`TECHNICAL_SPECS.md`), Cloud Run pipeline Dockerfile multi-context path fix (job green status), 100% album enrichment verification (2161/2161), 61/61 tests passing. |
+| **`v2.6.6`** | 2026-11-18 | 22 | ~880,000 | ~16,500 | **~$0.07** | Canonical album sibling deduplication (`APP-14`), BigQuery backfill, admin session assume routing & logout cookie path fixes, 63/63 tests passing. |
 
 ---
 
