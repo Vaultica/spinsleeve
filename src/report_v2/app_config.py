@@ -14,7 +14,7 @@ APP_VERSION = "v2.6.6"
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
 DATASET_V2 = "spotify_v2"
 PLAYBACK_HISTORY_TABLE = os.getenv("PLAYBACK_HISTORY_TABLE", f"{PROJECT_ID}.{DATASET_V2}.playback_history")
-ADMIN_USER_IDS = ["serbou", "sergebou", "vaultica", "zbzoe"]
+ADMIN_USER_IDS = ["serbou", "sergebou", "vaultica"]
 
 
 def get_secret(secret_name, default=""):
