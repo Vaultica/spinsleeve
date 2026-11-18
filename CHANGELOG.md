@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.6.6] — 2026-11-18
+### 🎵 Canonical Album Sibling Deduplication & Analytics Fan-Out Elimination (`APP-14`)
+* **What:**
+  - **Deterministic Canonical Sibling Normalization:** Implemented `compute_canonical_album_key()` using regex stripping for edition suffixes (`deluxe`, `remastered`, `anniversary`, `edition`, `version`, `reissue`, `expanded`, `collector`, `live`, `acoustic`, `mono`, `stereo`, `remix`), successfully profiling and merging 194 variant pairs (e.g. Marika Hackman *I'm Not Your Man (Deluxe)* and *I'm Not Your Man* both mapping to `marika hackman::i'm not your man`).
+  - **Physical Column Storage & Ingestion:** Updated `src/pipeline_v2/sync.py` to compute and store `canonical_album_key` directly in both BigQuery `playback_history` and `user_saved_albums`.
+  - **Analytics Fan-Out & Double Counting Elimination:** Refactored telemetry and analytics queries in `src/report_v2/services/analytics.py` to join on `canonical_album_key`, eliminating 1-to-many join duplication and ensuring accurate top album/track play counts.
+  - **Sibling-Aware Unowned Recommendations (`/recommend`):** Updated unowned crate discovery in `src/report_v2/services/catalog.py` to check ownership against `canonical_album_key`, preventing owned sibling editions from appearing in *"You Should Save These"*.
+  - **Historical BigQuery Backfill:** Executed a partition-batched historical backfill across all BigQuery scrobble partitions (2011–2026) and saved library tables.
+* **Why:**
+  - Resolves double-counting anomalies in telemetry/analytics and ensures robust deduplication across different releases of the same album.
+* **How:**
+  - Added normalization helper in `sync.py`, updated `analytics.py` and `catalog.py` queries, executed partition-safe BigQuery DML backfill, added `tests/test_canonical_dedup.py`, and verified 63/63 unit tests passing.
+
+---
+
 ## [v2.6.5] — 2026-11-17
 ### 🛠️ INFRA-05 Tech Specs, Pipeline Dockerfile Path Fix & 100% Album Enrichment Coverage
 * **What:**

@@ -12,6 +12,7 @@ import time
 import json
 import logging
 import datetime
+import re
 from google.cloud import bigquery, datastore, secretmanager, storage
 import pandas as pd
 import spotipy
@@ -41,6 +42,26 @@ def get_secret(secret_name, default=""):
 
 SPOTIPY_CLIENT_ID = get_secret("SPOTIPY_CLIENT_ID")
 SPOTIPY_CLIENT_SECRET = get_secret("SPOTIPY_CLIENT_SECRET")
+
+EDITION_BLACKLIST = [
+    "deluxe", "remastered", "anniversary", "edition", "version", "reissue",
+    "expanded", "collector", "live", "acoustic", "mono", "stereo", "remix",
+    "deluxe edition", "anniversary edition", "expanded edition", "remaster"
+]
+
+def compute_canonical_album_key(artist_name, album_name):
+    """Computes a canonical sibling key for grouping editions (e.g. Deluxe vs Standard)."""
+    if not artist_name or not album_name:
+        return ""
+    artist = str(artist_name).lower().strip()
+    album = str(album_name).lower().strip()
+    pattern_paren = r'\s*\((?:' + '|'.join(EDITION_BLACKLIST) + r')[^)]*\)'
+    pattern_bracket = r'\s*\[(?:' + '|'.join(EDITION_BLACKLIST) + r')[^\]]*\]'
+    album = re.sub(pattern_paren, '', album, flags=re.IGNORECASE)
+    album = re.sub(pattern_bracket, '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s*-\s*(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix).*$', '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s+', ' ', album).strip()
+    return f"{artist}::{album}"
 
 
 def upload_blob(bucket_name, blob_text, destination_blob_name):
@@ -121,6 +142,7 @@ def sync_user_tracks(user_id, sp, bq_client):
         artists = track.get("artists", [])
         artist_name = artists[0].get("name", "Unknown") if artists else "Unknown"
         artist_id = artists[0].get("id", None) if artists else None
+        album_name = alb.get("name")
         rows.append({
             "user_id": user_id,
             "played_at": item.get("played_at"),
@@ -130,7 +152,8 @@ def sync_user_tracks(user_id, sp, bq_client):
             "artist_id": artist_id,
             "artist_name": artist_name,
             "album_id": alb.get("id"),
-            "album_name": alb.get("name")
+            "album_name": album_name,
+            "canonical_album_key": compute_canonical_album_key(artist_name, album_name)
         })
 
     df = pd.DataFrame(rows)
@@ -161,7 +184,8 @@ def sync_user_tracks(user_id, sp, bq_client):
         return 0
 
     table_ref = f"{PROJECT_ID}.{DATASET_V2}.playback_history"
-    load_job = bq_client.load_table_from_dataframe(df, table_ref)
+    load_cfg = bigquery.LoadJobConfig(schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION])
+    load_job = bq_client.load_table_from_dataframe(df, table_ref, job_config=load_cfg)
     load_job.result()
     logger.info("[%s] Successfully loaded %d new listening events into %s!", user_id, len(df), table_ref)
     return len(df)
@@ -197,6 +221,7 @@ def sync_user_saved_albums(user_id, sp, bq_client):
         artists = alb.get("artists", [])
         artist_name = artists[0].get("name", "Unknown") if artists else "Unknown"
         artist_id = artists[0].get("id", None) if artists else None
+        album_name = alb.get("name")
         images = alb.get("images", [])
         image_url = images[0].get("url", None) if images else None
         rel_date = alb.get("release_date", "")
@@ -207,7 +232,7 @@ def sync_user_saved_albums(user_id, sp, bq_client):
             "user_id": user_id,
             "album_id": alb.get("id"),
             "album_uri": alb.get("uri"),
-            "album_name": alb.get("name"),
+            "album_name": album_name,
             "artist_id": artist_id,
             "artist_name": artist_name,
             "added_at": item.get("added_at"),
@@ -217,7 +242,8 @@ def sync_user_saved_albums(user_id, sp, bq_client):
             "album_type": alb.get("album_type"),
             "label": alb.get("label", ""),
             "image_url": image_url,
-            "genres": genres
+            "genres": genres,
+            "canonical_album_key": compute_canonical_album_key(artist_name, album_name)
         })
 
     df = pd.DataFrame(rows)
@@ -242,7 +268,8 @@ def sync_user_saved_albums(user_id, sp, bq_client):
         return 0
 
     table_ref = f"{PROJECT_ID}.{DATASET_V2}.user_saved_albums"
-    load_job = bq_client.load_table_from_dataframe(new_albums, table_ref)
+    load_cfg = bigquery.LoadJobConfig(schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION])
+    load_job = bq_client.load_table_from_dataframe(new_albums, table_ref, job_config=load_cfg)
     load_job.result()
     logger.info("[%s] Successfully appended %d brand new albums into %s!", user_id, len(new_albums), table_ref)
     return len(new_albums)

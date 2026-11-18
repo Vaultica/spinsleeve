@@ -81,12 +81,11 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     query = f"""
     WITH first_plays AS (
       SELECT
-        LOWER(TRIM(album_name)) as norm_album_name,
-        LOWER(TRIM(artist_name)) as norm_artist_name,
+        canonical_album_key,
         MIN(played_at) as first_played_at
       FROM `{PLAYBACK_HISTORY_TABLE}`
-      WHERE user_id = @user_id
-      GROUP BY norm_album_name, norm_artist_name
+      WHERE user_id = @user_id AND canonical_album_key IS NOT NULL AND canonical_album_key != ''
+      GROUP BY canonical_album_key
     ),
     filtered_plays AS (
       SELECT
@@ -103,30 +102,30 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         COALESCE(a.genres, g.genres) as album_genres,
         fp.first_played_at
       FROM `{PLAYBACK_HISTORY_TABLE}` p
-      LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` a
-        ON p.user_id = a.user_id
-        AND (
-          p.album_id = a.album_id
-          OR (
-            LOWER(TRIM(p.album_name)) = LOWER(TRIM(a.album_name))
-            AND LOWER(TRIM(p.artist_name)) = LOWER(TRIM(a.artist_name))
-          )
-        )
       LEFT JOIN (
         SELECT
-          LOWER(TRIM(album_name)) as norm_name,
-          LOWER(TRIM(artist_name)) as norm_artist,
+          user_id,
+          canonical_album_key,
           MAX(image_url) as image_url,
           MAX(release_date) as release_date,
           MAX(genres) as genres
         FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-        GROUP BY norm_name, norm_artist
+        WHERE user_id = @user_id
+        GROUP BY user_id, canonical_album_key
+      ) a
+        ON p.user_id = a.user_id AND p.canonical_album_key = a.canonical_album_key
+      LEFT JOIN (
+        SELECT
+          canonical_album_key,
+          MAX(image_url) as image_url,
+          MAX(release_date) as release_date,
+          MAX(genres) as genres
+        FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+        GROUP BY canonical_album_key
       ) g
-        ON LOWER(TRIM(p.album_name)) = g.norm_name
-        AND LOWER(TRIM(p.artist_name)) = g.norm_artist
+        ON p.canonical_album_key = g.canonical_album_key
       LEFT JOIN first_plays fp
-        ON LOWER(TRIM(p.album_name)) = fp.norm_album_name
-        AND LOWER(TRIM(p.artist_name)) = fp.norm_artist_name
+        ON p.canonical_album_key = fp.canonical_album_key
       {where_str}
     )
     SELECT * FROM filtered_plays

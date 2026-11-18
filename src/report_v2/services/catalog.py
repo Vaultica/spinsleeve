@@ -313,6 +313,11 @@ def fetch_unowned_album_data(user_id, horizon="all"):
             horizon_clause = "AND p.played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)"
 
         query = f"""
+        WITH owned_keys AS (
+          SELECT DISTINCT canonical_album_key
+          FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+          WHERE user_id = @user_id AND canonical_album_key IS NOT NULL AND canonical_album_key != ''
+        )
         SELECT 
           p.album_name,
           p.artist_name,
@@ -322,11 +327,7 @@ def fetch_unowned_album_data(user_id, horizon="all"):
           MAX(p.played_at) as last_played_at
         FROM `{PLAYBACK_HISTORY_TABLE}` p
         WHERE p.user_id = @user_id
-          AND CONCAT(LOWER(TRIM(p.album_name)), '::', LOWER(TRIM(p.artist_name))) NOT IN (
-            SELECT CONCAT(LOWER(TRIM(album_name)), '::', LOWER(TRIM(artist_name)))
-            FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-            WHERE user_id = @user_id
-          )
+          AND (p.canonical_album_key IS NULL OR p.canonical_album_key NOT IN (SELECT canonical_album_key FROM owned_keys))
           {horizon_clause}
         GROUP BY p.album_name, p.artist_name
         HAVING distinct_tracks >= 2
