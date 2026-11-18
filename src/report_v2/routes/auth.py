@@ -174,7 +174,9 @@ def callback():
 @auth_bp.route("/beta/logout")
 def logout():
     session.clear()
-    return redirect("/login")
+    resp = redirect("/login")
+    resp.delete_cookie("__session", path="/")
+    return resp
 
 
 @auth_bp.route("/admin/assume/<target_id>")
