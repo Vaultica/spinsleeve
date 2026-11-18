@@ -189,7 +189,10 @@ def admin_assume(target_id):
     if not user:
         return f"User {target_id} not found in Datastore", 404
 
-    real_admin = session.get("admin_user_id") or session.get("user_id")
+    if session.get("is_impersonating") and session.get("admin_user_id"):
+        real_admin = session.get("admin_user_id")
+    else:
+        real_admin = session.get("admin_user_id") or session.get("user_id")
     session["admin_user_id"] = real_admin
     session["user_id"] = target_id
     session["display_name"] = user.get("display_name", target_id)
