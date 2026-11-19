@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.7.0] — 2026-11-19
+### ✉️ Real-Time Admin Email Notifications via Resend (`OPS-03`)
+* **What:**
+  - **Resend Email Service Integration:** Created `src/report_v2/services/notifications.py` integrating the Resend API to send real-time HTML email notifications to administrators when new users authenticate and join SpinSleeve.
+  - **Auth Pipeline Integration:** Hooked notification dispatch into `src/report_v2/routes/auth.py` upon initial user registration/login.
+  - **Test Suite & Mocks:** Added robust unit test coverage in `tests/test_notifications.py` verifying successful email payload dispatch and graceful fallback handling when `RESEND_API_KEY` is not configured.
+* **Why:**
+  - Enables instant administrative awareness whenever new beta users join the platform.
+* **How:**
+  - Implemented `notifications.py`, updated `auth.py`, added unit tests in `tests/test_notifications.py`, and verified 66/66 tests passing.
+
+---
+
 ## [v2.6.6] — 2026-11-18
 ### 🎵 Canonical Album Sibling Deduplication & Analytics Fan-Out Elimination (`APP-14`)
 * **What:**

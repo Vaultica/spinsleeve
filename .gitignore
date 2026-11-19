@@ -89,6 +89,12 @@ celerybeat-schedule
 venv/
 ENV/
 
+# Temporary profiling reports & test scripts
+data_profiling_report.html
+profile_db.py
+query_first_scrobbles.py
+test_notification_script.py
+
 # Spyder project settings
 .spyderproject
 .spyproject

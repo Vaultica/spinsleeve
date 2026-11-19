@@ -193,7 +193,7 @@ raw_albums AS (
   SELECT 
     a.*,
     ROW_NUMBER() OVER(
-      PARTITION BY a.user_id, LOWER(TRIM(a.artist_name)), LOWER(TRIM(a.album_name))
+      PARTITION BY a.user_id, COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name))))
       ORDER BY 
         CASE WHEN a.image_url IS NOT NULL AND a.image_url != "" THEN 1 ELSE 2 END ASC,
         a.added_at DESC

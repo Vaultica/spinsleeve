@@ -93,10 +93,13 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
 * **Phase 6h: UI Polish, Header Navigation Consistency & Persistent Audio Mute (`POLISH-09` to `POLISH-13`)**
   - Landing page version number alignment (`v2.5.1`).
   - Consistent header navigation tabs and audio toggles across Library, Crate Digger, Analytics & SpinPals.
-  - Cross-page audio mute state persistence via `localStorage`.
-  - URL parameter tab routing (`?tab=unowned`, `?tab=saved`).
-  - Mobile user settings menu overflow and positioning fix.
-  - Deployed live release `v2.5.1`.
+* **Phase 6k: Real-Time Admin Email Notifications via Resend (`OPS-03`, `v2.7.0`)**
+  - Integrated Resend API in `src/report_v2/services/notifications.py` for instant HTML notification dispatch when new beta users join SpinSleeve.
+  - Hooked notification dispatch into auth callback route.
+  - Added test suite (`tests/test_notifications.py`) and verified 66/66 unit tests passing.
+* **Phase 6j: Canonical Album Sibling Deduplication (`APP-14`, `v2.6.6`)**
+  - Implemented `compute_canonical_album_key()` regex normalization stripping edition suffixes (`deluxe`, `remastered`, `archive collection`, etc.).
+  - Updated BigQuery table materialization (`rematerialize_user_albums_features` in `sync.py` and `bigquery.py`) to partition by `canonical_album_key`, successfully collapsing edition duplicates like *RAM* and *RAM (Archive Collection)* into a single clean entry in the library view.
 * **Phase 6i: Legacy Streaming History Format Support & BigQuery Partition Limit Fix (`v2.5.3`)**
   - Extended and legacy (`StreamingHistory_music_*.json`) Spotify GDPR ZIP extraction filter support.
   - Year-by-year BigQuery DML batching (`MERGE`/`INSERT`) to prevent `400 Too many partitions produced by query` ceiling errors on multi-year lifetime archives.

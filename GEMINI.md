@@ -58,8 +58,8 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.6.6` (Canonical album sibling deduplication, telemetry fan-out elimination, admin assume session routing & logout cookie path fixes, 63/63 tests passing).
-* **Next Planned Milestone:** `Phase 7` — Cross-Platform Apple Music Library Onboarding (`APP-02`) & WhatsApp Admin Alerting (`OPS-03`).
+* **Current Production Release:** `v2.7.0` (Real-Time Admin Email Notifications via Resend (`OPS-03`), canonical album sibling deduplication, 66/66 tests passing).
+* **Next Planned Milestone:** `Phase 7` — Cross-Platform Apple Music Library Onboarding (`APP-02`).
 
 ---
 
@@ -87,6 +87,7 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`v2.6.5` (Pipeline Fix & Specs)** | 2026-11-17 | 12 | ~500,000 | ~10,000 | **~$0.04** | `INFRA-05` technical specs (`TECHNICAL_SPECS.md`), Cloud Run pipeline Dockerfile multi-context path fix (job green status), 100% album enrichment verification (2161/2161), 61/61 tests passing. |
 | **`v2.6.6`** | 2026-11-18 | 22 | ~880,000 | ~16,500 | **~$0.07** | Canonical album sibling deduplication (`APP-14`), BigQuery backfill, admin session assume routing & logout cookie path fixes, 63/63 tests passing. |
+| **`v2.7.0`** | 2026-11-19 | 10 | ~400,000 | ~10,000 | **~$0.03** | Real-Time Admin Email Notifications via Resend (`OPS-03`), auth notification integration, unit test suite, 66/66 tests passing. |
 
 ---
 

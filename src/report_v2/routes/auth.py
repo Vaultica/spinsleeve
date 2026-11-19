@@ -109,6 +109,12 @@ def callback():
                 "sync_status": "idle" if is_admin else "pending"
             })
             ds_client.put(user)
+            if not is_admin:
+                try:
+                    from services.notifications import send_admin_join_alert
+                    send_admin_join_alert(display_name, email, spotify_id)
+                except Exception as e:
+                    logger.error("Error dispatching admin join notification: %s", e)
         else:
             user["display_name"] = display_name
             user["email"] = email
