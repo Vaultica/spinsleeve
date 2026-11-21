@@ -153,7 +153,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Automated Ingestion~~ | Core App | 6–8 hours | Completed (`v2.5.0`: Revision `00034-6lq`) |
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16 hours | Medium |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30 hours | Medium–High |
-| **`APP-16`** | Semantic Liner Notes & Description Classification for Crate Digger Relevance | Core App | 6–8 hours | Medium |
+| **`APP-16`** | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~ | Core App | 6–8 hours | Completed (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1 hour | Completed (`v2.2.2`) |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.2`) |
@@ -810,7 +810,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-13`** | ✅ ~~Spotify Full Scrobble Historical Data Upload & Ingestion~~ | Core App | 6–8h | Python, BigQuery, Jinja2 | ✅ **Completed** (`v2.5.0`: Revision `00034-6lq`): Extended and legacy GDPR JSON/ZIP streaming history ingestion with QA table reconciliation and UI settings integration. |
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16h | Flask REST JSON API, Firebase CDN Reverse Proxy | **Medium:** Decouples Flask monolithic templates into clean REST endpoints and Firebase CDN proxy. |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30h | SwiftUI, Swift, Spotify OAuth PKCE | **High:** Native iOS app with Spotify OAuth PKCE authentication and 33⅓ RPM crate browsing. |
-| **`APP-16`** | Semantic Liner Notes & Description Classification for Crate Digger Relevance | Core App | 6–8h | NLP Text Parsing, BigQuery Schema Expansion | **Medium:** Keyword scoring and text parsing to derive macro-genres and moods for Crate Digger relevance. |
+| **`APP-16`** | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~ | Core App | 6–8h | NLP Text Parsing, BigQuery Schema Expansion | ✅ **Completed** (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1h | JavaScript, DOM Lifecycle | ✅ **Completed** (`v2.2.2`): Initial sort triggers `onFilterChange()` on DOMContentLoaded for strict 30D heavy rotation sorting. |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | ✅ **Completed** (`v2.2.2`): Decimal fractional scrobbles, integer whole spins, and contextual "Newly Added" / "Never Played" tags. |

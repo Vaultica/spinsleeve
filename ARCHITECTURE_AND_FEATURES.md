@@ -168,29 +168,44 @@ SpinSleeve employs a hybrid persistence tier: **Google BigQuery** for partitione
 
 ---
 
-#### 3. Table `album_enriched_metadata` (Universal Shared Catalog)
-* **Storage Model:** Global, multi-tenant shared table keyed by `album_id`.
-* **Primary Key:** `album_id`
+#### 3. Table `album_enriched_metadata` (Universal Golden Enriched Catalog)
+* **Storage Model:** Global, multi-tenant golden synthesized table clustered by `canonical_album_key`.
+* **Clustering:** `CLUSTER BY canonical_album_key`
 
 | Column | Type | Mode | Constraints & Notes |
 | :--- | :--- | :--- | :--- |
-| `album_id` | `STRING` | **`REQUIRED`** | Unique Spotify album ID (Global Primary Key). |
+| `canonical_album_key` | `STRING` | **`REQUIRED`** | Primary Sibling Key: `{artist}::{album_clean}`. |
+| `album_id` | `STRING` | `NULLABLE` | Spotify album ID fallback. |
 | `album_name` | `STRING` | `NULLABLE` | Canonical album title. |
 | `artist_name` | `STRING` | `NULLABLE` | Canonical artist title. |
-| `album_description` | `STRING` | `NULLABLE` | Lead paragraph summary from Wikipedia. |
+| `album_description` | `STRING` | `NULLABLE` | Lead paragraph summary from Wikipedia / Discogs notes. |
 | `wikipedia_url` | `STRING` | `NULLABLE` | Desktop Wikipedia article URL. |
-| `pitchfork_score` | `FLOAT64` | `NULLABLE` | Range: `[0.0, 10.0]`. Rating extracted from Wikipedia review box. |
-| `metacritic_score` | `INT64` | `NULLABLE` | Range: `[0, 100]`. Normalized Metacritic rating. |
-| `allmusic_score` | `FLOAT64` | `NULLABLE` | Range: `[0.0, 5.0]`. Star rating extracted from AllMusic reviews. |
+| `pitchfork_score` | `STRING` | `NULLABLE` | Rating extracted from Wikipedia review box (e.g. `10/10`). |
+| `metacritic_score` | `STRING` | `NULLABLE` | Normalized Metacritic rating (e.g. `91/100`). |
+| `allmusic_score` | `STRING` | `NULLABLE` | Rating extracted from AllMusic reviews (e.g. `5/5`). |
+| `guardian_score` | `STRING` | `NULLABLE` | Star rating extracted from The Guardian (e.g. `5/5`). |
 | `discogs_rating` | `FLOAT64` | `NULLABLE` | Range: `[0.0, 5.0]`. Community rating from Discogs. |
-| `discogs_votes` | `INT64` | `NULLABLE` | Range: $\ge 0$. Count of community ratings on Discogs. |
+| `discogs_votes` | `FLOAT64` | `NULLABLE` | Count of community ratings on Discogs. |
 | `personnel` | `STRING` | `NULLABLE` | Bulleted liner notes formatted as `Musician (Role) • Producer (Role)`. |
 | `discogs_url` | `STRING` | `NULLABLE` | Discogs release URL (`https://www.discogs.com/release/...`). |
 | `styles` | `STRING` | `NULLABLE` | Comma-separated physical styles (e.g., `Shoegaze, Indie Rock, Lo-Fi`). |
+| `macro_genre` | `STRING` | `NULLABLE` | High-level macro genre bucket (e.g. `Ambient`, `Electronic`, `Rock`). |
+| `derived_moods` | `ARRAY<STRING>` | `REPEATED` | Extracted atmosphere tags (e.g. `["Chill", "Late Night"]`). |
+| `descriptive_tags` | `ARRAY<STRING>` | `REPEATED` | Stylistic/production markers (e.g. `["Synthesizers", "Minimalist"]`). |
+| `enrichment_quality_score` | `FLOAT64` | `NULLABLE` | Range: `[0.0, 1.0]`. Completeness and fidelity score. |
+| `updated_at` | `TIMESTAMP` | `NULLABLE` | Timestamp of latest golden synthesis update. |
 
 ---
 
-#### 4. Table `user_albums_features_table` (Materialized Presentation Layer)
+#### 4. Raw Tier & Bridge Tables (Two-Tier Data Lake Architecture)
+* **`album_provider_ids`**: Bridges external streaming IDs to `canonical_album_key`. `CLUSTER BY canonical_album_key, provider`.
+* **`enrichment_raw_wikipedia`**: Append-only raw Wikipedia extractions. `PARTITION BY DATE(fetched_at)`, `CLUSTER BY canonical_album_key`.
+* **`enrichment_raw_discogs`**: Append-only raw Discogs liner notes and credits. `PARTITION BY DATE(fetched_at)`, `CLUSTER BY canonical_album_key`.
+* **`enrichment_raw_musicbrainz`**: Append-only raw MusicBrainz release-group tags and genres. `PARTITION BY DATE(fetched_at)`, `CLUSTER BY canonical_album_key`.
+
+---
+
+#### 5. Table `user_albums_features_table` (Materialized Presentation Layer)
 * **Storage Model:** Physical materialized table refreshed by `rematerialize_user_albums_features()`.
 * **Clustering:** `CLUSTER BY user_id`
 * **Presentation Invariants:**

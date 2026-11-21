@@ -71,6 +71,22 @@ def rematerialize_user_albums_features(bq_client):
     ),
     deduped AS (
       SELECT * FROM raw_albums WHERE dedupe_rank = 1
+    ),
+    golden_enriched AS (
+      SELECT * EXCEPT(dedup_rank)
+      FROM (
+        SELECT *,
+          ROW_NUMBER() OVER(
+            PARTITION BY canonical_album_key 
+            ORDER BY 
+              COALESCE(enrichment_quality_score, 0.0) DESC,
+              CASE WHEN album_description IS NOT NULL AND album_description != "" THEN 1 ELSE 2 END ASC,
+              updated_at DESC
+          ) as dedup_rank
+        FROM `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata`
+        WHERE canonical_album_key IS NOT NULL AND canonical_album_key != ""
+      )
+      WHERE dedup_rank = 1
     )
     SELECT 
       d.user_id,
@@ -100,7 +116,11 @@ def rematerialize_user_albums_features(bq_client):
       e.personnel,
       e.wikipedia_url,
       e.discogs_url,
-      e.styles as enriched_styles
+      e.styles as enriched_styles,
+      e.macro_genre,
+      e.derived_moods,
+      e.descriptive_tags,
+      e.enrichment_quality_score
     FROM deduped d
     LEFT JOIN album_plays_by_id pid
       ON d.user_id = pid.user_id AND d.album_id = pid.album_id
@@ -108,8 +128,8 @@ def rematerialize_user_albums_features(bq_client):
       ON d.user_id = pname.user_id 
       AND LOWER(TRIM(d.album_name)) = pname.norm_album_name
       AND LOWER(TRIM(d.artist_name)) = pname.norm_artist_name
-    LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e
-      ON d.album_id = e.album_id
+    LEFT JOIN golden_enriched e
+      ON COALESCE(NULLIF(d.canonical_album_key, ''), CONCAT(LOWER(TRIM(d.artist_name)), '::', LOWER(TRIM(d.album_name)))) = e.canonical_album_key
     """
     try:
         job = bq_client.query(remat_q)

@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.0] — 2026-11-21
+### 🏷️ Two-Tier Album Enrichment Architecture & APP-16 Semantic Classification
+* **What:**
+  - **Two-Tier Album Metadata Architecture:**
+    - Tier 1: Provisioned append-only raw tables (`enrichment_raw_wikipedia`, `enrichment_raw_discogs`, `enrichment_raw_musicbrainz`) partitioned by `DATE(fetched_at)` and clustered by `canonical_album_key`, plus external streaming ID bridge `album_provider_ids` clustered by `(canonical_album_key, provider)`.
+    - Tier 2: Upgraded golden `album_enriched_metadata` table clustered by `canonical_album_key`.
+  - **APP-16 Semantic Classification Engine (`src/pipeline_v2/classifier.py`):**
+    - Implemented deterministic NLP rule-based classifier providing:
+      - `macro_genre` (Ambient, Electronic, Rock, Jazz, Hip-Hop, Metal, Punk / Alternative, R&B / Soul, Classical, Folk / Country, Pop, etc.)
+      - `derived_moods` (`ARRAY<STRING>`: Late Night, Chill, Energetic, Mellow, Vintage, Melancholic, Atmospheric, Psychedelic, Introspective, etc.)
+      - `descriptive_tags` (`ARRAY<STRING>`: Synthesizers, Acoustic Guitar, Concept Album, Lo-Fi Production, Orchestral Strings, Minimalist, Heavy Basslines, etc.)
+      - `enrichment_quality_score` (`FLOAT64` 0.0 to 1.0 completeness metric).
+  - **Zero Data Loss Backfill & Migration (`setup_app16_schema.py`):**
+    - Created safety clone backup `album_enriched_metadata_backup_app16`.
+    - Backfilled all 2,170 existing records with APP-16 classifications directly from existing verified liner notes, reviews, and Discogs data without burning external API limits.
+    - Clustered golden `album_enriched_metadata` on `canonical_album_key`.
+  - **Pipeline & Ingestion Upgrades (`src/pipeline_v2/enrich.py` & `sync.py`):**
+    - Added MusicBrainz release-group integration (`fetch_musicbrainz_data`).
+    - Updated candidate album selection to join on `canonical_album_key` to prevent re-scraping existing sibling releases.
+    - Updated `rematerialize_user_albums_features` using `golden_enriched` CTE with `ROW_NUMBER() OVER(PARTITION BY canonical_album_key ORDER BY enrichment_quality_score DESC)` to prevent Cartesian fan-out and propagate APP-16 columns to `user_albums_features_table`.
+    - Linked saved Spotify albums to `album_provider_ids`.
+  - **Catalog Service Integration (`src/report_v2/services/catalog.py`):**
+    - Updated `fetch_user_album_data` to load, sanitize, and return `macro_genre`, `derived_moods`, `descriptive_tags`, and `enrichment_quality_score` with Cloud Datastore gzip caching.
+  - **Test Suite Expansion:**
+    - Added `tests/test_app16_classification.py` and updated `tests/test_enrich_v2.py` and `tests/test_datastore_cache.py`, expanding the test suite to 73/73 passing tests.
+* **Why:**
+  - Standardizes album enrichment into an audit-proof two-tier data lake pattern, eliminates edition duplication, and provides deep semantic classification for gatefold recommendation relevance in Crate Digger.
+* **How:**
+  - Implemented `classifier.py`, modified `enrich.py`, `sync.py`, `bigquery.py`, `catalog.py`, executed BigQuery DDL/DML backfill, verified 73/73 unit tests passing.
+
+---
+
 ## [v2.7.1] — 2026-11-21
 ### 🎨 Album Artwork Resolution, Dynamic SQL Deduplication & Documentation Restructuring
 * **What:**

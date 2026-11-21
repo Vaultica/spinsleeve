@@ -274,6 +274,31 @@ def sync_user_saved_albums(user_id, sp, bq_client):
     load_job = bq_client.load_table_from_dataframe(new_albums, table_ref, job_config=load_cfg)
     load_job.result()
     logger.info("[%s] Successfully appended %d brand new albums into %s!", user_id, len(new_albums), table_ref)
+
+    # Bridge new albums to album_provider_ids
+    try:
+        provider_rows = []
+        now_ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        for _, row in new_albums.iterrows():
+            aid = row.get("album_id")
+            ckey = row.get("canonical_album_key")
+            if aid and ckey:
+                provider_rows.append({
+                    "provider": "spotify",
+                    "external_album_id": str(aid),
+                    "canonical_album_key": str(ckey),
+                    "raw_album_name": str(row.get("album_name") or ""),
+                    "raw_artist_name": str(row.get("artist_name") or ""),
+                    "updated_at": now_ts
+                })
+        if provider_rows:
+            p_table = f"{PROJECT_ID}.{DATASET_V2}.album_provider_ids"
+            p_job = bq_client.load_table_from_json(provider_rows, p_table)
+            p_job.result()
+            logger.info("[%s] Synced %d entries into album_provider_ids", user_id, len(provider_rows))
+    except Exception as e:
+        logger.warning("[%s] Error populating album_provider_ids: %s", user_id, e)
+
     return len(new_albums)
 
 
@@ -416,6 +441,22 @@ def rematerialize_user_albums_features(bq_client):
     ),
     deduped AS (
       SELECT * FROM raw_albums WHERE dedupe_rank = 1
+    ),
+    golden_enriched AS (
+      SELECT * EXCEPT(dedup_rank)
+      FROM (
+        SELECT *,
+          ROW_NUMBER() OVER(
+            PARTITION BY canonical_album_key 
+            ORDER BY 
+              COALESCE(enrichment_quality_score, 0.0) DESC,
+              CASE WHEN album_description IS NOT NULL AND album_description != "" THEN 1 ELSE 2 END ASC,
+              updated_at DESC
+          ) as dedup_rank
+        FROM `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata`
+        WHERE canonical_album_key IS NOT NULL AND canonical_album_key != ""
+      )
+      WHERE dedup_rank = 1
     )
     SELECT 
       d.user_id,
@@ -445,7 +486,11 @@ def rematerialize_user_albums_features(bq_client):
       e.personnel,
       e.wikipedia_url,
       e.discogs_url,
-      e.styles as enriched_styles
+      e.styles as enriched_styles,
+      e.macro_genre,
+      e.derived_moods,
+      e.descriptive_tags,
+      e.enrichment_quality_score
     FROM deduped d
     LEFT JOIN album_plays_by_id pid
       ON d.user_id = pid.user_id AND d.album_id = pid.album_id
@@ -453,8 +498,8 @@ def rematerialize_user_albums_features(bq_client):
       ON d.user_id = pname.user_id 
       AND LOWER(TRIM(d.album_name)) = pname.norm_album_name
       AND LOWER(TRIM(d.artist_name)) = pname.norm_artist_name
-    LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e
-      ON d.album_id = e.album_id
+    LEFT JOIN golden_enriched e
+      ON COALESCE(NULLIF(d.canonical_album_key, ''), CONCAT(LOWER(TRIM(d.artist_name)), '::', LOWER(TRIM(d.album_name)))) = e.canonical_album_key
     """
     try:
         job = bq_client.query(remat_q)

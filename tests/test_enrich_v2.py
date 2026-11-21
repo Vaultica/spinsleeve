@@ -27,20 +27,17 @@ class TestEnrichV2(unittest.TestCase):
 
     @patch("enrich.requests.get")
     def test_fetch_wikipedia_data(self, mock_get):
-        # Mock search response
         search_res = MagicMock()
         search_res.json.return_value = {
             "query": {
                 "search": [{"title": "OK Computer"}]
             }
         }
-        # Mock summary response
         sum_res = MagicMock()
         sum_res.json.return_value = {
             "extract": "OK Computer is the third studio album by English rock band Radiohead.",
             "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/OK_Computer"}}
         }
-        # Mock parse response with wikitext reviews
         parse_res = MagicMock()
         parse_res.json.return_value = {
             "parse": {
@@ -73,12 +70,10 @@ class TestEnrichV2(unittest.TestCase):
     @patch("enrich.time.sleep")
     @patch("enrich.requests.get")
     def test_fetch_discogs_data(self, mock_get, mock_sleep):
-        # Mock search response
         search_res = MagicMock()
         search_res.json.return_value = {
             "results": [{"id": 12345}]
         }
-        # Mock release detail response
         detail_res = MagicMock()
         detail_res.json.return_value = {
             "extraartists": [
@@ -103,6 +98,27 @@ class TestEnrichV2(unittest.TestCase):
         self.assertEqual(data["discogs_styles"], "Alternative Rock, Art Rock")
         self.assertEqual(data["discogs_notes"], "Recorded in St Catherine's Court, Bath.")
 
+    @patch("enrich.time.sleep")
+    @patch("enrich.requests.get")
+    def test_fetch_musicbrainz_data(self, mock_get, mock_sleep):
+        mb_res = MagicMock()
+        mb_res.json.return_value = {
+            "release-groups": [
+                {
+                    "id": "mb-rg-12345",
+                    "title": "OK Computer",
+                    "tags": [{"name": "art rock"}, {"name": "alternative rock"}],
+                    "genres": [{"name": "rock"}]
+                }
+            ]
+        }
+        mock_get.return_value = mb_res
+
+        data = enrich.fetch_musicbrainz_data("Radiohead", "OK Computer")
+        self.assertEqual(data["musicbrainz_release_id"], "mb-rg-12345")
+        self.assertIn("art rock", data["mb_tags"])
+        self.assertIn("rock", data["mb_genres"])
+
     @patch("enrich.bigquery.Client")
     def test_run_enrichment_dry_run(self, mock_bq_cls):
         mock_bq = MagicMock()
@@ -124,14 +140,16 @@ class TestEnrichV2(unittest.TestCase):
         mock_bq.query.return_value.to_dataframe.return_value = df_fake
 
         with patch("enrich.fetch_wikipedia_data") as mock_wiki, \
-             patch("enrich.fetch_discogs_data") as mock_discogs:
+             patch("enrich.fetch_discogs_data") as mock_discogs, \
+             patch("enrich.fetch_musicbrainz_data") as mock_mb:
             mock_wiki.return_value = {"wiki_summary": "Summary text", "pitchfork_score": "10/10"}
             mock_discogs.return_value = {"discogs_rating": 4.9, "personnel": "Producer"}
+            mock_mb.return_value = {"musicbrainz_release_id": "mb-123", "mb_genres": "electronic", "mb_tags": "ambient"}
 
             count = enrich.run_enrichment(batch_size=1, dry_run=True)
             self.assertEqual(count, 1)
             # Verify no BigQuery load job was executed on dry run
-            self.assertFalse(mock_bq.load_table_from_dataframe.called)
+            self.assertFalse(mock_bq.load_table_from_json.called)
 
 
 if __name__ == "__main__":

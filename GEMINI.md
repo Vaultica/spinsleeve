@@ -58,7 +58,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.7.1` (Landing page artwork fix, RAM canonical sibling deduplication fix, analytics art fallback, documentation restructuring, 66/66 tests passing).
+* **Current Production Release:** `v2.8.0` (Two-Tier Album Enrichment Architecture & APP-16 Semantic Classification, BigQuery raw/golden tables, 73/73 tests passing).
 * **Next Planned Milestone:** `Phase 7` — Cross-Platform Apple Music Library Onboarding (`APP-02`).
 
 ---

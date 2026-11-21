@@ -131,6 +131,49 @@ class TestDatastoreCatalogCache(unittest.TestCase):
         mock_bq_client_class.assert_not_called()
         self.assertEqual(res["albums"][0]["album_name"], "OK Computer")
 
+    @patch("services.catalog.get_catalog_from_datastore")
+    @patch("services.catalog.bigquery.Client")
+    def test_fetch_user_album_data_app16_fields(self, mock_bq_client_class, mock_get_ds_catalog):
+        mock_get_ds_catalog.return_value = None
+        mock_bq = MagicMock()
+        mock_bq_client_class.return_value = mock_bq
+
+        import pandas as pd
+        df_fake = pd.DataFrame([
+            {
+                "album_id": "aid_1",
+                "album_name": "Kid A",
+                "album_artist_name": "Radiohead",
+                "album_image_url": "http://img.jpg",
+                "release_year": "2000",
+                "added_at": "2024-01-01T00:00:00Z",
+                "album_genres": "electronic, rock",
+                "album_track_plays": 20,
+                "album_plays": 2.0,
+                "album_track_plays_30d": 10,
+                "album_plays_30d": 1.0,
+                "album_tracks_total": 10,
+                "album_description": "Gatefold notes",
+                "personnel": "Nigel Godrich (Producer)",
+                "pitchfork_score": "10/10",
+                "discogs_rating": 4.9,
+                "enriched_styles": "IDM, Experimental",
+                "macro_genre": "Electronic",
+                "derived_moods": ["Atmospheric", "Late Night"],
+                "descriptive_tags": ["Synthesizers", "Minimalist"],
+                "enrichment_quality_score": 0.95
+            }
+        ])
+        mock_bq.query.return_value.to_dataframe.return_value = df_fake
+
+        res = fetch_user_album_data("test_app16_user")
+        self.assertEqual(len(res["albums"]), 1)
+        album = res["albums"][0]
+        self.assertEqual(album["macro_genre"], "Electronic")
+        self.assertEqual(album["derived_moods"], ["Atmospheric", "Late Night"])
+        self.assertEqual(album["descriptive_tags"], ["Synthesizers", "Minimalist"])
+        self.assertEqual(album["enrichment_quality_score"], 0.95)
+
 
 if __name__ == "__main__":
     unittest.main()

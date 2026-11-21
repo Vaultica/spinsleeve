@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-SpinSleeve V2 Album Metadata Enrichment Pipeline.
+SpinSleeve V2 Album Metadata Enrichment Pipeline (APP-16).
 
-Enriches albums in BigQuery (dataset: spotify_v2) with:
-  1. Wikipedia: Album narrative story, executive summary, and critical ratings
-     (Pitchfork, Metacritic, AllMusic, The Guardian).
-  2. Discogs: Physical liner notes, personnel (musicians, producers, mixers,
-     mastering engineers), vinyl styles, and community ratings.
+Enriches albums in BigQuery (dataset: spotify_v2) via a two-tier architecture:
+  Tier 1 (Raw Append-Only Sources):
+    - `enrichment_raw_wikipedia`: Summaries, URLs, review ratings (Pitchfork, Metacritic, AllMusic, Guardian).
+    - `enrichment_raw_discogs`: Liner notes, personnel, community ratings, styles.
+    - `enrichment_raw_musicbrainz`: Canonical release group identifiers, genres, tags.
+    - `album_provider_ids`: External streaming ID bridge (Spotify, Apple Music) to canonical_album_key.
 
-Target BigQuery Table:
-  `secret-compass-181513.spotify_v2.album_enriched_metadata`
+  Tier 2 (Golden Synthesized Table):
+    - `album_enriched_metadata`: Clustered by `canonical_album_key`, enriched with APP-16 semantic
+      classification (`macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`).
 """
 
 import os
@@ -20,9 +22,16 @@ import urllib.parse
 import re
 import logging
 from datetime import datetime
+from typing import Dict, Any, List, Optional
 import requests
 import pandas as pd
-from google.cloud import bigquery
+from google.cloud import bigquery, datastore
+
+# Add current directory to path
+sys.path.insert(0, os.path.dirname(__file__))
+
+from classifier import classify_album_metadata
+from sync import compute_canonical_album_key, rematerialize_user_albums_features
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -34,9 +43,10 @@ TARGET_TABLE = f"{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata"
 
 HEADERS_WIKI = {"User-Agent": "SpinSleeveEnrichment/2.0 (serge.bouschet@gmail.com)"}
 HEADERS_DISCOGS = {"User-Agent": "SpinSleeveEnrichment/2.0 (serge.bouschet@gmail.com)"}
+HEADERS_MB = {"User-Agent": "SpinSleeveEnrichment/2.0 (serge.bouschet@gmail.com)"}
 
 
-def clean_search_term(text):
+def clean_search_term(text: Optional[str]) -> str:
     """Strips remaster labels, deluxe indicators, and special chars for clean search."""
     if not text:
         return ""
@@ -49,7 +59,7 @@ def clean_search_term(text):
     return text
 
 
-def fetch_wikipedia_data(artist, album):
+def fetch_wikipedia_data(artist: str, album: str) -> Dict[str, Any]:
     """
     Finds and extracts album prose description and critical reviews/scores
     from Wikipedia MediaWiki API and REST summary endpoint.
@@ -58,7 +68,7 @@ def fetch_wikipedia_data(artist, album):
     clean_art = clean_search_term(artist)
     q = f"{clean_art} {clean_album} album"
 
-    data = {
+    data: Dict[str, Any] = {
         "wiki_summary": None,
         "wiki_url": None,
         "pitchfork_score": None,
@@ -68,7 +78,7 @@ def fetch_wikipedia_data(artist, album):
     }
 
     try:
-        # Step 1: Search Wikipedia for the best matching page
+        # Step 1: Search Wikipedia for best matching page
         search_url = "https://en.wikipedia.org/w/api.php"
         s_params = {
             "action": "query",
@@ -81,7 +91,6 @@ def fetch_wikipedia_data(artist, album):
         if not matches:
             return data
 
-        # Select best page prioritizing exact album title matches
         top_title = None
         for m in matches:
             t_low = m["title"].lower()
@@ -155,7 +164,7 @@ def fetch_wikipedia_data(artist, album):
     return data
 
 
-def fetch_discogs_data(artist, album):
+def fetch_discogs_data(artist: str, album: str) -> Dict[str, Any]:
     """
     Queries Discogs for liner notes, personnel (musicians, producers, mixers),
     styles, and community scores with polite rate limiting.
@@ -163,7 +172,8 @@ def fetch_discogs_data(artist, album):
     clean_album = clean_search_term(album)
     clean_art = artist if "various" not in artist.lower() else ""
 
-    data = {
+    data: Dict[str, Any] = {
+        "discogs_release_id": None,
         "discogs_url": None,
         "discogs_rating": None,
         "discogs_votes": None,
@@ -180,8 +190,8 @@ def fetch_discogs_data(artist, album):
         if not results:
             return data
 
-        # Fetch release detail
         rel_id = results[0].get("id")
+        data["discogs_release_id"] = rel_id
         data["discogs_url"] = f"https://www.discogs.com/release/{rel_id}"
 
         # Respect Discogs rate limit (1 req/s)
@@ -189,7 +199,6 @@ def fetch_discogs_data(artist, album):
         rel_url = f"https://api.discogs.com/releases/{rel_id}"
         detail = requests.get(rel_url, headers=HEADERS_DISCOGS, timeout=5).json()
 
-        # Extract Personnel credits
         extra = detail.get("extraartists", [])
         personnel_list = []
         for p in extra[:20]:
@@ -201,7 +210,6 @@ def fetch_discogs_data(artist, album):
         if personnel_list:
             data["personnel"] = " • ".join(personnel_list)
 
-        # Community Ratings
         comm = detail.get("community", {})
         avg_score = comm.get("rating", {}).get("average")
         votes = comm.get("rating", {}).get("count")
@@ -209,12 +217,10 @@ def fetch_discogs_data(artist, album):
             data["discogs_rating"] = round(float(avg_score), 2)
             data["discogs_votes"] = float(votes) if votes else 0.0
 
-        # Styles / Genres
         styles = detail.get("styles", []) or detail.get("genres", [])
         if styles:
             data["discogs_styles"] = ", ".join(styles[:6])
 
-        # Notes
         notes = detail.get("notes")
         if notes:
             data["discogs_notes"] = notes.strip()
@@ -225,7 +231,48 @@ def fetch_discogs_data(artist, album):
     return data
 
 
-def get_candidate_albums(bq_client, batch_limit=50, specific_album_id=None):
+def fetch_musicbrainz_data(artist: str, album: str) -> Dict[str, Any]:
+    """
+    Queries MusicBrainz API for release group tags, genres, and identifiers.
+    """
+    clean_album = clean_search_term(album)
+    clean_art = clean_search_term(artist)
+    data: Dict[str, Any] = {
+        "musicbrainz_release_id": None,
+        "mb_genres": None,
+        "mb_tags": None,
+    }
+    if not clean_album or not clean_art:
+        return data
+
+    try:
+        url = "https://musicbrainz.org/ws/2/release-group"
+        query = f'artist:"{clean_art}" AND releasegroup:"{clean_album}"'
+        params = {"query": query, "fmt": "json", "limit": 3}
+        time.sleep(1.0)  # MusicBrainz rate limit
+        res = requests.get(url, params=params, headers=HEADERS_MB, timeout=5).json()
+        rgs = res.get("release-groups", [])
+        if not rgs:
+            return data
+
+        best = rgs[0]
+        data["musicbrainz_release_id"] = best.get("id")
+
+        tags = [t.get("name") for t in best.get("tags", []) if t.get("name")]
+        if tags:
+            data["mb_tags"] = ", ".join(tags[:10])
+
+        genres = [g.get("name") for g in best.get("genres", []) if g.get("name")]
+        if genres:
+            data["mb_genres"] = ", ".join(genres[:8])
+
+    except Exception as e:
+        logger.debug("MusicBrainz fetch exception for %s - %s: %s", artist, album, e)
+
+    return data
+
+
+def get_candidate_albums(bq_client: bigquery.Client, batch_limit: int = 50, specific_album_id: Optional[str] = None) -> pd.DataFrame:
     """
     Selects unenriched albums from spotify_v2.user_saved_albums prioritized by:
     1. Total track plays across all tenants in playback_history
@@ -238,6 +285,7 @@ def get_candidate_albums(bq_client, batch_limit=50, specific_album_id=None):
           album_id,
           ANY_VALUE(artist_name) as artist_name,
           ANY_VALUE(album_name) as album_name,
+          ANY_VALUE(canonical_album_key) as canonical_album_key,
           ANY_VALUE(release_date) as release_date,
           ANY_VALUE(release_year) as release_year,
           ANY_VALUE(genres) as genres,
@@ -263,6 +311,7 @@ def get_candidate_albums(bq_client, batch_limit=50, specific_album_id=None):
         album_id,
         ANY_VALUE(artist_name) as artist_name,
         ANY_VALUE(album_name) as album_name,
+        ANY_VALUE(canonical_album_key) as canonical_album_key,
         ANY_VALUE(release_date) as release_date,
         ANY_VALUE(release_year) as release_year,
         ANY_VALUE(genres) as genres,
@@ -274,6 +323,7 @@ def get_candidate_albums(bq_client, batch_limit=50, specific_album_id=None):
       a.album_id,
       a.artist_name,
       a.album_name,
+      COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) as canonical_album_key,
       a.release_date,
       a.release_year,
       a.genres,
@@ -281,8 +331,9 @@ def get_candidate_albums(bq_client, batch_limit=50, specific_album_id=None):
       a.collector_count
     FROM albums a
     LEFT JOIN plays p ON a.album_id = p.album_id
-    LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e ON a.album_id = e.album_id
-    WHERE e.album_id IS NULL
+    LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e 
+      ON COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) = e.canonical_album_key
+    WHERE e.canonical_album_key IS NULL
       AND a.album_name IS NOT NULL
       AND a.artist_name IS NOT NULL
     ORDER BY total_plays DESC, a.collector_count DESC, a.release_date DESC
@@ -294,7 +345,22 @@ def get_candidate_albums(bq_client, batch_limit=50, specific_album_id=None):
     return bq_client.query(query, job_config=job_cfg).to_dataframe()
 
 
-def run_enrichment(batch_size=50, specific_album_id=None, dry_run=False):
+def invalidate_all_user_caches():
+    """Invalidates UserCatalogCache, PalCompatibilityCache, and UserAnalyticsCache across all users."""
+    try:
+        ds_client = datastore.Client(project=PROJECT_ID)
+        for kind in ["UserCatalogCache", "PalCompatibilityCache", "UserAnalyticsCache"]:
+            query = ds_client.query(kind=kind)
+            keys = [entity.key for entity in query.fetch()]
+            if keys:
+                for i in range(0, len(keys), 500):
+                    ds_client.delete_multi(keys[i:i + 500])
+                logger.info("Invalidated %d entities from Datastore kind '%s'", len(keys), kind)
+    except Exception as e:
+        logger.warning("Error invalidating Datastore caches: %s", e)
+
+
+def run_enrichment(batch_size: int = 50, specific_album_id: Optional[str] = None, dry_run: bool = False) -> int:
     """
     Runs the V2 metadata enrichment pipeline and appends records to BigQuery.
     """
@@ -312,11 +378,20 @@ def run_enrichment(batch_size=50, specific_album_id=None, dry_run=False):
 
     logger.info("Found %d candidate albums needing 12\" gatefold enrichment.", total_to_enrich)
 
-    enriched_records = []
+    now_dt = datetime.utcnow()
+    now_ts = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    wiki_raw_records = []
+    discogs_raw_records = []
+    mb_raw_records = []
+    provider_records = []
+    golden_records = []
+
     for idx, row in df_candidates.iterrows():
-        album_id = row["album_id"]
-        artist = row.get("artist_name", "Unknown Artist")
-        album = row.get("album_name", "Unknown Album")
+        album_id = str(row["album_id"])
+        artist = str(row.get("artist_name") or "Unknown Artist")
+        album = str(row.get("album_name") or "Unknown Album")
+        canon_key = compute_canonical_album_key(artist, album)
         rel_date = str(row.get("release_date") or "")
         rel_year = str(row.get("release_year") or (rel_date[:4] if len(rel_date) >= 4 else ""))
 
@@ -342,15 +417,92 @@ def run_enrichment(batch_size=50, specific_album_id=None, dry_run=False):
         # 2. Fetch Discogs
         discogs_data = fetch_discogs_data(artist, album)
 
+        # 3. Fetch MusicBrainz
+        mb_data = fetch_musicbrainz_data(artist, album)
+
         # Merge descriptions
         description = wiki_data.get("wiki_summary")
         if not description and discogs_data.get("discogs_notes"):
             description = discogs_data["discogs_notes"][:500]
 
-        record = {
-            "album_id": str(album_id),
-            "artist_name": str(artist),
-            "album_name": str(album),
+        # 4. APP-16 Semantic Classification
+        rec_for_classifier = {
+            "genres": row.get("genres"),
+            "styles": discogs_data.get("discogs_styles"),
+            "mb_tags": mb_data.get("mb_tags"),
+            "album_description": description,
+            "discogs_notes": discogs_data.get("discogs_notes"),
+            "pitchfork_score": wiki_data.get("pitchfork_score"),
+            "metacritic_score": wiki_data.get("metacritic_score"),
+            "allmusic_score": wiki_data.get("allmusic_score"),
+            "guardian_score": wiki_data.get("guardian_score"),
+            "personnel": discogs_data.get("personnel"),
+            "discogs_rating": discogs_data.get("discogs_rating")
+        }
+        cls_out = classify_album_metadata(rec_for_classifier)
+
+        # Populate Raw Wikipedia record
+        if wiki_data.get("wiki_summary") or wiki_data.get("wiki_url") or wiki_data.get("pitchfork_score"):
+            wiki_raw_records.append({
+                "canonical_album_key": canon_key,
+                "fetched_at": now_ts,
+                "extractor_version": "v2_live",
+                "confidence_score": 0.95,
+                "raw_payload": None,
+                "wiki_summary": wiki_data.get("wiki_summary"),
+                "wiki_url": wiki_data.get("wiki_url"),
+                "pitchfork_score": wiki_data.get("pitchfork_score"),
+                "metacritic_score": wiki_data.get("metacritic_score"),
+                "allmusic_score": wiki_data.get("allmusic_score"),
+                "guardian_score": wiki_data.get("guardian_score")
+            })
+
+        # Populate Raw Discogs record
+        if discogs_data.get("personnel") or discogs_data.get("discogs_rating") or discogs_data.get("discogs_styles"):
+            discogs_raw_records.append({
+                "canonical_album_key": canon_key,
+                "fetched_at": now_ts,
+                "extractor_version": "v2_live",
+                "confidence_score": 0.95,
+                "raw_payload": None,
+                "discogs_release_id": discogs_data.get("discogs_release_id"),
+                "personnel": discogs_data.get("personnel"),
+                "discogs_rating": discogs_data.get("discogs_rating"),
+                "discogs_votes": discogs_data.get("discogs_votes"),
+                "discogs_styles": discogs_data.get("discogs_styles"),
+                "discogs_notes": discogs_data.get("discogs_notes"),
+                "discogs_url": discogs_data.get("discogs_url")
+            })
+
+        # Populate Raw MusicBrainz record
+        if mb_data.get("musicbrainz_release_id") or mb_data.get("mb_tags"):
+            mb_raw_records.append({
+                "canonical_album_key": canon_key,
+                "fetched_at": now_ts,
+                "extractor_version": "v2_live",
+                "confidence_score": 0.95,
+                "raw_payload": None,
+                "musicbrainz_release_id": mb_data.get("musicbrainz_release_id"),
+                "mb_genres": mb_data.get("mb_genres"),
+                "mb_tags": mb_data.get("mb_tags")
+            })
+
+        # Populate Provider Bridge record
+        provider_records.append({
+            "provider": "spotify",
+            "external_album_id": album_id,
+            "canonical_album_key": canon_key,
+            "raw_album_name": album,
+            "raw_artist_name": artist,
+            "updated_at": now_ts
+        })
+
+        # Populate Golden record
+        golden_records.append({
+            "album_id": album_id,
+            "artist_name": artist,
+            "album_name": album,
+            "canonical_album_key": canon_key,
             "release_date": rel_date,
             "release_year": rel_year,
             "era_group": era_group,
@@ -366,49 +518,98 @@ def run_enrichment(batch_size=50, specific_album_id=None, dry_run=False):
             "discogs_votes": discogs_data.get("discogs_votes"),
             "wikipedia_url": str(wiki_data.get("wiki_url") or ""),
             "discogs_url": str(discogs_data.get("discogs_url") or ""),
-            "enriched_at": datetime.utcnow()
-        }
-        enriched_records.append(record)
-
-    df_out = pd.DataFrame(enriched_records)
+            "macro_genre": cls_out["macro_genre"],
+            "derived_moods": cls_out["derived_moods"],
+            "descriptive_tags": cls_out["descriptive_tags"],
+            "enrichment_quality_score": cls_out["enrichment_quality_score"],
+            "updated_at": now_ts
+        })
 
     if dry_run:
-        logger.info("[DRY RUN] Would append %d records to %s. First row preview:\n%s", len(df_out), TARGET_TABLE, df_out.iloc[0].to_dict())
-        return len(df_out)
+        logger.info("[DRY RUN] Would synthesize %d records. Preview:\n%s", len(golden_records), golden_records[0])
+        return len(golden_records)
 
-    # BigQuery Table schema alignment
-    schema = [
-        bigquery.SchemaField("album_id", "STRING", mode="REQUIRED"),
-        bigquery.SchemaField("artist_name", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("album_name", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("release_date", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("release_year", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("era_group", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("genres", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("styles", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("album_description", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("personnel", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("pitchfork_score", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("metacritic_score", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("allmusic_score", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("guardian_score", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("discogs_rating", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("discogs_votes", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("wikipedia_url", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("discogs_url", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("enriched_at", "DATETIME", mode="NULLABLE"),
-    ]
+    # 1. Ingest Raw Records
+    if wiki_raw_records:
+        w_table = f"{PROJECT_ID}.{DATASET_V2}.enrichment_raw_wikipedia"
+        load_cfg = bigquery.LoadJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_APPEND)
+        bq_client.load_table_from_json(wiki_raw_records, w_table, job_config=load_cfg).result()
+        logger.info("Appended %d records into %s", len(wiki_raw_records), w_table)
 
-    job_config = bigquery.LoadJobConfig(
-        schema=schema,
-        write_disposition=bigquery.WriteDisposition.WRITE_APPEND
-    )
+    if discogs_raw_records:
+        d_table = f"{PROJECT_ID}.{DATASET_V2}.enrichment_raw_discogs"
+        load_cfg = bigquery.LoadJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_APPEND)
+        bq_client.load_table_from_json(discogs_raw_records, d_table, job_config=load_cfg).result()
+        logger.info("Appended %d records into %s", len(discogs_raw_records), d_table)
 
-    logger.info("Appending %d enriched album records into BigQuery table %s...", len(df_out), TARGET_TABLE)
-    load_job = bq_client.load_table_from_dataframe(df_out, TARGET_TABLE, job_config=job_config)
-    load_job.result()
-    logger.info("Successfully enriched and appended %d albums into %s!", len(df_out), TARGET_TABLE)
-    return len(df_out)
+    if mb_raw_records:
+        mb_table = f"{PROJECT_ID}.{DATASET_V2}.enrichment_raw_musicbrainz"
+        load_cfg = bigquery.LoadJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_APPEND)
+        bq_client.load_table_from_json(mb_raw_records, mb_table, job_config=load_cfg).result()
+        logger.info("Appended %d records into %s", len(mb_raw_records), mb_table)
+
+    if provider_records:
+        p_table = f"{PROJECT_ID}.{DATASET_V2}.album_provider_ids"
+        load_cfg = bigquery.LoadJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_APPEND)
+        bq_client.load_table_from_json(provider_records, p_table, job_config=load_cfg).result()
+        logger.info("Appended %d records into %s", len(provider_records), p_table)
+
+    # 2. Merge into Golden Table
+    staging_table = f"{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata_staging"
+    load_cfg = bigquery.LoadJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE)
+    bq_client.load_table_from_json(golden_records, staging_table, job_config=load_cfg).result()
+
+    merge_sql = f"""
+    MERGE `{TARGET_TABLE}` T
+    USING `{staging_table}` S
+    ON T.canonical_album_key = S.canonical_album_key
+    WHEN MATCHED THEN UPDATE SET
+        T.album_id = S.album_id,
+        T.artist_name = S.artist_name,
+        T.album_name = S.album_name,
+        T.release_date = CAST(S.release_date AS STRING),
+        T.release_year = CAST(S.release_year AS STRING),
+        T.era_group = S.era_group,
+        T.genres = S.genres,
+        T.styles = S.styles,
+        T.album_description = COALESCE(NULLIF(S.album_description, ''), T.album_description),
+        T.personnel = COALESCE(NULLIF(S.personnel, ''), T.personnel),
+        T.pitchfork_score = COALESCE(NULLIF(S.pitchfork_score, ''), T.pitchfork_score),
+        T.metacritic_score = COALESCE(NULLIF(S.metacritic_score, ''), T.metacritic_score),
+        T.allmusic_score = COALESCE(NULLIF(S.allmusic_score, ''), T.allmusic_score),
+        T.guardian_score = COALESCE(NULLIF(S.guardian_score, ''), T.guardian_score),
+        T.discogs_rating = COALESCE(S.discogs_rating, T.discogs_rating),
+        T.discogs_votes = COALESCE(S.discogs_votes, T.discogs_votes),
+        T.wikipedia_url = COALESCE(NULLIF(S.wikipedia_url, ''), T.wikipedia_url),
+        T.discogs_url = COALESCE(NULLIF(S.discogs_url, ''), T.discogs_url),
+        T.macro_genre = S.macro_genre,
+        T.derived_moods = S.derived_moods,
+        T.descriptive_tags = S.descriptive_tags,
+        T.enrichment_quality_score = S.enrichment_quality_score,
+        T.updated_at = S.updated_at
+    WHEN NOT MATCHED THEN INSERT (
+        album_id, artist_name, album_name, canonical_album_key, release_date, release_year, era_group,
+        genres, styles, album_description, personnel, pitchfork_score, metacritic_score, allmusic_score,
+        guardian_score, discogs_rating, discogs_votes, wikipedia_url, discogs_url, macro_genre,
+        derived_moods, descriptive_tags, enrichment_quality_score, updated_at
+    ) VALUES (
+        S.album_id, S.artist_name, S.album_name, S.canonical_album_key, CAST(S.release_date AS STRING), CAST(S.release_year AS STRING), S.era_group,
+        S.genres, S.styles, S.album_description, S.personnel, S.pitchfork_score, S.metacritic_score, S.allmusic_score,
+        S.guardian_score, S.discogs_rating, S.discogs_votes, S.wikipedia_url, S.discogs_url, S.macro_genre,
+        S.derived_moods, S.descriptive_tags, S.enrichment_quality_score, S.updated_at
+    );
+    """
+    bq_client.query(merge_sql).result()
+    bq_client.delete_table(staging_table, not_found_ok=True)
+    logger.info("Successfully merged %d golden records into %s!", len(golden_records), TARGET_TABLE)
+
+    # 3. Re-materialize User Albums Features Table
+    rematerialize_user_albums_features(bq_client)
+
+    # 4. Invalidate Datastore Caches
+    invalidate_all_user_caches()
+
+    return len(golden_records)
 
 
 if __name__ == "__main__":

@@ -170,7 +170,8 @@ def fetch_user_album_data(user_id, force_refresh=False):
         SELECT 
             album_id, album_name, album_artist_name, album_image_url, release_year, added_at,
             album_genres, album_track_plays, album_plays, album_track_plays_30d, album_plays_30d,
-            album_tracks_total, album_description, personnel, pitchfork_score, discogs_rating, enriched_styles
+            album_tracks_total, album_description, personnel, pitchfork_score, discogs_rating, enriched_styles,
+            macro_genre, derived_moods, descriptive_tags, enrichment_quality_score
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         WHERE user_id = @user_id
         ORDER BY album_plays_30d DESC, album_plays DESC
@@ -230,6 +231,27 @@ def fetch_user_album_data(user_id, force_refresh=False):
             styles_str = safe_str(row.get("enriched_styles"))
             has_gf = bool(desc or pers)
 
+            macro_g = safe_str(row.get("macro_genre"), "Eclectic / Other")
+            raw_moods = row.get("derived_moods")
+            moods_list = []
+            if isinstance(raw_moods, (list, tuple)):
+                moods_list = [safe_str(m) for m in raw_moods if m]
+            elif hasattr(raw_moods, "tolist"):
+                moods_list = [safe_str(m) for m in raw_moods.tolist() if m]
+            elif isinstance(raw_moods, str) and raw_moods.strip():
+                moods_list = [safe_str(m.strip()) for m in raw_moods.split(",") if m.strip()]
+
+            raw_tags = row.get("descriptive_tags")
+            tags_list = []
+            if isinstance(raw_tags, (list, tuple)):
+                tags_list = [safe_str(t) for t in raw_tags if t]
+            elif hasattr(raw_tags, "tolist"):
+                tags_list = [safe_str(t) for t in raw_tags.tolist() if t]
+            elif isinstance(raw_tags, str) and raw_tags.strip():
+                tags_list = [safe_str(t.strip()) for t in raw_tags.split(",") if t.strip()]
+
+            quality_score = safe_float(row.get("enrichment_quality_score"), 0.0)
+
             albums.append({
                 "album_id": aid,
                 "album_name": aname,
@@ -248,6 +270,10 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 "pitchfork_score": pf,
                 "discogs_rating": disc_rat,
                 "enriched_styles": styles_str,
+                "macro_genre": macro_g,
+                "derived_moods": moods_list,
+                "descriptive_tags": tags_list,
+                "enrichment_quality_score": quality_score,
                 "album_url": f"https://open.spotify.com/album/{aid}" if aid else "",
                 "has_gatefold": has_gf,
                 "image": img_url,
