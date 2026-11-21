@@ -186,24 +186,27 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
-### `OPS-03`: Instant Admin Notifications for User Join Requests (Twilio WhatsApp API)
-* **Technical Objective:** Push real-time mobile WhatsApp notifications when a new user signs in for the first time (`is_approved=False`).
+### `OPS-03`: ✅ ~~Real-Time Admin Email Notifications via Resend~~ (`v2.7.0`)
+* **Technical Objective:** Push real-time HTML email notifications to the site administrator when a new user signs in for the first time (`is_approved=False`).
 * **Architecture & Flow:**
-  - Triggered in `src/report_v2/app.py` inside the OAuth callback (`/beta/callback`) upon initial Datastore `User` entity creation with `is_approved=False`.
-  - Service: Twilio Programmable Messaging API (`https://api.twilio.com`).
+  - Triggered in `src/report_v2/routes/auth.py` inside the OAuth callback upon initial Datastore `User` entity creation with `is_approved=False`.
+  - Service: Resend API (`https://api.resend.com/emails`) via `src/report_v2/services/notifications.py`.
   - Required Environment Secrets / Cloud Run Env Vars:
-    - `TWILIO_ACCOUNT_SID`
-    - `TWILIO_AUTH_TOKEN`
-    - `TWILIO_WHATSAPP_SENDER` (e.g., `whatsapp:+14155238886`)
-    - `ADMIN_WHATSAPP_RECIPIENT` (e.g., `whatsapp:+<admin_number>`)
-  - Message Template:
-    ```text
-    🔔 New SpinSleeve Collector Request!
-    • Name: {display_name}
-    • Spotify ID: {spotify_id}
-    • Email: {email}
-    👉 1-Click Approval: https://spinsleeve.cc/admin
+    - `RESEND_API_KEY`
+  - Email Template (`src/report_v2/services/notifications.py`):
+    ```html
+    <div style="background: #0c0f12; color: #e5e7eb; padding: 20px; border-radius: 10px;">
+        <h2 style="color: #1DB954;">🔔 New SpinSleeve Collector Request</h2>
+        <p>A new user has signed in and is awaiting approval:</p>
+        <ul>
+            <li><b>Display Name:</b> {user_name}</li>
+            <li><b>Spotify ID:</b> {spotify_id}</li>
+            <li><b>Email:</b> {user_email}</li>
+        </ul>
+        <p><a href="https://spinsleeve.cc/admin" style="background: #1DB954; color: black; padding: 10px 20px; font-weight: bold;">1-Click Approval Portal</a></p>
+    </div>
     ```
+  - Test Coverage: `tests/test_notifications.py` (verified 66/66 unit tests passing).
 
 ---
 

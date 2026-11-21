@@ -136,7 +136,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`INFRA-05`** | Zero-Cold-Start & High-Concurrency Production Architecture (`--min-instances=1`, 100% Zero-BQ Caching) | Infrastructure | 4–6 hours | Low–Medium |
 | **`OPS-01`** | CI/CD Pipelines via GitHub Actions & Branch Protection | DevOps | 6–8 hours | Medium |
 | **`OPS-02`** | Production Observability, Alerting & Health Monitoring | DevOps | 4–6 hours | Low–Med |
-| **`OPS-03`** | Real-Time Admin Alerts for User Join Requests | DevOps | 3–4 hours | Low |
+| **`OPS-03`** | ✅ ~~Real-Time Admin Email Notifications via Resend~~ | DevOps | 3–4 hours | Completed (`v2.7.0`) |
 | **`OPS-04`** | ✅ ~~Monolithic App Modularisation & AI Parsing Optimization~~ | DevOps & Efficiency | 4–6 hours | Completed (`v2.6.4`: Modularized across config, services, route blueprints) |
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A / Side B Breakdown | Core App | 4–6 hours | Low–Med |
 | **`APP-02`** | Cross-Platform Apple Music Library Onboarding (Phase 7) | Core App | 16–24 hours | Medium |
@@ -289,21 +289,15 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `OPS-03`: Real-Time Admin Alerts for User Join Requests (Twilio WhatsApp API)
+#### `OPS-03`: ✅ ~~Real-Time Admin Email Notifications via Resend~~ (`v2.7.0`)
 * **Problem:**  
-  When an uninvited user logs in for the first time, their account sits in `PENDING` state until the admin happens to inspect the Admin Control Deck.
+  When an uninvited user logs in for initial beta onboarding, their account sits in `PENDING` state until the admin inspects the Admin Control Deck or notices.
 * **Solution:**  
-  Instant WhatsApp notifications pushed directly to Serge whenever a new Spotify user authenticates:
-  - **Service:** Twilio Programmable Messaging API (`whatsapp:+...`).
-  - **Payload:** User display name, Spotify ID, email, and a 1-click approval URL:
-    ```text
-    📢 New SpinSleeve Member Request!
-    • Name: Charlie Watts
-    • Spotify ID: charliewatts123
-    • Email: charlie@rollingstones.com
-    👉 Approve: https://spinsleeve.cc/admin
-    ```
-* **Effort & Complexity:** ~3–4 hours (0.5 day) • **Complexity:** **Low**
+  Instant transactional HTML email notifications dispatched via Resend API (`src/report_v2/services/notifications.py`) whenever a new Spotify user authenticates:
+  - **Service:** Resend API (`https://api.resend.com/emails`).
+  - **Payload:** User display name, Spotify ID, email, and a 1-click approval link to `https://spinsleeve.cc/admin`.
+  - **Test Suite:** Automated unit test coverage in `tests/test_notifications.py` (66/66 tests passing).
+* **Status & Release:** ✅ **Completed** (`v2.7.0`) • **Effort & Complexity:** ~3–4 hours • **Complexity:** **Low**
 
 ---
 
@@ -800,7 +794,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`INFRA-03`** | Sub-100ms Multi-Tier Caching & Materialization | Infrastructure | 6–8h | Cloud Datastore, BigQuery, sessionStorage, Flask | **High:** Eliminates 2–4s tab-switching latency; drops catalog response times to <25ms with $0 new cloud costs. |
 | **`OPS-01`** | CI/CD GitHub Actions & Protected Master | DevOps | 6–8h | GitHub Actions, Workload Identity Federation, Pytest | **High:** Eliminates manual terminal deployments and prevents untested regressions. |
 | **`OPS-02`** | Observability, Alerting & Health Monitoring | DevOps | 4–6h | Cloud Monitoring, Alert Policies, `/healthz` | **Medium:** Automated 5xx failure detection and resource saturation alerts. |
-| **`OPS-03`** | Real-Time Admin Alerts for Join Requests | DevOps | 3–4h | Twilio WhatsApp API, Cloud Run | **Medium:** Instant 1-click mobile approvals for new friends. |
+| **`OPS-03`** | ✅ ~~Real-Time Admin Email Notifications via Resend~~ | DevOps | 3–4h | Resend API, Flask Auth | ✅ **Completed** (`v2.7.0`): Real-Time HTML email notifications dispatched to admin when new users authenticate. |
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A/B Splits | Core App | 4–6h | Spotify Web API, Jinja2, Tailwind CSS | **Medium:** Completes tactile physical record feel with track-level auditioning. |
 | **`APP-02`** | Apple Music Library Onboarding (Phase 7) | Core App | 16–24h | MusicKit JS v3, Apple Developer Key (.p8), BigQuery | **Massive:** Bypasses Spotify allowlist limits and expands to Apple Music collectors. |
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
