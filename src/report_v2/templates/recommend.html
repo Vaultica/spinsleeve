@@ -387,6 +387,9 @@
                     <!-- Archival Badges with External Deep Links -->
                     <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
 
+                    <!-- Semantic Tag Strip: Macro Genre, Moods, Descriptive Tags (APP-16) -->
+                    <div id="modalSemanticTags" class="flex flex-wrap items-center gap-1.5 my-2.5 hidden"></div>
+
                     <!-- Liner Notes & Personnel -->
                     <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
                         <div id="modalDescriptionSection">
@@ -924,6 +927,47 @@
                         <span>Wikipedia</span>
                         <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </a>`;
+            }
+
+            // Semantic Classification & Mood Tags (APP-16)
+            const tagsContainer = document.getElementById("modalSemanticTags");
+            if (tagsContainer) {
+                tagsContainer.innerHTML = '';
+                let hasTags = false;
+
+                if (album.macro_genre && album.macro_genre !== 'Eclectic / Other' && album.macro_genre !== 'Unknown') {
+                    tagsContainer.innerHTML += `
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1 shadow-sm">
+                            <span class="opacity-75">🏷️</span> ${album.macro_genre}
+                        </span>`;
+                    hasTags = true;
+                }
+
+                if (album.derived_moods && Array.isArray(album.derived_moods)) {
+                    album.derived_moods.forEach(mood => {
+                        tagsContainer.innerHTML += `
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-purple-500/15 text-purple-300 border border-purple-500/30 inline-flex items-center gap-1 shadow-sm">
+                                <span class="opacity-75">🌙</span> ${mood}
+                            </span>`;
+                        hasTags = true;
+                    });
+                }
+
+                if (album.descriptive_tags && Array.isArray(album.descriptive_tags)) {
+                    album.descriptive_tags.forEach(tag => {
+                        tagsContainer.innerHTML += `
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 inline-flex items-center gap-1 shadow-sm">
+                                <span class="opacity-75">✨</span> ${tag}
+                            </span>`;
+                        hasTags = true;
+                    });
+                }
+
+                if (hasTags) {
+                    tagsContainer.classList.remove("hidden");
+                } else {
+                    tagsContainer.classList.add("hidden");
+                }
             }
 
             const descEl = document.getElementById("modalDescription");

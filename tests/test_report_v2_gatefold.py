@@ -77,6 +77,18 @@ class TestReportV2Gatefold(unittest.TestCase):
                 for token in links_tokens:
                     self.assertIn(token, html, f"Missing archival/link token '{token}' in {name}")
 
+    def test_semantic_tag_strip_elements(self):
+        semantic_tokens = [
+            'id="modalSemanticTags"',
+            'album.macro_genre',
+            'album.derived_moods',
+            'album.descriptive_tags'
+        ]
+        for name, html in self.templates.items():
+            with self.subTest(template=name):
+                for token in semantic_tokens:
+                    self.assertIn(token, html, f"Missing semantic token '{token}' in {name}")
+
     def test_personnel_list_parsing(self):
         # Simulate catalog parsing logic for personnel strings
         raw_personnel = "Carrie Smith (3) (Art Direction) • Beth Bird (Artwork)"
