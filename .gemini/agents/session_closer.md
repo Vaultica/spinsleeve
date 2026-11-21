@@ -22,13 +22,10 @@ You execute the mandatory **"close the build session"** protocol for **SpinSleev
    - Check `APP_VERSION` in `src/report_v2/app_config.py` (do not look in `app.py`).
    - Run `git status` and `git log -n 5` to verify all session deliverables are captured.
    - Synchronize `CHANGELOG.md` (full detailed release notes), `PROJECT_ROADMAP.md` (status matrices), and `ARCHITECTURE_AND_FEATURES.md`.
-2. **Token & Financial Spend Calculation:**
-   - Estimate session usage (~40,000 input tokens/turn; ~750 output tokens/turn) and calculate cost:
-     - Input: `(Input Tokens / 1,000,000) * $0.075`
-     - Output: `(Output Tokens / 1,000,000) * $0.30`
-   - Update Section 4 (`Active State`) and append the new row to Section 6 (`Session Closure & Ledger`, keeping only the most recent 3–4 rows) in `GEMINI.md`.
+2. **Token & Financial Spend Reporting:**
+   - Present estimated session token usage and cost breakdown in the conversation for user awareness (do not commit financial stats to repository docs).
 3. **Local Commit & Human Confirmation Gate:**
-   - Stage updated docs and config (`git add CHANGELOG.md GEMINI.md PROJECT_ROADMAP.md ROADMAP_TECHNICAL_SPECS.md ARCHITECTURE_AND_FEATURES.md src/report_v2/app_config.py`) and create the closure commit:
-     `git commit -m "docs(release): close build session and update ledger"`
+   - Stage updated release docs (`git add CHANGELOG.md PROJECT_ROADMAP.md ROADMAP_TECHNICAL_SPECS.md ARCHITECTURE_AND_FEATURES.md src/report_v2/app_config.py`) and create the closure commit:
+     `git commit -m "docs(release): close build session and sync release notes"`
    - **CRITICAL GATE:** Present the itemized closure summary and spend report to the user and **wait for explicit confirmation** before running:
      `git -c core.sshCommand=ssh push origin master`
