@@ -151,6 +151,22 @@ class TestEnrichV2(unittest.TestCase):
             # Verify no BigQuery load job was executed on dry run
             self.assertFalse(mock_bq.load_table_from_json.called)
 
+    @patch("enrich.bigquery.Client")
+    def test_get_candidate_albums_re_enrich(self, mock_bq_cls):
+        mock_bq = MagicMock()
+        mock_bq_cls.return_value = mock_bq
+
+        # Verify query with re_enrich=True includes mb_scraped and min_quality_score
+        mock_bq.query.return_value.to_dataframe.return_value = pd.DataFrame([{"album_id": "test_id_1"}])
+        res = enrich.get_candidate_albums(mock_bq, batch_limit=5, re_enrich=True, min_quality_score=0.85)
+        self.assertEqual(len(res), 1)
+
+        # Check query string passed to BigQuery
+        call_args = mock_bq.query.call_args
+        query_sql = call_args[0][0]
+        self.assertIn("enrichment_raw_musicbrainz", query_sql)
+        self.assertIn("min_quality_score", query_sql)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -272,12 +272,19 @@ def fetch_musicbrainz_data(artist: str, album: str) -> Dict[str, Any]:
     return data
 
 
-def get_candidate_albums(bq_client: bigquery.Client, batch_limit: int = 50, specific_album_id: Optional[str] = None) -> pd.DataFrame:
+def get_candidate_albums(
+    bq_client: bigquery.Client,
+    batch_limit: int = 50,
+    specific_album_id: Optional[str] = None,
+    re_enrich: bool = False,
+    min_quality_score: float = 0.85
+) -> pd.DataFrame:
     """
-    Selects unenriched albums from spotify_v2.user_saved_albums prioritized by:
-    1. Total track plays across all tenants in playback_history
-    2. Number of users who saved the album
-    3. Most recent release date
+    Selects candidate albums from spotify_v2.user_saved_albums.
+    - If specific_album_id is provided: targets that single album.
+    - If re_enrich is False: targets only completely unenriched albums.
+    - If re_enrich is True: targets unenriched albums, albums missing MusicBrainz tags,
+      and albums with enrichment_quality_score < min_quality_score, prioritized by play count.
     """
     if specific_album_id:
         query = f"""
@@ -299,12 +306,64 @@ def get_candidate_albums(bq_client: bigquery.Client, batch_limit: int = 50, spec
         )
         return bq_client.query(query, job_config=job_cfg).to_dataframe()
 
+    if not re_enrich:
+        query = f"""
+        WITH plays AS (
+          SELECT album_id, COUNT(*) as play_count
+          FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
+          WHERE album_id IS NOT NULL AND album_id != ""
+          GROUP BY album_id
+        ),
+        albums AS (
+          SELECT 
+            album_id,
+            ANY_VALUE(artist_name) as artist_name,
+            ANY_VALUE(album_name) as album_name,
+            ANY_VALUE(canonical_album_key) as canonical_album_key,
+            ANY_VALUE(release_date) as release_date,
+            ANY_VALUE(release_year) as release_year,
+            ANY_VALUE(genres) as genres,
+            COUNT(DISTINCT user_id) as collector_count
+          FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+          GROUP BY album_id
+        )
+        SELECT 
+          a.album_id,
+          a.artist_name,
+          a.album_name,
+          COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) as canonical_album_key,
+          a.release_date,
+          a.release_year,
+          a.genres,
+          COALESCE(p.play_count, 0) as total_plays,
+          a.collector_count
+        FROM albums a
+        LEFT JOIN plays p ON a.album_id = p.album_id
+        LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e 
+          ON COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) = e.canonical_album_key
+        WHERE e.canonical_album_key IS NULL
+          AND a.album_name IS NOT NULL
+          AND a.artist_name IS NOT NULL
+        ORDER BY total_plays DESC, a.collector_count DESC, a.release_date DESC
+        LIMIT @batch_limit
+        """
+        job_cfg = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("batch_limit", "INT64", batch_limit)]
+        )
+        return bq_client.query(query, job_config=job_cfg).to_dataframe()
+
+    # Re-Enrich Mode: targets albums missing MusicBrainz or with quality score < min_quality_score
     query = f"""
     WITH plays AS (
       SELECT album_id, COUNT(*) as play_count
       FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
       WHERE album_id IS NOT NULL AND album_id != ""
       GROUP BY album_id
+    ),
+    mb_scraped AS (
+      SELECT DISTINCT canonical_album_key
+      FROM `{PROJECT_ID}.{DATASET_V2}.enrichment_raw_musicbrainz`
+      WHERE canonical_album_key IS NOT NULL AND canonical_album_key != ""
     ),
     albums AS (
       SELECT 
@@ -328,19 +387,35 @@ def get_candidate_albums(bq_client: bigquery.Client, batch_limit: int = 50, spec
       a.release_year,
       a.genres,
       COALESCE(p.play_count, 0) as total_plays,
-      a.collector_count
+      a.collector_count,
+      e.enrichment_quality_score,
+      (mb.canonical_album_key IS NOT NULL) as has_musicbrainz
     FROM albums a
     LEFT JOIN plays p ON a.album_id = p.album_id
     LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e 
       ON COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) = e.canonical_album_key
-    WHERE e.canonical_album_key IS NULL
+    LEFT JOIN mb_scraped mb
+      ON COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) = mb.canonical_album_key
+    WHERE (
+        e.canonical_album_key IS NULL 
+        OR mb.canonical_album_key IS NULL 
+        OR COALESCE(e.enrichment_quality_score, 0.0) < @min_quality_score
+      )
       AND a.album_name IS NOT NULL
       AND a.artist_name IS NOT NULL
-    ORDER BY total_plays DESC, a.collector_count DESC, a.release_date DESC
+    ORDER BY 
+      CASE WHEN e.canonical_album_key IS NULL THEN 1 ELSE 2 END ASC,
+      total_plays DESC,
+      a.collector_count DESC,
+      COALESCE(e.enrichment_quality_score, 0.0) ASC,
+      a.release_date DESC
     LIMIT @batch_limit
     """
     job_cfg = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("batch_limit", "INT64", batch_limit)]
+        query_parameters=[
+            bigquery.ScalarQueryParameter("batch_limit", "INT64", batch_limit),
+            bigquery.ScalarQueryParameter("min_quality_score", "FLOAT64", min_quality_score)
+        ]
     )
     return bq_client.query(query, job_config=job_cfg).to_dataframe()
 
@@ -360,16 +435,28 @@ def invalidate_all_user_caches():
         logger.warning("Error invalidating Datastore caches: %s", e)
 
 
-def run_enrichment(batch_size: int = 50, specific_album_id: Optional[str] = None, dry_run: bool = False) -> int:
+def run_enrichment(
+    batch_size: int = 50,
+    specific_album_id: Optional[str] = None,
+    dry_run: bool = False,
+    re_enrich: bool = False,
+    min_quality_score: float = 0.85
+) -> int:
     """
     Runs the V2 metadata enrichment pipeline and appends records to BigQuery.
     """
     logger.info("=== Starting SpinSleeve V2 Album Metadata Enrichment ===")
-    logger.info("Target Dataset: %s.%s | Batch Size: %d | Dry Run: %s", PROJECT_ID, DATASET_V2, batch_size, dry_run)
+    logger.info("Target Dataset: %s.%s | Batch Size: %d | Dry Run: %s | Re-Enrich: %s", PROJECT_ID, DATASET_V2, batch_size, dry_run, re_enrich)
 
     bq_client = bigquery.Client(project=PROJECT_ID)
 
-    df_candidates = get_candidate_albums(bq_client, batch_limit=batch_size, specific_album_id=specific_album_id)
+    df_candidates = get_candidate_albums(
+        bq_client,
+        batch_limit=batch_size,
+        specific_album_id=specific_album_id,
+        re_enrich=re_enrich,
+        min_quality_score=min_quality_score
+    )
     total_to_enrich = len(df_candidates)
 
     if total_to_enrich == 0:
@@ -618,8 +705,16 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", "-b", type=int, default=50, help="Number of albums to enrich (default: 50)")
     parser.add_argument("--album-id", type=str, default=None, help="Enrich a single specific Spotify album ID")
     parser.add_argument("--dry-run", action="store_true", help="Perform scraping without saving to BigQuery")
+    parser.add_argument("--re-enrich", "-r", action="store_true", help="Re-enrich existing albums missing MusicBrainz or with quality score < min-score")
+    parser.add_argument("--min-score", type=float, default=0.85, help="Minimum quality score threshold for re-enrichment (default: 0.85)")
 
     args = parser.parse_args()
     batch = args.positional_batch if args.positional_batch is not None else args.batch_size
 
-    run_enrichment(batch_size=batch, specific_album_id=args.album_id, dry_run=args.dry_run)
+    run_enrichment(
+        batch_size=batch,
+        specific_album_id=args.album_id,
+        dry_run=args.dry_run,
+        re_enrich=args.re_enrich,
+        min_quality_score=args.min_score
+    )
