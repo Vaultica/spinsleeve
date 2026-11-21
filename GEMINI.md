@@ -85,9 +85,9 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.6.5` (Pipeline Fix & Specs)** | 2026-11-17 | 12 | ~500,000 | ~10,000 | **~$0.04** | `INFRA-05` technical specs (`TECHNICAL_SPECS.md`), Cloud Run pipeline Dockerfile multi-context path fix (job green status), 100% album enrichment verification (2161/2161), 61/61 tests passing. |
-| **`v2.6.6`** | 2026-11-18 | 22 | ~880,000 | ~16,500 | **~$0.07** | Canonical album sibling deduplication (`APP-14`), BigQuery backfill, admin session assume routing & logout cookie path fixes, 63/63 tests passing. |
 | **`v2.7.0`** | 2026-11-19 | 10 | ~400,000 | ~10,000 | **~$0.03** | Real-Time Admin Email Notifications via Resend (`OPS-03`), auth notification integration, unit test suite, 66/66 tests passing. |
+| **`v2.7.1`** | 2026-11-21 | 8 | ~300,000 | ~8,000 | **~$0.02** | Album artwork resolution, dynamic SQL deduplication (`RAM`), landing page gatefold art, docs restructuring, 66/66 tests passing. |
+| **`v2.8.0`** | 2026-11-21 | 14 | ~600,000 | ~15,000 | **~$0.05** | Two-tier album enrichment architecture & semantic classification (`APP-16`), NLP macro-genres/moods/tags classifier, MusicBrainz integration, `--re-enrich` incremental quality upgrade mode, 74/74 tests passing. |
 
 ---
 
