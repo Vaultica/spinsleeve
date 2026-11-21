@@ -154,6 +154,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16 hours | Medium |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30 hours | Medium–High |
 | **`APP-16`** | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~ | Core App | 6–8 hours | Completed (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill. |
+| **`APP-17`** | Unified Crate Workspace: Combined Saved Library, Unowned Crate & Crate Digger Mode | Core App | 6–8 hours | Medium |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~ | Tactical Polish | 2–3 hours | Completed (`v2.2.1`) |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1 hour | Completed (`v2.2.2`) |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2 hours | Completed (`v2.2.2`) |
@@ -440,6 +441,25 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   2. **Derived Structured Attributes:** Automatically map unstructured narratives into clean macro-categories (`derived_moods`, `macro_genre`, `descriptive_tags`) during the daily enrichment pipeline.
   3. **Semantic Similarity & "If You Like This Gatefold..." Recommendations:** Vectorize narrative descriptions (via TF-IDF or lightweight keyword scoring) to power kindred spirit recommendations in Crate Digger even when official Spotify tags differ.
   4. **Zero-Latency Read Path:** Pre-computed BigQuery columns queried instantly by Crate Digger (`/recommend`) with zero runtime latency penalty.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
+
+---
+
+#### `APP-17`: Unified Crate Workspace: Combining Saved Library, Unowned Streamed Crate & Crate Digger Mode
+* **Problem:**  
+  Previously, SpinSleeve separated library browsing (`/`), unowned discovery ("You Should Save These", `APP-07`), and algorithmic curation (Crate Digger, `/recommend`) into separate pages or disconnected tabs. This required users to jump between routes to browse saved albums, find unstreamed/unowned favorites, or spin algorithmic discovery spotlights, fragmenting the physical vinyl digging mental model.
+* **Solution:**  
+  Consolidate Library Explorer (`/`), "You Should Save These" (Unowned Crate), and Crate Digger (`/recommend`) into a single unified Crate workspace rendering the same 12" gatefold grid, sleeve play badges, and hover audio previews:
+  1. **Compact 2-Row Control Deck (~95–110px tall):** Cleanly separates Data Scope from Curation Mode in Row 1:
+     - **Scope (2-Way Data Pool Toggle):** `Saved Vinyl` (owned `user_saved_albums` / `user_albums_features_table`, default) vs. `Streamed / Unowned` (played-but-not-saved albums from `playback_history` with amber dashed sleeve treatment, multi-track rule, and 1-click Save to Library).
+     - **Mode (Toggleable Curation Overlay):** `Crate Digger` (pins 3 Spotlight Picks—Prime Selection, Vibe Match, Hidden Gem—plus `Spin Again` shuffle action at the top of the active filtered pool; toggling off returns to the pure full-grid browse view).
+  2. **Row 2 Unified Filter & Sort Controls:** Single-line filter/sort bar shared across scopes:
+     - Search box (live filter on album title, artist name, and APP-16 semantic tags/liner notes).
+     - Genre filter (combining genres and APP-16 `macro_genre` / `descriptive_tags`).
+     - Mood filter (driven by APP-16 `derived_moods` and vibe buckets).
+     - Era / Time Period filter (release era buckets: Vintage <1990, 90s & 2000s, 2010s, 2020s).
+     - Order preference (`Heavy Rotation (30D)` default, `Most Played (All Time)`, `Recently Added`, `Artist / Album A–Z`).
+  3. **Backwards Compatibility & Routing:** Preserves deep links (`/recommend`, `/beta/recommend`, `/?tab=unowned`, `/?tab=saved`, `/?view=dig`).
 * **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
 
 ---
@@ -811,6 +831,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16h | Flask REST JSON API, Firebase CDN Reverse Proxy | **Medium:** Decouples Flask monolithic templates into clean REST endpoints and Firebase CDN proxy. |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30h | SwiftUI, Swift, Spotify OAuth PKCE | **High:** Native iOS app with Spotify OAuth PKCE authentication and 33⅓ RPM crate browsing. |
 | **`APP-16`** | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~ | Core App | 6–8h | NLP Text Parsing, BigQuery Schema Expansion | ✅ **Completed** (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill. |
+| **`APP-17`** | Unified Crate Workspace (Saved, Unowned & Crate Digger) | Core App | 6–8h | Flask, Jinja2, BigQuery, Cloud Datastore | **High:** Consolidates library exploration, unowned discovery, and Crate Digger into a single intuitive 2-row control deck workspace. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1h | JavaScript, DOM Lifecycle | ✅ **Completed** (`v2.2.2`): Initial sort triggers `onFilterChange()` on DOMContentLoaded for strict 30D heavy rotation sorting. |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | ✅ **Completed** (`v2.2.2`): Decimal fractional scrobbles, integer whole spins, and contextual "Newly Added" / "Never Played" tags. |

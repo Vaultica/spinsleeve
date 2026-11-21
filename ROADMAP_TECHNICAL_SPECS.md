@@ -24,6 +24,7 @@
    - [`APP-07`: "Played But Not Owned" Discovery Crate](#app-07-played-but-not-owned-discovery-crate)
    - [`APP-08`: Full-Length Virtual Turntable Player (Spotify Web Playback SDK)](#app-08-full-length-virtual-turntable-player-spotify-web-playback-sdk)
    - [`APP-11`: Collector’s Inscriptions: Personal Album Ratings & Archival Notes](#app-11-collectors-inscriptions-personal-album-ratings--archival-notes)
+   - [`APP-17`: Unified Crate Workspace Architecture](#app-17-unified-crate-workspace-architecture)
 5. [Category: Tactical Polish & UX Streamlining (`POLISH`)](#5-category-tactical-polish--ux-streamlining-polish)
    - [`POLISH-02`: Library Explorer 30-Day Sort Initialization Fix](#polish-02-library-explorer-30-day-sort-initialization-fix)
    - [`POLISH-03`: Normalized Decimal Play Count & Contextual Badges](#polish-03-normalized-decimal-play-count--contextual-badges)
@@ -510,6 +511,21 @@ All new features and architectural changes must strictly adhere to these verifie
      - Compute cosine similarity or Jaccard overlap on derived mood/tag arrays and TF-IDF feature vectors of liner notes.
      - When a user views an album or uses Crate Digger, query kindred spirit albums sharing narrative descriptions even if official Spotify tags differ.
 * **Zero-Latency Read Path:** Pre-computed during daily Cloud Run enrichment job (`spotify-v2-enrichment-job`), ensuring zero runtime query latency for frontend Crate Digger filters.
+
+---
+
+### `APP-17`: Unified Crate Workspace Architecture
+* **Technical Objective:** Unify library browsing, unowned scrobble discovery, and Crate Digger curation into a single client-rendered crate workspace backed by optimized data endpoints and zero-latency caching.
+* **Routing & Backwards Compatibility:**
+  - Route handlers in `src/report_v2/routes/crate.py` maintain full URL backward compatibility, accepting legacy query parameters (`/recommend`, `/beta/recommend`, `/?tab=unowned`, `/?tab=saved`, `/?view=dig`) and normalizing them into unified workspace view state (`scope=saved|unowned`, `mode=grid|digger`).
+* **Data Flow & Caching Architecture:**
+  - **Saved Library Scope:** Client-side instant filtering/sorting (<10ms) on cached catalog payloads (`UserCatalogCache` + `sessionStorage`).
+  - **Streamed / Unowned Scope:** Async fetch from `/api/unowned-albums` (or unified JSON endpoint) querying BigQuery `playback_history` filtered by `user_id` and excluding `user_saved_albums`.
+  - **Crate Digger Mode:** Ranking and spotlight selection (Prime Selection, Vibe Match, Hidden Gem) computed via `src/report_v2/services/catalog.py` using APP-16 semantic tags and time horizons.
+* **Invariants & Security:**
+  - **Thin Route Handlers:** `src/report_v2/routes/crate.py` handles HTTP request parsing, session checks, and template/JSON rendering only; all data access and ranking logic reside in `src/report_v2/services/catalog.py`.
+  - **Data Sanitization:** All BigQuery/Pandas outputs pass through `safe_str()`, `safe_int()`, and `safe_float()` to guarantee zero raw `NaN` or `NaT` values in JSON payloads.
+  - **Cache Invalidation:** Saving an unowned album triggers explicit invalidation of affected Datastore cache keys (`UserCatalogCache`, `UserAnalyticsCache`).
 
 ---
 
