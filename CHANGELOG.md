@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.1] — 2026-11-21
+### 🏷️ Gatefold Semantic Tag Strip & Pipeline Deduplication Fixes
+* **What:**
+  - **Gatefold Semantic Tag Strip (`explorer.html`, `pals.html`, `recommend.html`):**
+    - Added visual UI tag pills displaying macro-genre badges (`macro_genre`), derived moods (`derived_moods`), and descriptive sound tags (`descriptive_tags`) across the 12" gatefold vinyl view in Explorer, SpinPals, and Recommendations.
+    - Added unit test suite `tests/test_report_v2_gatefold.py` covering tag strip rendering across templates.
+  - **Pipeline Candidate & MERGE Deduplication (`src/pipeline_v2/enrich.py`):**
+    - Fixed candidate selection deduplication on `canonical_album_key` to prevent re-scraping existing sibling releases.
+    - Fixed golden table MERGE operation to prevent duplicate primary keys on `canonical_album_key`.
+  - **Test Suite Expansion:**
+    - Expanded test coverage to 75/75 passing unit tests.
+* **Why:**
+  - Exposes the rich APP-16 semantic classification tags directly on the 12" gatefold record sleeves for immediate visual discovery, and ensures robust pipeline incremental enrichment without key constraint violations.
+* **How:**
+  - Modified templates (`explorer.html`, `pals.html`, `recommend.html`), `src/pipeline_v2/enrich.py`, added `tests/test_report_v2_gatefold.py`, verified 75/75 tests passing, and deployed revision `spotify-dashboard-beta-00067-z7f` to Cloud Run.
+
+---
+
 ## [v2.8.0] — 2026-11-21
 ### 🏷️ Two-Tier Album Enrichment Architecture & APP-16 Semantic Classification
 * **What:**

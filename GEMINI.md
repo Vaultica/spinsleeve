@@ -58,7 +58,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.8.0` (Two-Tier Album Enrichment Architecture & APP-16 Semantic Classification, BigQuery raw/golden tables, 73/73 tests passing).
+* **Current Production Release:** `v2.8.1` (Gatefold semantic tag strip, pipeline deduplication fix, 75/75 tests passing).
 * **Next Planned Milestone:** `Phase 7` — Cross-Platform Apple Music Library Onboarding (`APP-02`).
 
 ---
@@ -85,9 +85,9 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.7.0`** | 2026-11-19 | 10 | ~400,000 | ~10,000 | **~$0.03** | Real-Time Admin Email Notifications via Resend (`OPS-03`), auth notification integration, unit test suite, 66/66 tests passing. |
 | **`v2.7.1`** | 2026-11-21 | 8 | ~300,000 | ~8,000 | **~$0.02** | Album artwork resolution, dynamic SQL deduplication (`RAM`), landing page gatefold art, docs restructuring, 66/66 tests passing. |
 | **`v2.8.0`** | 2026-11-21 | 14 | ~600,000 | ~15,000 | **~$0.05** | Two-tier album enrichment architecture & semantic classification (`APP-16`), NLP macro-genres/moods/tags classifier, MusicBrainz integration, `--re-enrich` incremental quality upgrade mode, 74/74 tests passing. |
+| **`v2.8.1`** | 2026-11-21 | 12 | ~500,000 | ~12,500 | **~$0.04** | Gatefold semantic tag strip UI (`explorer.html`, `pals.html`, `recommend.html`), pipeline candidate & MERGE deduplication on `canonical_album_key`, 75/75 tests passing, Cloud Run revision `spotify-dashboard-beta-00067-z7f`. |
 
 ---
 
