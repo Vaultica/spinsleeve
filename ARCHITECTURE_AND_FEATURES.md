@@ -86,6 +86,16 @@ src/report_v2/
 * **Niche/Independents Gap:** Underground releases often lack dedicated Wikipedia pages and have sparse Discogs contributor entries.
 * **Title Variation Mismatches:** Subtitles, special characters, or alternate naming conventions can cause search queries to miss relevant articles.
 
+### Metadata Enrichment Sources & Enriched Attributes Mapping
+
+| Enrichment Source | Storage Table / Bridge | Enriched Attributes | Description & Profiling Focus |
+| :--- | :--- | :--- | :--- |
+| **Wikipedia** | `enrichment_raw_wikipedia` | `wiki_summary`, `wiki_url`, `pitchfork_score`, `metacritic_score`, `allmusic_score`, `guardian_score` | Editorial prose summaries and critical review scores (Pitchfork, Metacritic, AllMusic, Guardian). **Profiling gaps:** Missing review templates or unmatched Wikipedia search titles. |
+| **Discogs** | `enrichment_raw_discogs` | `discogs_release_id`, `personnel` (credits), `discogs_rating`, `discogs_votes`, `discogs_styles`, `discogs_notes`, `discogs_url` | Liner notes, production credits, community ratings, and secondary style tags. **Profiling gaps:** Sparse personnel credits or missing release matches. |
+| **MusicBrainz** | `enrichment_raw_musicbrainz` | `mb_release_group_id`, `genres`, `tags` | Canonical release-group identifiers, structured genre taxonomies, and folksonomy tags. **Profiling gaps:** Unlinked release groups or empty tag sets. |
+| **NLP Classifier / SpinSleeve Engine** | `album_enriched_metadata` (Tier 2 Synthesized) | `macro_genre`, `derived_moods`, `descriptive_tags`, `era_group`, `enrichment_quality_score` | Semantic normalization, macro-genre categorization (e.g., *Ambient, Electronic, Indie/Alternative, Rock*), mood derivation (*Chill, Energetic*), and aggregate quality scoring. **Profiling accuracy:** Validate macro-genre distribution and confidence scores. |
+| **Spotify / External Provider Bridge** | `album_provider_ids` | `canonical_album_key`, `provider`, `provider_album_id` | Foreign ID bridge mapping Spotify/Apple Music album IDs to the canonical key `(artist::album)`. **Profiling completeness:** Cross-platform mapping coverage and unlinked streaming albums. |
+
 ---
 
 ## 5. Architectural & Design Decision Rationale
