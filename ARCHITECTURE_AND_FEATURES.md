@@ -18,6 +18,9 @@ This document serves as the definitive technical reference for SpinSleeve's **ex
    - [Wikipedia & Discogs Scraping Mechanics](#wikipedia--discogs-scraping-mechanics)
    - [Root Causes of Sparse Data & Missing Gatefolds](#root-causes-of-sparse-data--missing-gatefolds)
 5. [Architectural & Design Decision Rationale](#5-architectural--design-decision-rationale)
+6. [Physical Data Models, Schemas & Constraints](#6-physical-data-models-schemas--constraints)
+   - [BigQuery Multi-Tenant Dataset (`spotify_v2`)](#bigquery-multi-tenant-dataset-spotify_v2)
+   - [Cloud Datastore Entities (NoSQL Cache & Auth Vault)](#cloud-datastore-entities-nosql-cache--auth-vault)
 
 ---
 
@@ -91,3 +94,167 @@ src/report_v2/
 * **Cloud Datastore Document Store Cache (`UserCatalogCache`):** Gzip-compressing cached catalog JSON payloads reduced cold load latency from ~3,800ms down to ~50ms (70x speedup) at zero additional infrastructure cost.
 * **BigQuery Partition & Cluster Guardrails:** Partitioning and clustering tenant tables by `user_id` ensures O(1) multi-tenant isolation and strict ad-hoc cost limits (`maximum_bytes_billed`).
 * **Zero-Lockout Admin Session Assumption (`/admin/assume/<id>`):** Housing impersonation strictly within the admin portal with persistent revert banners guarantees administrative security without user lockout risk.
+
+---
+
+## 6. Physical Data Models, Schemas & Constraints
+
+SpinSleeve employs a hybrid persistence tier: **Google BigQuery** for partitioned relational telemetry and materialization, and **Google Cloud Datastore** for transactional user state and gzipped document caching.
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   Cloud Datastore                      │
+│  User (Auth/Flags)  •  UserCatalogCache (Gzip Blob)    │
+│  PalCompatibilityCache  •  UserAnalyticsCache          │
+└───────────────────────────▲────────────────────────────┘
+                            │ (Sub-100ms Read Tier)
+┌───────────────────────────┴────────────────────────────┐
+│                    Google BigQuery                     │
+│  playback_history       (Partition: DATE, Cluster: UID)│
+│  user_saved_albums      (Cluster: UID, artist_name)    │
+│  album_enriched_metadata(Global Universal Table)       │
+│  user_albums_features_table (Materialized Cluster: UID)│
+└────────────────────────────────────────────────────────┘
+```
+
+### BigQuery Multi-Tenant Dataset (`spotify_v2`)
+* **GCP Project:** `secret-compass-181513` | **Location:** `US` Multi-Region | **Dataset:** `spotify_v2`
+
+#### 1. Table `playback_history` (Partitioned Listening Telemetry)
+* **Storage Model:** Append-only physical time-series table.
+* **Partitioning:** `PARTITION BY DATE(played_at)`
+* **Clustering:** `CLUSTER BY user_id, artist_name`
+* **Deduplication Key:** Composite `(user_id, track_id, played_at)`
+
+| Column | Type | Mode | Constraints & Notes |
+| :--- | :--- | :--- | :--- |
+| `user_id` | `STRING` | **`REQUIRED`** | Unique Spotify user ID (e.g., `sergebou`). Tenant isolation partition key. |
+| `played_at` | `TIMESTAMP` | **`REQUIRED`** | UTC timestamp of the scrobble event. |
+| `track_uri` | `STRING` | `NULLABLE` | Spotify Track URI format: `spotify:track:[A-Za-z0-9]{22}`. |
+| `track_id` | `STRING` | `NULLABLE` | Spotify 22-character base62 track identifier. |
+| `track_name` | `STRING` | `NULLABLE` | Track title as reported by Spotify Web API. |
+| `artist_id` | `STRING` | `NULLABLE` | Primary artist Spotify 22-character identifier. |
+| `artist_name` | `STRING` | `NULLABLE` | Display name of the primary performing artist. |
+| `album_id` | `STRING` | `NULLABLE` | Spotify 22-character base62 album identifier. |
+| `album_name` | `STRING` | `NULLABLE` | Album title associated with the track playback event. |
+| `canonical_album_key` | `STRING` | `NULLABLE` | Sibling normalization key format: `{artist}::{album_clean}`. |
+
+* **Ingestion Filters:** Short scrobbles under 30 seconds (`ms_played < 30000`) and podcast/non-music streams (`episode == true`) are filtered out prior to insertion.
+
+---
+
+#### 2. Table `user_saved_albums` (Tenant Library State)
+* **Storage Model:** Physical state table representing saved albums in user libraries.
+* **Clustering:** `CLUSTER BY user_id, artist_name`
+* **Uniqueness Key:** Composite `(user_id, album_id)`
+
+| Column | Type | Mode | Constraints & Notes |
+| :--- | :--- | :--- | :--- |
+| `user_id` | `STRING` | **`REQUIRED`** | Tenant Spotify ID. |
+| `album_id` | `STRING` | **`REQUIRED`** | Spotify 22-character album ID. |
+| `album_uri` | `STRING` | `NULLABLE` | Format: `spotify:album:[A-Za-z0-9]{22}`. |
+| `album_name` | `STRING` | **`REQUIRED`** | Album display name. |
+| `artist_id` | `STRING` | `NULLABLE` | Primary artist Spotify ID. |
+| `artist_name` | `STRING` | **`REQUIRED`** | Artist display name. |
+| `added_at` | `TIMESTAMP` | `NULLABLE` | UTC timestamp when the user saved the album to Spotify library. |
+| `release_date` | `STRING` | `NULLABLE` | Standard release date string (`YYYY`, `YYYY-MM`, or `YYYY-MM-DD`). |
+| `release_year` | `INT64` | `NULLABLE` | Range: `[1900, 2100]`. Extracted 4-digit year. |
+| `tracks_total` | `INT64` | `NULLABLE` | Range: $\ge 1$. *(Filtered to $> 2$ in vinyl crate views to exclude singles).* |
+| `album_type` | `STRING` | `NULLABLE` | Allowed values: `album`, `single`, `compilation`. |
+| `label` | `STRING` | `NULLABLE` | Record label, imprint, or copyright owner. |
+| `image_url` | `STRING` | `NULLABLE` | High-res album artwork URL (`https://i.scdn.co/image/...`). |
+| `genres` | `STRING` | `NULLABLE` | Comma-separated list of artist genres extracted from Spotify catalog. |
+| `canonical_album_key` | `STRING` | `NULLABLE` | Sibling normalization key format: `{artist}::{album_clean}`. |
+
+---
+
+#### 3. Table `album_enriched_metadata` (Universal Shared Catalog)
+* **Storage Model:** Global, multi-tenant shared table keyed by `album_id`.
+* **Primary Key:** `album_id`
+
+| Column | Type | Mode | Constraints & Notes |
+| :--- | :--- | :--- | :--- |
+| `album_id` | `STRING` | **`REQUIRED`** | Unique Spotify album ID (Global Primary Key). |
+| `album_name` | `STRING` | `NULLABLE` | Canonical album title. |
+| `artist_name` | `STRING` | `NULLABLE` | Canonical artist title. |
+| `album_description` | `STRING` | `NULLABLE` | Lead paragraph summary from Wikipedia. |
+| `wikipedia_url` | `STRING` | `NULLABLE` | Desktop Wikipedia article URL. |
+| `pitchfork_score` | `FLOAT64` | `NULLABLE` | Range: `[0.0, 10.0]`. Rating extracted from Wikipedia review box. |
+| `metacritic_score` | `INT64` | `NULLABLE` | Range: `[0, 100]`. Normalized Metacritic rating. |
+| `allmusic_score` | `FLOAT64` | `NULLABLE` | Range: `[0.0, 5.0]`. Star rating extracted from AllMusic reviews. |
+| `discogs_rating` | `FLOAT64` | `NULLABLE` | Range: `[0.0, 5.0]`. Community rating from Discogs. |
+| `discogs_votes` | `INT64` | `NULLABLE` | Range: $\ge 0$. Count of community ratings on Discogs. |
+| `personnel` | `STRING` | `NULLABLE` | Bulleted liner notes formatted as `Musician (Role) • Producer (Role)`. |
+| `discogs_url` | `STRING` | `NULLABLE` | Discogs release URL (`https://www.discogs.com/release/...`). |
+| `styles` | `STRING` | `NULLABLE` | Comma-separated physical styles (e.g., `Shoegaze, Indie Rock, Lo-Fi`). |
+
+---
+
+#### 4. Table `user_albums_features_table` (Materialized Presentation Layer)
+* **Storage Model:** Physical materialized table refreshed by `rematerialize_user_albums_features()`.
+* **Clustering:** `CLUSTER BY user_id`
+* **Presentation Invariants:**
+  - Excludes standalone singles via `WHERE COALESCE(tracks_total, 0) > 2`.
+  - Deduplicates edition variants via dynamic SQL regex partitioning on `(user_id, canonical_album_key)`.
+  - Calculates normalized play counts: $\lfloor \text{track\_plays} / \text{tracks\_total} \rfloor$.
+
+---
+
+### Cloud Datastore Entities (NoSQL Cache & Auth Vault)
+
+#### 1. Kind `User` (User Authentication & Permission Entity)
+* **Key Format:** String Key = `spotify_id` (e.g., `Key('User', 'sergebou')`).
+
+| Property | Datastore Type | Indexing | Allowed Values & Constraints |
+| :--- | :--- | :--- | :--- |
+| `spotify_id` | `String` | Indexed | Unique Spotify user ID. |
+| `display_name` | `String` | Unindexed | User's public display name. |
+| `email` | `String` | Unindexed | Spotify account email. |
+| `avatar_url` | `String` | Unindexed | URL to active avatar (SVG preset or Spotify CDN image). |
+| `spotify_avatar_url` | `String` | Unindexed | Original Spotify profile image URL. |
+| `custom_avatar_id` | `String` | Unindexed | Allowed values: `""`, `spotify`, `david_bowie`, `miles_davis`, `daft_punk`, `nina_simone`, `kraftwerk`, `bjork`, `kate_bush`, `joy_division`, `aphex_twin`. |
+| `is_approved` | `Boolean` | Indexed | `True` for approved beta access; `False` gates to `/pending`. |
+| `role` | `String` | Indexed | Allowed values: `admin`, `user`. |
+| `pals_opt_in` | `Boolean` | Indexed | `True` enables directory listing in SpinPals (`/pals`); `False` defaults private. |
+| `sync_paused` | `Boolean` | Indexed | `True` causes background sync jobs to skip this user; `False` active. |
+| `refresh_token` | `String` | Unindexed | Spotify OAuth 2.0 refresh token used for background ingestion. |
+| `sync_status` | `String` | Indexed | Allowed values: `idle`, `pending`, `syncing`, `failed`. |
+| `created_at` | `Timestamp` | Unindexed | UTC registration timestamp. |
+| `last_login_at` | `Timestamp` | Unindexed | UTC last authentication timestamp. |
+
+---
+
+#### 2. Kind `UserCatalogCache` (Gzip Library Document Cache)
+* **Key Format:** String Key = `user_id` (e.g., `Key('UserCatalogCache', 'sergebou')`).
+* **TTL Policy:** 86,400 seconds (24 hours); invalidated on sync completion or `?clear_cache=1`.
+
+| Property | Datastore Type | Indexing | Notes |
+| :--- | :--- | :--- | :--- |
+| `compressed_payload` | `Blob` (`bytes`) | **Unindexed** | Gzip-compressed UTF-8 JSON payload containing the complete list of albums. |
+| `album_count` | `Integer` | Indexed | Count of albums in the cached catalog. |
+| `uncompressed_kb` | `Float` | Unindexed | Payload size before gzip compression. |
+| `compressed_kb` | `Float` | Unindexed | Payload size stored in Datastore (~7.5x compression ratio). |
+| `updated_at` | `Timestamp` | Indexed | UTC cache write timestamp. |
+
+---
+
+#### 3. Kind `PalCompatibilityCache` (Gzip Social Matching Cache)
+* **Key Format:** String Key = `{current_user_id}::{pal_id}::{horizon}` (e.g., `sergebou::sarahboosch::30d`).
+* **TTL Policy:** 86,400 seconds (24 hours).
+
+| Property | Datastore Type | Indexing | Notes |
+| :--- | :--- | :--- | :--- |
+| `compressed_payload` | `Blob` (`bytes`) | **Unindexed** | Gzip-compressed JSON payload (acoustic compatibility %, kinship badge, top 5 borrow recommendations, shared albums). |
+| `updated_at` | `Timestamp` | Indexed | UTC cache write timestamp. |
+
+---
+
+#### 4. Kind `UserAnalyticsCache` (Gzip Telemetry Cache)
+* **Key Format:** String Key = `{user_id}::{range_param}` (e.g., `sergebou::30d`).
+* **TTL Policy:** 86,400 seconds (24 hours).
+
+| Property | Datastore Type | Indexing | Notes |
+| :--- | :--- | :--- | :--- |
+| `compressed_payload` | `Blob` (`bytes`) | **Unindexed** | Gzip-compressed JSON payload (KPI cards, listening heatmap, repeat vs discovery, eras, top artists/albums/tracks). |
+| `updated_at` | `Timestamp` | Indexed | UTC cache write timestamp. |
+
