@@ -115,3 +115,6 @@ Audio_Streaming_History_*.json
 *streaming_history*.json
 init_prompt.txt
 my_spotify_data.zip
+
+# UI Prototypes
+prototypes/
