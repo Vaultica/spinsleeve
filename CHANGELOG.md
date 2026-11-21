@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.7.1] — 2026-11-21
+### 🎨 Album Artwork Resolution, Dynamic SQL Deduplication & Documentation Restructuring
+* **What:**
+  - **Dynamic SQL Canonical Sibling Deduplication:** Updated `rematerialize_user_albums_features()` in `sync.py` and `bigquery.py` to normalize album names dynamically using BigQuery SQL regex, collapsing *RAM* and *RAM (Archive Collection)* into a single master library entry.
+  - **Expanded Edition Blacklist:** Added `archive collection`, `archive`, `super deluxe`, `remastered edition`, and `ultimate edition` to `EDITION_BLACKLIST` in `sync.py`.
+  - **Analytics Cover Art Fallback:** Added a fallback join on `user_albums_features_table` (`album_id`) in `services/analytics.py` so top-played telemetry records always resolve artwork even when scrobble metadata differs.
+  - **Landing Page Gatefold Artwork:** Replaced broken Wikimedia thumbnail URL with Spotify CDN artwork for Pink Floyd's *The Dark Side of the Moon*.
+  - **Local Dev Login Helper:** Added `/dev-login` and `/beta/dev-login` in `routes/auth.py` for rapid 1-click local testing without Spotify OAuth redirect restrictions.
+  - **Documentation Restructuring:** Renamed `TECHNICAL_SPECS.md` -> `ROADMAP_TECHNICAL_SPECS.md`, `PROJECT_ROADMAP_AND_SPECS.md` -> `PROJECT_ROADMAP.md`, and created `ARCHITECTURE_AND_FEATURES.md` as the definitive As-Built architecture ledger.
+* **Why:**
+  - Fixes missing artwork across analytics and landing pages, eliminates duplicate library crate cards for archive collections, and provides clear separation between future roadmap specs and existing as-built architecture.
+* **How:**
+  - Modified `sync.py`, `bigquery.py`, `analytics.py`, `landing.html`, `auth.py`, rematerialized BigQuery physical tables, updated agent configs, verified 66/66 unit tests passing, and deployed revision `spotify-dashboard-beta-00065-bpm` to Cloud Run.
+
+---
+
 ## [v2.7.0] — 2026-11-19
 ### ✉️ Real-Time Admin Email Notifications via Resend (`OPS-03`)
 * **What:**
