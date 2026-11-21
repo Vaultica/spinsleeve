@@ -48,7 +48,7 @@ Subagents execute in isolated context loops on `gemini-3.1-flash-lite` so long t
 | :--- | :--- | :--- |
 | **`@reviewer`** | Audits `git diff` against `GEMINI.md` invariants, blueprint/service boundaries, and module docstrings. | `@reviewer audit my uncommitted changes before I run tests` |
 | **`@tester`** | Runs `.venv/bin/python3 -m unittest discover tests`, diagnoses tracebacks, and writes unit tests. | `@tester run the full test suite and verify cache invalidation` |
-| **`@scribe`** | Updates `TECHNICAL_SPECS.md` / `PROJECT_ROADMAP_AND_SPECS.md` and creates local Conventional Commits (never pushes). | `@scribe update TECHNICAL_SPECS.md and stage/commit my changes` |
+| **`@scribe`** | Updates `ROADMAP_TECHNICAL_SPECS.md`, `PROJECT_ROADMAP.md`, or `ARCHITECTURE_AND_FEATURES.md` and creates local Conventional Commits (never pushes). | `@scribe update ROADMAP_TECHNICAL_SPECS.md and stage/commit my changes` |
 | **`@deploy_assistant`** | Runs tests, submits Cloud Build, **pauses for human sign-off**, deploys to Cloud Run, pushes to GitHub, and curls `/` & `/beta/`. | `@deploy_assistant build and prepare production release` |
 | **`@session_closer`** | Triggered by **"close the build session"**: verifies `APP_VERSION` in `app_config.py`, syncs `CHANGELOG.md` & `GEMINI.md` ledger, **pauses before `git push`**. | `close the build session` |
 

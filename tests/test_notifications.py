@@ -22,6 +22,7 @@ class TestNotificationsService(unittest.TestCase):
         mock_post.assert_called_once()
 
     @patch("src.report_v2.services.notifications.get_secret")
+    @patch.dict("os.environ", {"RESEND_API_KEY": ""}, clear=False)
     def test_send_admin_join_alert_missing_key(self, mock_get_secret):
         mock_get_secret.return_value = ""
         success = send_admin_join_alert("Test Collector", "test@example.com", "spotify_123")

@@ -97,9 +97,9 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         DATE(p.played_at) as play_date,
         EXTRACT(DAYOFWEEK FROM p.played_at) as dow,
         EXTRACT(HOUR FROM p.played_at) as hour,
-        COALESCE(a.image_url, g.image_url) as album_image_url,
-        COALESCE(a.release_date, g.release_date) as album_release_date,
-        COALESCE(a.genres, g.genres) as album_genres,
+        COALESCE(a.image_url, g.image_url, uaft.image_url) as album_image_url,
+        COALESCE(a.release_date, g.release_date, uaft.release_date) as album_release_date,
+        COALESCE(a.genres, g.genres, uaft.genres) as album_genres,
         fp.first_played_at
       FROM `{PLAYBACK_HISTORY_TABLE}` p
       LEFT JOIN (
@@ -124,6 +124,16 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         GROUP BY canonical_album_key
       ) g
         ON p.canonical_album_key = g.canonical_album_key
+      LEFT JOIN (
+        SELECT
+          album_id,
+          MAX(album_image_url) as image_url,
+          MAX(album_release_date) as release_date,
+          MAX(album_genres) as genres
+        FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
+        GROUP BY album_id
+      ) uaft
+        ON p.album_id = uaft.album_id
       LEFT JOIN first_plays fp
         ON p.canonical_album_key = fp.canonical_album_key
       {where_str}

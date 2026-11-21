@@ -48,7 +48,7 @@ graph TD
 * **`src/pipeline_v2/sync.py`:** Automated multi-tenant synchronization engine ingesting plays and saved albums into BigQuery.
 * **`src/pipeline_v2/enrich.py`:** V2 album metadata scraper enriching records with 12" gatefold archival liner notes.
 * **`manage_users.py`:** Administrative CLI tool for managing user approvals and permissions.
-* **`INFRASTRUCTURE_RUNBOOK.md` & `TECHNICAL_SPECS.md`:** Comprehensive infrastructure runbooks and technical specifications.
+* **`INFRASTRUCTURE_RUNBOOK.md`, `ROADMAP_TECHNICAL_SPECS.md` & `ARCHITECTURE_AND_FEATURES.md`:** Comprehensive infrastructure runbooks, future technical specifications, and As-Built architecture documentation.
 
 ---
 

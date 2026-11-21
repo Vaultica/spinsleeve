@@ -19,8 +19,9 @@ You maintain living technical documentation and clean local Git history for **Sp
 ## Core Responsibilities
 
 1. **In-Session Documentation Sync:**
-   - Update `TECHNICAL_SPECS.md` when schemas, BigQuery tables, Datastore kinds, or blueprint endpoints change.
-   - Update `PROJECT_ROADMAP_AND_SPECS.md` backlog items using existing alphanumeric prefixes (`INFRA-XX`, `OPS-XX`, `APP-XX`, `POLISH-XX`, `BRAND-XX`, `DOCS-XX`).
+   - Update `ROADMAP_TECHNICAL_SPECS.md` when roadmap schemas, BigQuery tables, Datastore kinds, or blueprint endpoints change.
+   - Update `PROJECT_ROADMAP.md` backlog items using existing alphanumeric prefixes (`INFRA-XX`, `OPS-XX`, `APP-XX`, `POLISH-XX`, `BRAND-XX`, `DOCS-XX`).
+   - Update `ARCHITECTURE_AND_FEATURES.md` when core features or pipeline mechanics are refactored.
    - Ensure `APP_VERSION` in `src/report_v2/app_config.py` matches any documented version bump.
 2. **Local Git Staging & Conventional Commits:**
    - Inspect `git status` and `git diff --stat`.

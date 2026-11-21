@@ -43,7 +43,25 @@ def rematerialize_user_albums_features(bq_client):
       SELECT 
         a.*,
         ROW_NUMBER() OVER(
-          PARTITION BY a.user_id, COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name))))
+          PARTITION BY a.user_id, CONCAT(
+            LOWER(TRIM(a.artist_name)), 
+            '::', 
+            TRIM(
+              REGEXP_REPLACE(
+                REGEXP_REPLACE(
+                  REGEXP_REPLACE(
+                    LOWER(TRIM(a.album_name)),
+                    r'\s*\((?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix|archive collection|archive|super deluxe|remaster|ultimate edition)[^)]*\)',
+                    ''
+                  ),
+                  r'\s*\[(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix|archive collection|archive|super deluxe|remaster|ultimate edition)[^\]]*\]',
+                  ''
+                ),
+                r'\s*-\s*(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix|archive collection|archive|super deluxe|remaster).*$',
+                ''
+              )
+            )
+          )
           ORDER BY 
             CASE WHEN a.image_url IS NOT NULL AND a.image_url != "" THEN 1 ELSE 2 END ASC,
             a.added_at DESC
@@ -72,6 +90,7 @@ def rematerialize_user_albums_features(bq_client):
       GREATEST(COALESCE(pid.track_plays_by_id_30d, 0), COALESCE(pname.track_plays_by_name_30d, 0)) as album_track_plays_30d,
       ROUND(GREATEST(COALESCE(pid.track_plays_by_id_30d, 0), COALESCE(pname.track_plays_by_name_30d, 0)) / NULLIF(d.tracks_total, 0), 1) as album_plays_30d,
       CONCAT("https://open.spotify.com/album/", d.album_id) as album_url,
+      COALESCE(NULLIF(d.canonical_album_key, ''), CONCAT(LOWER(TRIM(d.artist_name)), '::', LOWER(TRIM(d.album_name)))) as canonical_album_key,
       e.pitchfork_score,
       e.metacritic_score,
       e.allmusic_score,

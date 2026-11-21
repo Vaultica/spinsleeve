@@ -52,13 +52,13 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
   * `enrich.py`: Wikipedia/Discogs scraper + NLP mood/genre classifier populating `album_enriched_metadata`.
 * **`tests/`:** `unittest` suite covering invariants, caching, routes, and pipelines.
 * **`.gemini/agents/`:** Specialized subagents (`reviewer`, `tester`, `scribe`, `deploy_assistant`, `session_closer`).
-* **Docs:** `VIBE_CODING_MANUAL.md` (Agent Orchestration), `PROJECT_ROADMAP_AND_SPECS.md` (What/Why & Backlog), `TECHNICAL_SPECS.md` (Schemas/Contracts), `CHANGELOG.md` (Full Release History), `INFRASTRUCTURE_RUNBOOK.md` (DR & DDL).
+* **Docs:** `VIBE_CODING_MANUAL.md` (Agent Orchestration), `PROJECT_ROADMAP.md` (What/Why & Backlog), `ROADMAP_TECHNICAL_SPECS.md` (Future Specs), `ARCHITECTURE_AND_FEATURES.md` (As-Built Architecture & Features), `CHANGELOG.md` (Full Release History), `INFRASTRUCTURE_RUNBOOK.md` (DR & DDL).
 
 ---
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.7.0` (Real-Time Admin Email Notifications via Resend (`OPS-03`), canonical album sibling deduplication, 66/66 tests passing).
+* **Current Production Release:** `v2.7.1` (Landing page artwork fix, RAM canonical sibling deduplication fix, analytics art fallback, documentation restructuring, 66/66 tests passing).
 * **Next Planned Milestone:** `Phase 7` — Cross-Platform Apple Music Library Onboarding (`APP-02`).
 
 ---

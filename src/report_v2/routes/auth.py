@@ -47,6 +47,19 @@ def login():
     return render_template('landing.html', brand_icon=ICON_A_SVG)
 
 
+@auth_bp.route("/dev-login")
+@auth_bp.route("/beta/dev-login")
+def dev_login():
+    """Local development login helper to bypass Spotify OAuth when running locally."""
+    session["user_id"] = "sergebou"
+    session["display_name"] = "Serge"
+    session["role"] = "admin"
+    session["admin_user_id"] = "sergebou"
+    session["pals_opt_in"] = True
+    session["is_impersonating"] = False
+    return redirect("/")
+
+
 @auth_bp.route("/roadmap")
 @auth_bp.route("/beta/roadmap")
 @auth_bp.route("/roadmap/")
