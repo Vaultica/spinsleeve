@@ -308,42 +308,56 @@ def get_candidate_albums(
 
     if not re_enrich:
         query = f"""
-        WITH plays AS (
-          SELECT album_id, COUNT(*) as play_count
-          FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
-          WHERE album_id IS NOT NULL AND album_id != ""
-          GROUP BY album_id
+        WITH saved AS (
+          SELECT 
+            COALESCE(NULLIF(canonical_album_key, ''), CONCAT(LOWER(TRIM(artist_name)), '::', LOWER(TRIM(album_name)))) as canonical_album_key,
+            album_id,
+            artist_name,
+            album_name,
+            release_date,
+            release_year,
+            genres,
+            user_id
+          FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+          WHERE album_name IS NOT NULL AND artist_name IS NOT NULL
         ),
         albums AS (
           SELECT 
-            album_id,
+            canonical_album_key,
+            ANY_VALUE(album_id) as album_id,
             ANY_VALUE(artist_name) as artist_name,
             ANY_VALUE(album_name) as album_name,
-            ANY_VALUE(canonical_album_key) as canonical_album_key,
             ANY_VALUE(release_date) as release_date,
             ANY_VALUE(release_year) as release_year,
             ANY_VALUE(genres) as genres,
             COUNT(DISTINCT user_id) as collector_count
-          FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-          GROUP BY album_id
+          FROM saved
+          GROUP BY canonical_album_key
+        ),
+        plays AS (
+          SELECT 
+            s.canonical_album_key,
+            COUNT(*) as play_count
+          FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
+          JOIN (SELECT DISTINCT album_id, canonical_album_key FROM saved) s ON p.album_id = s.album_id
+          WHERE p.album_id IS NOT NULL AND p.album_id != ""
+          GROUP BY s.canonical_album_key
         )
         SELECT 
           a.album_id,
           a.artist_name,
           a.album_name,
-          COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) as canonical_album_key,
+          a.canonical_album_key,
           a.release_date,
           a.release_year,
           a.genres,
           COALESCE(p.play_count, 0) as total_plays,
           a.collector_count
         FROM albums a
-        LEFT JOIN plays p ON a.album_id = p.album_id
+        LEFT JOIN plays p ON a.canonical_album_key = p.canonical_album_key
         LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e 
-          ON COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) = e.canonical_album_key
+          ON a.canonical_album_key = e.canonical_album_key
         WHERE e.canonical_album_key IS NULL
-          AND a.album_name IS NOT NULL
-          AND a.artist_name IS NOT NULL
         ORDER BY total_plays DESC, a.collector_count DESC, a.release_date DESC
         LIMIT @batch_limit
         """
@@ -354,35 +368,51 @@ def get_candidate_albums(
 
     # Re-Enrich Mode: targets albums missing MusicBrainz or with quality score < min_quality_score
     query = f"""
-    WITH plays AS (
-      SELECT album_id, COUNT(*) as play_count
-      FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
-      WHERE album_id IS NOT NULL AND album_id != ""
-      GROUP BY album_id
+    WITH saved AS (
+      SELECT 
+        COALESCE(NULLIF(canonical_album_key, ''), CONCAT(LOWER(TRIM(artist_name)), '::', LOWER(TRIM(album_name)))) as canonical_album_key,
+        album_id,
+        artist_name,
+        album_name,
+        release_date,
+        release_year,
+        genres,
+        user_id
+      FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+      WHERE album_name IS NOT NULL AND artist_name IS NOT NULL
+    ),
+    albums AS (
+      SELECT 
+        canonical_album_key,
+        ANY_VALUE(album_id) as album_id,
+        ANY_VALUE(artist_name) as artist_name,
+        ANY_VALUE(album_name) as album_name,
+        ANY_VALUE(release_date) as release_date,
+        ANY_VALUE(release_year) as release_year,
+        ANY_VALUE(genres) as genres,
+        COUNT(DISTINCT user_id) as collector_count
+      FROM saved
+      GROUP BY canonical_album_key
+    ),
+    plays AS (
+      SELECT 
+        s.canonical_album_key,
+        COUNT(*) as play_count
+      FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
+      JOIN (SELECT DISTINCT album_id, canonical_album_key FROM saved) s ON p.album_id = s.album_id
+      WHERE p.album_id IS NOT NULL AND p.album_id != ""
+      GROUP BY s.canonical_album_key
     ),
     mb_scraped AS (
       SELECT DISTINCT canonical_album_key
       FROM `{PROJECT_ID}.{DATASET_V2}.enrichment_raw_musicbrainz`
       WHERE canonical_album_key IS NOT NULL AND canonical_album_key != ""
-    ),
-    albums AS (
-      SELECT 
-        album_id,
-        ANY_VALUE(artist_name) as artist_name,
-        ANY_VALUE(album_name) as album_name,
-        ANY_VALUE(canonical_album_key) as canonical_album_key,
-        ANY_VALUE(release_date) as release_date,
-        ANY_VALUE(release_year) as release_year,
-        ANY_VALUE(genres) as genres,
-        COUNT(DISTINCT user_id) as collector_count
-      FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-      GROUP BY album_id
     )
     SELECT 
       a.album_id,
       a.artist_name,
       a.album_name,
-      COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) as canonical_album_key,
+      a.canonical_album_key,
       a.release_date,
       a.release_year,
       a.genres,
@@ -391,18 +421,16 @@ def get_candidate_albums(
       e.enrichment_quality_score,
       (mb.canonical_album_key IS NOT NULL) as has_musicbrainz
     FROM albums a
-    LEFT JOIN plays p ON a.album_id = p.album_id
+    LEFT JOIN plays p ON a.canonical_album_key = p.canonical_album_key
     LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e 
-      ON COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) = e.canonical_album_key
-    LEFT JOIN mb_scraped mb
-      ON COALESCE(NULLIF(a.canonical_album_key, ''), CONCAT(LOWER(TRIM(a.artist_name)), '::', LOWER(TRIM(a.album_name)))) = mb.canonical_album_key
+      ON a.canonical_album_key = e.canonical_album_key
+    LEFT JOIN mb_scraped mb 
+      ON a.canonical_album_key = mb.canonical_album_key
     WHERE (
         e.canonical_album_key IS NULL 
         OR mb.canonical_album_key IS NULL 
         OR COALESCE(e.enrichment_quality_score, 0.0) < @min_quality_score
       )
-      AND a.album_name IS NOT NULL
-      AND a.artist_name IS NOT NULL
     ORDER BY 
       CASE WHEN e.canonical_album_key IS NULL THEN 1 ELSE 2 END ASC,
       total_plays DESC,
@@ -641,14 +669,31 @@ def run_enrichment(
         bq_client.load_table_from_json(provider_records, p_table, job_config=load_cfg).result()
         logger.info("Appended %d records into %s", len(provider_records), p_table)
 
-    # 2. Merge into Golden Table
+    # 2. Merge into Golden Table (strictly 1 row per canonical_album_key)
+    seen_golden = set()
+    deduped_golden_records = []
+    for r in golden_records:
+        k = r.get("canonical_album_key")
+        if k and k not in seen_golden:
+            seen_golden.add(k)
+            deduped_golden_records.append(r)
+        elif not k:
+            deduped_golden_records.append(r)
+
     staging_table = f"{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata_staging"
     load_cfg = bigquery.LoadJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE)
-    bq_client.load_table_from_json(golden_records, staging_table, job_config=load_cfg).result()
+    bq_client.load_table_from_json(deduped_golden_records, staging_table, job_config=load_cfg).result()
 
     merge_sql = f"""
     MERGE `{TARGET_TABLE}` T
-    USING `{staging_table}` S
+    USING (
+      SELECT * EXCEPT(rn)
+      FROM (
+        SELECT *, ROW_NUMBER() OVER(PARTITION BY canonical_album_key ORDER BY enrichment_quality_score DESC, updated_at DESC) as rn
+        FROM `{staging_table}`
+      )
+      WHERE rn = 1
+    ) S
     ON T.canonical_album_key = S.canonical_album_key
     WHEN MATCHED THEN UPDATE SET
         T.album_id = S.album_id,
