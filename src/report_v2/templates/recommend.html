@@ -935,7 +935,7 @@
                 tagsContainer.innerHTML = '';
                 let hasTags = false;
 
-                if (album.macro_genre && album.macro_genre !== 'Eclectic / Other' && album.macro_genre !== 'Unknown') {
+                if (album.macro_genre && album.macro_genre !== 'Other / Unclassified' && album.macro_genre !== 'Unknown') {
                     tagsContainer.innerHTML += `
                         <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1 shadow-sm">
                             <span class="opacity-75">🏷️</span> ${album.macro_genre}

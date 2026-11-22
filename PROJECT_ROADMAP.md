@@ -98,6 +98,10 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Integrated Resend API in `src/report_v2/services/notifications.py` for instant HTML notification dispatch when new beta users join SpinSleeve.
   - Hooked notification dispatch into auth callback route.
   - Added test suite (`tests/test_notifications.py`) and verified 66/66 unit tests passing.
+* **Phase 6l: Macro-Genre Fallback Refinement & Decision Table Alignment (`v2.8.4`)**
+  - Renamed default/fallback macro-genre from `"Eclectic / Other"` to `"Other / Unclassified"` across classifier logic, catalog services, UI templates (`explorer.html`, `pals.html`, `recommend.html`), and unit test assertions.
+  - Updated macro-genre mapping documentation and sequential first-match rules in `MACRO_GENRE_MAPPING_DECISION_TABLE.md`.
+  - Verified 79/79 unit tests passing successfully.
 * **Phase 6j: Canonical Album Sibling Deduplication (`APP-14`, `v2.6.6`)**
   - Implemented `compute_canonical_album_key()` regex normalization stripping edition suffixes (`deluxe`, `remastered`, `archive collection`, etc.).
   - Updated BigQuery table materialization (`rematerialize_user_albums_features` in `sync.py` and `bigquery.py`) to partition by `canonical_album_key`, successfully collapsing edition duplicates like *RAM* and *RAM (Archive Collection)* into a single clean entry in the library view.

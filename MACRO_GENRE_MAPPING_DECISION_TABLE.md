@@ -9,7 +9,8 @@ This decision table details the end-to-end logic of how albums are mapped to mac
 When an album is enriched by `enrich.py`, raw metadata from Spotify (artist/album genres), Discogs (styles), and MusicBrainz (tags) are concatenated into a lowercase text corpus:
 `corpus = f"{genres_str or ''} {styles_str or ''} {mb_tags or ''}".lower()`
 
-The classifier evaluates `corpus` against prioritized regex pattern rules (`MACRO_GENRE_RULES`) in sequential order:
+### Evaluation Rule: **Sequential First-Match Win**
+The classifier evaluates `corpus` against prioritized regex pattern rules (`MACRO_GENRE_RULES`) **sequentially from top to bottom**. The **first** matching regex pattern wins and assigns the primary macro-genre. Tags are aggregated cumulatively into the corpus, but precedence is determined by the order of rules in the classification pipeline.
 
 | Macro-Genre | Trigger Regex Patterns (`MACRO_GENRE_RULES`) | Example Spotify/Discogs Tags |
 | :--- | :--- | :--- |
@@ -27,20 +28,26 @@ The classifier evaluates `corpus` against prioritized regex pattern rules (`MACR
 | **Rock** | `\brock\b`, `\bindie rock\b`, `\bpsychedelic rock\b`, `\bprog(?:ressive)? rock\b`, `\bshoegaze\b`, `\bclassic rock\b`, `\bart rock\b`, `\bhard rock\b` | indie rock, psychedelic rock, shoegaze |
 | **Pop** | `\bpop\b`, `\bindie pop\b`, `\bdance-pop\b`, `\bchamber pop\b`, `\bbaroque pop\b`, `\bpower pop\b` | pop, indie pop, baroque pop, chamber pop |
 | **Latin / World** | `\blatin\b`, `\bbossa nova\b`, `\btango\b`, `\bsamba\b`, `\bafrobeat\b`, `\bcumbia\b`, `\bflamenco\b`, `\bworld\b` | latin, bossa nova, afrobeat |
-| **Fallback** | *No regex pattern matched* | Assigned to **`Eclectic / Other`** |
+| **Fallback** | *No regex pattern matched* | Assigned to **`Other / Unclassified`** |
 
 ---
 
-## 2. Dropdown Population Logic (`src/report_v2/services/catalog.py`)
+## 2. Terminology: Raw Genres vs. Normalized Macro-Genres
 
-* **Source Data:** When loading user catalogs from BigQuery or Cloud Datastore cache (`UserCatalogCache`), the service builds `top_genres` strictly by counting distinct macro-genres (`macro_genre`) present across all saved albums in the user's library (excluding `"Eclectic / Other"` and `"Unknown"`).
-* **UI Delivery:** Rendered in `explorer.html` as the level-1 Macro-Genre filter dropdown (`#genreSelect`).
+* **Raw Genres (`album_genres`):** These are the original, unfiltered micro-genre tags returned directly by Spotify (e.g., `"uk alternative hip hop"`, `"chamber psych"`, `"detroit indie"`).
+* **Normalized Macro-Genres (`macro_genre`):** These are the high-level, standardized Level-1 categories (e.g., `"Electronic"`, `"Rock"`, `"Pop"`, `"Other / Unclassified"`) assigned by the classifier for clean library navigation and filtering.
 
 ---
 
-## 3. UI Filtering & Recommendation Matching (`src/report_v2/templates/explorer.html`)
+## 3. Dropdown Population Logic (`src/report_v2/services/catalog.py`)
 
-When a user selects a macro-genre from the dropdown (or uses Crate Digger mode), dual-layer matching is evaluated:
+* **Source Data:** Rendered in `explorer.html` as the level-1 Macro-Genre filter dropdown (`#genreSelect`), populated strictly from the distinct normalized macro-genres present in the user's library (`macro_genre_counter`).
+
+---
+
+## 4. UI Filtering & Recommendation Matching (`src/report_v2/templates/explorer.html`)
+
+When a user selects a macro-genre from the dropdown (or uses Crate Digger mode), dual-layer matching evaluates both macro-genres and raw genres:
 
 | Condition / Input | Matching Logic (`matchG` / `runRecommender`) | Outcome |
 | :--- | :--- | :--- |

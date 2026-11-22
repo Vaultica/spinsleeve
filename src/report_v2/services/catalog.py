@@ -144,7 +144,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
             macro_genre_counter = Counter()
             for a in cached_albums:
                 mg = safe_str(a.get("macro_genre"), "")
-                if mg and mg not in ("Eclectic / Other", "Unknown"):
+                if mg and mg not in ("Other / Unclassified", "Unknown"):
                     macro_genre_counter[mg] += 1
 
             ds_cached["top_genres"] = [g for g, count in macro_genre_counter.most_common(15)]
@@ -196,7 +196,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
         for _, row in df.iterrows():
             mg = safe_str(row.get("macro_genre"), "")
-            if mg and mg not in ("Eclectic / Other", "Unknown"):
+            if mg and mg not in ("Other / Unclassified", "Unknown"):
                 macro_genre_counter[mg] += 1
 
             genres_str = safe_str(row.get("album_genres"), "")
@@ -245,7 +245,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
             styles_str = safe_str(row.get("enriched_styles"))
             has_gf = bool(desc or pers)
 
-            macro_g = safe_str(row.get("macro_genre"), "Eclectic / Other")
+            macro_g = safe_str(row.get("macro_genre"), "Other / Unclassified")
             raw_moods = row.get("derived_moods")
             moods_list = []
             if isinstance(raw_moods, (list, tuple)):

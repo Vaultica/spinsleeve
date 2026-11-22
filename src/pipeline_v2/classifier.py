@@ -96,18 +96,18 @@ TAG_LEXICON = {
 def classify_macro_genre(genres_str: Optional[str] = "", styles_str: Optional[str] = "", mb_tags: Optional[str] = "") -> str:
     """
     Classifies combined genres, styles, and tags into a normalized macro genre.
-    Defaults to 'Eclectic / Other' if no pattern matches.
+    Defaults to 'Other / Unclassified' if no pattern matches.
     """
     corpus = f"{genres_str or ''} {styles_str or ''} {mb_tags or ''}".lower()
     if not corpus.strip():
-        return "Eclectic / Other"
+        return "Other / Unclassified"
 
     for macro, patterns in MACRO_GENRE_RULES:
         for pat in patterns:
             if re.search(pat, corpus):
                 return macro
 
-    return "Eclectic / Other"
+    return "Other / Unclassified"
 
 
 def extract_derived_moods(

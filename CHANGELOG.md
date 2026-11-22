@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.4] — 2026-11-22
+### 🏷️ Macro-Genre Fallback Refinement ("Other / Unclassified") & Decision Table Alignment
+* **What:**
+  - **Macro-Genre Fallback Rename (`src/pipeline_v2/classifier.py`, `src/report_v2/services/catalog.py`):**
+    - Renamed default/fallback macro-genre from `"Eclectic / Other"` to `"Other / Unclassified"` across classifier logic, catalog services, UI templates (`explorer.html`, `pals.html`, `recommend.html`), and unit test assertions.
+  - **Decision Table & Documentation Update (`MACRO_GENRE_MAPPING_DECISION_TABLE.md`):**
+    - Updated macro-genre mapping documentation and sequential first-match rules to reflect `"Other / Unclassified"`.
+  - **Test Suite Verification:**
+    - Verified 79/79 unit tests passing successfully.
+* **Why:**
+  - Improves taxonomic clarity by distinguishing between intentionally eclectic albums and unclassified/fallback items in library filters and gatefold badges.
+* **How:**
+  - Updated `classifier.py`, `catalog.py`, `explorer.html`, `pals.html`, `recommend.html`, `MACRO_GENRE_MAPPING_DECISION_TABLE.md`, `test_app16_classification.py`, bumped `APP_VERSION` to `v2.8.4`.
+
+---
+
 ## [v2.8.3] — 2026-11-22
 ### 🎛️ APP-17 Unified Crate Workspace & Dynamic Macro-Genre Filtering
 * **What:**

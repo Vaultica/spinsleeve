@@ -29,7 +29,7 @@ class TestAPP16Classification(unittest.TestCase):
         self.assertEqual(classifier.classify_macro_genre("psychedelic rock, indie rock", "", ""), "Rock")
         self.assertEqual(classifier.classify_macro_genre("dance-pop, electropop", "", ""), "Pop")
         self.assertEqual(classifier.classify_macro_genre("afrobeat, bossa nova", "", ""), "Latin / World")
-        self.assertEqual(classifier.classify_macro_genre("", "", ""), "Eclectic / Other")
+        self.assertEqual(classifier.classify_macro_genre("", "", ""), "Other / Unclassified")
 
     def test_extract_derived_moods(self):
         summary = "A dark late night nocturnal album recorded at 3am with moody, smoky atmospheres."
