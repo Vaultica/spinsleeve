@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.5] — 2026-11-22
+### 🍏 APP-02a: Apple Music Backend Pipeline & JWT Ingestion Service
+* **What:**
+  - **Apple Music JWT Tokenizer & Pipeline (`src/pipeline_v2/apple_music.py`, `src/report_v2/services/apple_music.py`, `src/report_v2/routes/apple_music.py`):**
+    - Implemented automated ES256 JWT developer token minting and caching via ECDSA P-256 and SHA-256 using Apple Developer Private Key (`.p8`).
+    - Developed Apple Music Web API library client (`GET /v1/me/library/albums`) with cursor pagination, rate-limiting handling, and robust auth error recovery.
+    - Added data normalization into `user_saved_albums` with zero-NaN guarantees and canonical edition deduplication (`compute_canonical_album_key`).
+    - Implemented BigQuery batch ingestion supporting QA table suffixes (`_app_02a`) and foreign provider bridging into `album_provider_ids` (`provider='apple_music'`).
+    - Integrated explicit Cloud Datastore cache invalidation for `UserCatalogCache`, `UserAnalyticsCache`, and `PalCompatibilityCache`.
+  - **Modular Flask Route Blueprint & Unit Test Suite (`tests/test_apple_music_pipeline.py`):**
+    - Created modular Flask route blueprint in `src/report_v2/routes/apple_music.py` with root and `/beta/*` aliases.
+    - Added comprehensive unit test suite with 14 test cases (`tests/test_apple_music_pipeline.py`), bringing total test suite to 93/93 passing unit tests.
+* **Why:**
+  - Establishes a secure multi-provider backend ingestion and library synchronization engine for Apple Music, breaking free from Spotify single-provider dependency and allowlist limits.
+* **How:**
+  - Implemented `apple_music.py` pipeline and service layers, added `tests/test_apple_music_pipeline.py`, verified 93/93 unit tests passing, and bumped `APP_VERSION` to `v2.8.5`.
+
+---
+
 ## [v2.8.4] — 2026-11-22
 ### 🏷️ Macro-Genre Fallback Refinement ("Other / Unclassified") & Decision Table Alignment
 * **What:**

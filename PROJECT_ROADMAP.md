@@ -110,6 +110,14 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Year-by-year BigQuery DML batching (`MERGE`/`INSERT`) to prevent `400 Too many partitions produced by query` ceiling errors on multi-year lifetime archives.
   - Strict pandas-level dataframe deduplication (`drop_duplicates`) prior to staging load for 100% upload idempotency.
   - Deployed live release `v2.5.3`.
+* **Phase 7: Cross-Platform Apple Music Backend Pipeline (`APP-02a`, `v2.8.5`)**
+  - Automated ES256 JWT developer token minting and caching via ECDSA P-256 and SHA-256 in `src/pipeline_v2/apple_music.py`.
+  - Apple Music Web API library client with cursor pagination and rate-limit/auth error handling.
+  - Data normalization into `user_saved_albums` with zero-NaN guarantees and canonical edition deduplication (`compute_canonical_album_key`).
+  - BigQuery batch ingestion supporting QA table suffixes (`_app_02a`) and foreign provider bridging into `album_provider_ids` (`provider='apple_music'`).
+  - Explicit Cloud Datastore cache invalidation for `UserCatalogCache`, `UserAnalyticsCache`, and `PalCompatibilityCache`.
+  - Service layer in `src/report_v2/services/apple_music.py` and modular Flask route blueprint in `src/report_v2/routes/apple_music.py`.
+  - Unit test suite `tests/test_apple_music_pipeline.py` with 14 unit test cases; full test suite passing at 93/93 tests.
 
 ---
 
@@ -146,7 +154,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`OPS-03`**    | ✅ ~~Real-Time Admin Email Notifications via Resend~~                                                   | DevOps              | 3–4 hours        | Completed (`v2.7.0`)                                                                                                 |
 | **`OPS-04`**    | ✅ ~~Monolithic App Modularisation & AI Parsing Optimization~~                                          | DevOps & Efficiency | 4–6 hours        | Completed (`v2.6.4`: Modularized across config, services, route blueprints)                                          |
 | **`APP-01`**    | 12" Gatefold Tracklisting & Side A / Side B Breakdown                                                  | Core App            | 4–6 hours        | Low–Med                                                                                                              |
-| **`APP-02a`**   | Apple Music Backend Pipeline & JWT Ingestion Service                                                   | Core App            | 8–10 hours       | Medium                                                                                                               |
+| **`APP-02a`**   | ✅ ~~Apple Music Backend Pipeline & JWT Ingestion Service~~                                              | Core App            | 8–10 hours       | Completed (`v2.8.5`): ES256 JWT minting, Web API client, BQ ingestion, provider bridging.                           |
 | **`APP-02b`**   | MusicKit JS v3 Frontend Client & Onboarding UI                                                         | Core App            | 8–12 hours       | Medium–High                                                                                                          |
 | **`APP-03`**    | In-App Feedback & Liner Notes Wishlist Collector                                                       | Core App            | 5–7 hours        | Low–Med                                                                                                              |
 | **`APP-04`**    | ✅ ~~Music Legend Illustrated Avatar Persona Picker~~                                                   | Core App            | 4–5 hours        | Completed (`v2.3.0`)                                                                                                 |
@@ -855,7 +863,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`OPS-02`** | Observability, Alerting & Health Monitoring | DevOps | 4–6h | Cloud Monitoring, Alert Policies, `/healthz` | **Medium:** Automated 5xx failure detection and resource saturation alerts. |
 | **`OPS-03`** | ✅ ~~Real-Time Admin Email Notifications via Resend~~ | DevOps | 3–4h | Resend API, Flask Auth | ✅ **Completed** (`v2.7.0`): Real-Time HTML email notifications dispatched to admin when new users authenticate. |
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A/B Splits | Core App | 4–6h | Spotify Web API, Jinja2, Tailwind CSS | **Medium:** Completes tactile physical record feel with track-level auditioning. |
-| **`APP-02a`** | Apple Music Backend Pipeline & JWT Ingestion | Core App | 8–10h | Apple Developer JWT (.p8), BigQuery, Flask REST API | **High:** Establishes secure multi-provider backend ingestion for Apple Music libraries. |
+| **`APP-02a`** | ✅ ~~Apple Music Backend Pipeline & JWT Ingestion~~ | Core App | 8–10h | Apple Developer JWT (.p8), BigQuery, Flask REST API | ✅ **Completed** (`v2.8.5`): Automated ES256 JWT minting, Apple Music API library ingestion, canonical deduplication, and provider bridging. |
 | **`APP-02b`** | MusicKit JS v3 Frontend Client & Onboarding UI | Core App | 8–12h | MusicKit JS v3, Tailwind CSS, JavaScript | **High:** Intuitive 1-click Apple Music authentication and synchronization UI. |
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
 | **`APP-04`** | Music Legend Illustrated Avatars | Core App | 4–5h | SVG Vector Graphics, Datastore, Tailwind CSS | **Low:** Aesthetic charm and personal flair for users without profile photos. |

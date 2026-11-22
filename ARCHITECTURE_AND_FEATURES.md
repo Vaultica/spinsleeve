@@ -65,6 +65,9 @@ src/report_v2/
 ### Spotify Full Scrobble Historical Upload (`APP-13`)
 * **Workflow:** In-memory ZIP/JSON streaming history parser supporting Extended and Legacy GDPR formats (`StreamingHistory_music_*.json`), filtering podcasts and short scrobbles (<30s) with year-by-year BigQuery batching and duplicate prevention.
 
+### Apple Music Backend Pipeline & JWT Ingestion (`APP-02a`)
+* **Workflow:** Automated ES256 developer JWT token minting and caching via ECDSA P-256 and SHA-256 (`src/pipeline_v2/apple_music.py`), fetching user library albums from Apple Music API (`GET /v1/me/library/albums`) with cursor pagination and rate-limit handling, normalizing into `user_saved_albums`, bridging via `album_provider_ids` (`provider='apple_music'`), and invalidating Cloud Datastore caches.
+
 ---
 
 ## 4. Deep-Dive: Metadata Enrichment Pipeline (`src/pipeline_v2/enrich.py`)

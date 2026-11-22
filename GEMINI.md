@@ -61,8 +61,8 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.8.4` (Macro-genre fallback refinement to "Other / Unclassified", decision table alignment, 79/79 unit tests passing).
-* **Next Planned Milestone:** `Phase 7` — Cross-Platform Apple Music Library Onboarding (`APP-02`).
+* **Current Production Release:** `v2.8.5` (Apple Music Backend Pipeline & JWT Ingestion Service, 93/93 unit tests passing).
+* **Next Planned Milestone:** `Phase 7` — MusicKit JS v3 Frontend Client & Onboarding UI (`APP-02b`).
 
 ---
 
@@ -88,9 +88,9 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.8.2`** | 2026-11-22 | 5 | ~200,000 | ~5,000 | **~$0.01** | Automatic analytics & pal compatibility cache invalidation upon sync completion, 76/76 unit tests passing. |
 | **`v2.8.3`** | 2026-11-22 | 8 | ~350,000 | ~8,000 | **~$0.02** | APP-17 Unified Crate workspace (`📁 Saved Vinyl` vs `📻 Streamed / Unowned`), dynamic macro-genre Crate filtering, catalog profiling scripts, 79/79 unit tests passing. |
 | **`v2.8.4`** | 2026-11-22 | 4 | ~150,000 | ~3,500 | **~$0.01** | Macro-genre fallback rename to `"Other / Unclassified"`, decision table alignment, 79/79 unit tests passing. |
+| **`v2.8.5`** | 2026-11-22 | 6 | ~250,000 | ~4,000 | **~$0.01** | APP-02a Apple Music Backend Pipeline & JWT Ingestion Service, ES256 JWT minting, BigQuery ingestion, provider bridging, 93/93 unit tests passing. |
 
 ---
 
