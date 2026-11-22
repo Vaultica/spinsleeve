@@ -163,6 +163,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-15`**    | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2)                                     | Core App            | 20–30 hours      | Medium–High                                                                                                          |
 | **`APP-16`**    | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~                     | Core App            | 6–8 hours        | Completed (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill. |
 | **`APP-17`**    | ✅ ~~Unified Crate Workspace: Combined Saved Library, Unowned Crate & Crate Digger Mode~~                     | Core App            | 6–8 hours        | Completed (`v2.8.3`): Consolidated Saved Vinyl & Streamed/Unowned crates, dynamic macro-genre filtering, unified 2-row control deck. |
+| **`APP-18`**    | Zero-Shot Semantic Text Classification & Adaptive Taxonomy                                             | Core App            | 6–8 hours        | Medium-High (Specified in APP_18_ZERO_SHOT_CLASSIFICATION_SPEC.md)                                                   |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~                                        | Tactical Polish     | 2–3 hours        | Completed (`v2.2.1`)                                                                                                 |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~                                | Tactical Polish     | 1 hour           | Completed (`v2.2.2`)                                                                                                 |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~                                        | Tactical Polish     | 1–2 hours        | Completed (`v2.2.2`)                                                                                                 |
@@ -489,7 +490,16 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
-#### `APP-03`: In-App Feedback & Liner Notes Wishlist Collector
+#### `APP-18`: Zero-Shot Semantic Text Classification & Adaptive Taxonomy
+* **Problem:**  
+  Rigid, hand-tuned regex rules (`MACRO_GENRE_RULES`) can overfit to early developer libraries and miss nuanced or obscure micro-genres across diverse user collections.
+* **Solution:**  
+  1. **Zero-Shot Semantic Text Classification:** Replace brittle regex loops with lightweight sentence embeddings (`sentence-transformers/all-MiniLM-L6-v2`) or cosine similarity against canonical macro-genre anchor descriptions.
+  2. **Dual-Layer Fallback & Robust Filtering:** Combine semantic classification (`macro_genre`) with raw genre substring matching (`album_genres`) to guarantee zero false negatives.
+  3. **Backward Compatibility:** Preserve the exact `classify_macro_genre()` API contract for seamless BigQuery DML and Flask route integration.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium-High**
+
+---
 * **Problem:**  
   Friends testing SpinSleeve need a quick, seamless way to suggest missing liner notes, report bugs, or recommend features without leaving the application.
 * **Solution:**  

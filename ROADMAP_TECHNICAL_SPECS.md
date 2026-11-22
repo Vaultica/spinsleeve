@@ -643,3 +643,15 @@ All new features and architectural changes must strictly adhere to these verifie
       K[Cloud Scheduler] -->|Daily 04:00 UTC| L[Cloud Run Job: spotify-v2-enrichment-job]
       L -->|Scrape Discogs / Wiki| M[(BigQuery: album_enriched_metadata)]
   ```
+
+---
+
+## 8. Category: Machine Learning & Classification (`ML`)
+
+### `APP-18`: Zero-Shot Semantic Text Classification Architecture
+* **Technical Objective:** Replace brittle, hand-tuned regex rules (`MACRO_GENRE_RULES`) with zero-shot semantic text classification using lightweight sentence embeddings (`sentence-transformers/all-MiniLM-L6-v2`) against canonical macro-genre anchor descriptions.
+* **Architecture & Flow:**
+  1. **Canonical Macro-Genre Anchors:** Define rich semantic descriptions for each macro-genre (Electronic, Rock, Pop, Hip-Hop, Jazz, Classical, Folk/Country, R&B/Soul, Ambient, Punk/Alternative, etc.).
+  2. **Embedding & Similarity:** Serialize album corpus (Spotify genres + Discogs styles + MusicBrainz tags) into embedding vectors and compute cosine similarity against macro-genre anchor vectors.
+  3. **Backward Compatibility:** Maintain API contract `classify_macro_genre(genres_str, styles_str, mb_tags)` so BigQuery DML and Flask routes require zero structural alterations.
+
