@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.2] — 2026-11-22
+### ⚡ Automatic Pipeline Analytics & Pal Compatibility Cache Invalidation
+* **What:**
+  - **Cache Invalidation on Sync Completion (`src/pipeline_v2/sync.py`, `src/report_v2/services/datastore.py`, `src/report_v2/services/analytics.py`):**
+    - Implemented automatic invalidation of `UserAnalyticsCache` and `PalCompatibilityCache` in Cloud Datastore and in-memory stores whenever a user sync finishes with new plays or albums.
+  - **Test Suite Expansion:**
+    - Added unit test `test_invalidate_user_analytics_and_pal_caches` in `tests/test_datastore_cache.py`, bringing test suite to 76/76 passing unit tests.
+* **Why:**
+  - Guarantees that user telemetry, analytics dashboards, and SpinPals compatibility scores update instantly upon ingestion without requiring manual cache clearing or waiting for TTL expiry.
+* **How:**
+  - Updated `pipeline_v2/sync.py`, `report_v2/services/datastore.py`, `report_v2/services/analytics.py`, added unit tests, bumped version to `v2.8.2`.
+
+---
+
 ## [v2.8.1] — 2026-11-21
 ### 🏷️ Gatefold Semantic Tag Strip & Pipeline Deduplication Fixes
 * **What:**

@@ -351,6 +351,8 @@ def run_pipeline():
 
             if new_tracks > 0 or new_albums > 0:
                 invalidate_user_catalog_cache(user_id, ds_client)
+                invalidate_user_analytics_cache(user_id, ds_client)
+                invalidate_pal_compatibility_cache(user_id, ds_client)
 
             user["last_sync_at"] = datetime.datetime.now(datetime.timezone.utc)
             user["sync_status"] = "idle"
@@ -381,6 +383,30 @@ def invalidate_user_catalog_cache(user_id, ds_client):
         logger.info("[%s] Invalidated Datastore UserCatalogCache.", user_id)
     except Exception as e:
         logger.warning("[%s] Failed to invalidate Datastore UserCatalogCache: %s", user_id, e)
+
+
+def invalidate_user_analytics_cache(user_id, ds_client):
+    """Deletes cached analytics in Datastore when new listening events are synced."""
+    try:
+        query = ds_client.query(kind="UserAnalyticsCache")
+        keys_to_delete = [e.key for e in query.fetch() if e.key.name and e.key.name.startswith(f"{user_id}::")]
+        if keys_to_delete:
+            ds_client.delete_multi(keys_to_delete)
+            logger.info("[%s] Invalidated %d Datastore UserAnalyticsCache entities.", user_id, len(keys_to_delete))
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate UserAnalyticsCache: %s", user_id, e)
+
+
+def invalidate_pal_compatibility_cache(user_id, ds_client):
+    """Deletes cached pal compatibility in Datastore when new listening events are synced."""
+    try:
+        query = ds_client.query(kind="PalCompatibilityCache")
+        keys_to_delete = [e.key for e in query.fetch() if e.key.name and (e.key.name.startswith(f"{user_id}::") or f"::{user_id}::" in e.key.name)]
+        if keys_to_delete:
+            ds_client.delete_multi(keys_to_delete)
+            logger.info("[%s] Invalidated %d Datastore PalCompatibilityCache entities.", user_id, len(keys_to_delete))
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate PalCompatibilityCache: %s", user_id, e)
 
 
 def rematerialize_user_albums_features(bq_client):

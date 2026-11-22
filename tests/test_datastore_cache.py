@@ -174,6 +174,34 @@ class TestDatastoreCatalogCache(unittest.TestCase):
         self.assertEqual(album["descriptive_tags"], ["Synthesizers", "Minimalist"])
         self.assertEqual(album["enrichment_quality_score"], 0.95)
 
+    @patch("services.datastore.get_datastore_client")
+    def test_invalidate_user_analytics_and_pal_caches(self, mock_ds_client_func):
+        from services.datastore import invalidate_user_analytics_cache, invalidate_pal_compatibility_cache
+        mock_ds = MagicMock()
+        mock_ds_client_func.return_value = mock_ds
+
+        entity1 = MagicMock()
+        entity1.key.name = "sergebou::30d"
+        entity2 = MagicMock()
+        entity2.key.name = "otheruser::30d"
+
+        entity_pal1 = MagicMock()
+        entity_pal1.key.name = "sergebou::pal123::30d"
+        entity_pal2 = MagicMock()
+        entity_pal2.key.name = "pal123::sergebou::30d"
+        entity_pal3 = MagicMock()
+        entity_pal3.key.name = "userA::userB::30d"
+
+        mock_ds.query.side_effect = lambda kind: MagicMock(
+            fetch=lambda: [entity1, entity2] if kind == "UserAnalyticsCache" else [entity_pal1, entity_pal2, entity_pal3]
+        )
+
+        invalidate_user_analytics_cache("sergebou")
+        mock_ds.delete_multi.assert_called()
+
+        invalidate_pal_compatibility_cache("sergebou")
+        mock_ds.delete_multi.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

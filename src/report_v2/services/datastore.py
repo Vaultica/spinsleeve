@@ -38,6 +38,38 @@ def invalidate_user_catalog_cache(user_id):
         logger.warning("[%s] Failed to invalidate Datastore UserCatalogCache: %s", user_id, e)
 
 
+def invalidate_user_analytics_cache(user_id):
+    """Deletes cached analytics in Datastore and in-memory cache when new listening events are synced (INFRA-03d)."""
+    try:
+        ds_client = get_datastore_client()
+        query = ds_client.query(kind="UserAnalyticsCache")
+        keys_to_delete = [e.key for e in query.fetch() if e.key.name and e.key.name.startswith(f"{user_id}::")]
+        if keys_to_delete:
+            ds_client.delete_multi(keys_to_delete)
+            logger.info("[%s] Invalidated %d Datastore UserAnalyticsCache entities.", user_id, len(keys_to_delete))
+        
+        from services.analytics import _user_analytics_cache, _user_analytics_cache_time
+        keys_to_del_mem = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
+        for k in keys_to_del_mem:
+            _user_analytics_cache.pop(k, None)
+            _user_analytics_cache_time.pop(k, None)
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate UserAnalyticsCache: %s", user_id, e)
+
+
+def invalidate_pal_compatibility_cache(user_id):
+    """Deletes cached pal compatibility in Datastore when listening events change (INFRA-03c)."""
+    try:
+        ds_client = get_datastore_client()
+        query = ds_client.query(kind="PalCompatibilityCache")
+        keys_to_delete = [e.key for e in query.fetch() if e.key.name and (e.key.name.startswith(f"{user_id}::") or f"::{user_id}::" in e.key.name)]
+        if keys_to_delete:
+            ds_client.delete_multi(keys_to_delete)
+            logger.info("[%s] Invalidated %d Datastore PalCompatibilityCache entities.", user_id, len(keys_to_delete))
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate PalCompatibilityCache: %s", user_id, e)
+
+
 def get_catalog_from_datastore(user_id):
     """Retrieves and decompresses user catalog payload from Cloud Datastore (INFRA-03b)."""
     try:

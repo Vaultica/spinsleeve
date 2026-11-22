@@ -19,14 +19,10 @@ _user_analytics_cache_time = {}
 
 
 def invalidate_user_analytics_cache(user_id):
-    """Deletes cached analytics in Datastore when new listening events are synced (INFRA-03d)."""
-    global _user_analytics_cache, _user_analytics_cache_time
+    """Deletes cached analytics in Datastore and in-memory cache when new listening events are synced (INFRA-03d)."""
     try:
-        keys_to_del = [k for k in _user_analytics_cache if k.startswith(f"{user_id}::")]
-        for k in keys_to_del:
-            _user_analytics_cache.pop(k, None)
-            _user_analytics_cache_time.pop(k, None)
-        logger.info("[%s] Invalidated Datastore UserAnalyticsCache & in-memory analytics cache.", user_id)
+        from services.datastore import invalidate_user_analytics_cache as ds_invalidate_analytics
+        ds_invalidate_analytics(user_id)
     except Exception as e:
         logger.warning("[%s] Failed to invalidate Datastore UserAnalyticsCache: %s", user_id, e)
 
