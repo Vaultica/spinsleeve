@@ -85,9 +85,9 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.7.1`** | 2026-11-21 | 8 | ~300,000 | ~8,000 | **~$0.02** | Album artwork resolution, dynamic SQL deduplication (`RAM`), landing page gatefold art, docs restructuring, 66/66 tests passing. |
 | **`v2.8.0`** | 2026-11-21 | 14 | ~600,000 | ~15,000 | **~$0.05** | Two-tier album enrichment architecture & semantic classification (`APP-16`), NLP macro-genres/moods/tags classifier, MusicBrainz integration, `--re-enrich` incremental quality upgrade mode, 74/74 tests passing. |
 | **`v2.8.1`** | 2026-11-21 | 12 | ~500,000 | ~12,500 | **~$0.04** | Gatefold semantic tag strip UI (`explorer.html`, `pals.html`, `recommend.html`), pipeline candidate & MERGE deduplication on `canonical_album_key`, 75/75 tests passing, Cloud Run revision `spotify-dashboard-beta-00067-z7f`. |
+| **`v2.8.2`** | 2026-11-22 | 5 | ~200,000 | ~5,000 | **~$0.01** | Automatic analytics & pal compatibility cache invalidation upon sync completion, 76/76 unit tests passing. |
 
 ---
 
