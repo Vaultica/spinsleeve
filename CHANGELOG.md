@@ -6,21 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [v2.8.6 - In Progress] — 2026-11-22
-### 🍏 APP-02b: MusicKit JS v3 Frontend Client & Onboarding UI (PR #11)
+## [v2.8.6] — 2026-11-22
+### 🍏 APP-02b: MusicKit JS v3 Frontend Client, Mock Isolation & Production Deployment (PR #11)
 * **What:**
   - **MusicKit JS v3 Integration & Onboarding UI (`src/report_v2/templates/explorer.html`, `src/report_v2/routes/apple_music.py`):**
     - Implemented route-scoped `/beta` isolation preserving Spotify-only default root (`/` / `/crate`).
     - Integrated Apple MusicKit JS v3 script loading, configuration, and authorization workflow.
     - Added header connection dropdown trigger with platform status indicators and Onboarding & Authorization modal supporting Live and Sandbox/Mock Test Collection toggles (enabling instant offline testing and QA without a live Apple Developer subscription).
     - Developed sync progress toasts and platform vinyl badges (` Apple Music`) for cross-platform library attribution.
-  - **Comprehensive Frontend Unit Test Suite (`tests/test_apple_music_frontend.py`):**
-    - Added rigorous unit test coverage for Apple Music frontend routes, authorization flows, and mock catalog synchronization, bringing the total test suite to 97/97 passing unit tests.
+  - **Mock Filtering & Strict Route Isolation (`src/report_v2/services/catalog.py`, `src/report_v2/routes/apple_music.py`):**
+    - Filtered mock album covers and enforced strict Spotify-only isolation on default root (`/` / `/crate`).
+  - **Container Packaging & Production Deployment (`Dockerfile`, `src/report_v2/Dockerfile`):**
+    - Packaged `pipeline_v2` dependency in web container and decoupled `apple_music` from sync.
+    - Executed BigQuery DML cleanup (7 mock rows deleted from `user_saved_albums` and `album_provider_ids`, `user_albums_features_table` refreshed with 0 mock albums remaining, `UserCatalogCache/sergebou` invalidated).
+    - Deployed production revision `spotify-dashboard-beta-00073-r5n` live on `europe-west2` serving 100% traffic, verified HTTP 200 on `https://spinsleeve.cc/` and `https://spinsleeve.cc/beta/`.
+  - **Comprehensive Unit Test Suite (`tests/test_apple_music_frontend.py`, `tests/`):**
+    - Added rigorous unit test coverage, bringing the total test suite to 98/98 passing unit tests cleanly.
     - Pushed branch `feat/app-02b-musickit-frontend` to PR #11. Note: Live Apple Developer Program enrollment (£79) is currently pending.
 * **Why:**
-  - Provides a seamless cross-platform front-end collector onboarding and library exploration experience for Apple Music users while maintaining strict route isolation and robust testability.
+  - Provides a seamless cross-platform front-end collector onboarding and library exploration experience for Apple Music users while maintaining strict route isolation, clean production telemetry, and robust testability.
 * **How:**
-  - Implemented MusicKit JS v3 client workflows, modal templates, source filters, and `tests/test_apple_music_frontend.py`, verifying 97/97 unit tests passing on branch `feat/app-02b-musickit-frontend` (PR #11).
+  - Implemented MusicKit JS v3 client workflows, modal templates, source filters, mock filtering, packaging updates, BQ cleanup, and unit tests (`tests/test_apple_music_frontend.py`), verifying 98/98 unit tests passing on branch `feat/app-02b-musickit-frontend` (PR #11) and deploying live revision `spotify-dashboard-beta-00073-r5n`.
 
 ---
 
