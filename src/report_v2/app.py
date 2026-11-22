@@ -22,6 +22,7 @@ from routes.crate import crate_bp
 from routes.analytics import analytics_bp
 from routes.pals import pals_bp
 from routes.admin import admin_bp
+from routes.apple_music import apple_music_bp
 
 # Re-export service helpers, caches, and template strings for unit tests & backward compatibility
 from services.catalog import (
@@ -73,6 +74,7 @@ app.register_blueprint(crate_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(pals_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(apple_music_bp)
 
 
 def get_secret(secret_name, default=""):
