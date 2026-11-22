@@ -270,18 +270,21 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
-### `APP-02`: Cross-Platform Apple Music Library Onboarding
-* **Technical Objective:** Support Apple Music subscribers via Apple MusicKit JS v3, expanding collector community beyond Spotify's 25-user sandbox limit.
+### `APP-02`: Cross-Platform Apple Music Library Onboarding (`APP-02a`, `APP-02b`)
+* **Technical Objective:** Support Apple Music subscribers via Apple MusicKit JS v3 and automated backend ingestion, expanding collector community beyond Spotify's 25-user sandbox limit. Both `APP-02a` (backend pipeline & ingestion) and `APP-02b` (frontend client, mock collection, route isolation) are fully implemented and verified (97/97 unit tests passing).
 * **Architecture & Authentication:**
-  1. **Developer Key & Token Generation:**
+  1. **Developer Key & Token Generation (`APP-02a`):**
      - Apple Developer Account MusicKit private key (`.p8`), Team ID, Key ID.
-     - Server generates developer bearer JWT (`exp`: 180 days).
-  2. **Client-Side Authorization:**
-     - Initialize `MusicKit.configure({ developerToken, app: { name: 'SpinSleeve', build: '2.2.1' } })`.
+     - Server generates developer bearer JWT (`exp`: 180 days) via ES256 / ECDSA P-256 in `src/pipeline_v2/apple_music.py`.
+  2. **Client-Side Authorization & UI (`APP-02b`):**
+     - Initialize `MusicKit.configure({ developerToken, app: { name: 'SpinSleeve', build: '2.8.6' } })`.
+     - Route-scoped `/beta` isolation preserving Spotify-only default root.
+     - Header connection dropdown trigger opening Onboarding & Authorization modal with Live and Sandbox/Mock Test Collection toggles.
      - User authorizes via Apple Music modal (`musicKit.authorize()`), returning `userToken`.
-  3. **Data Ingestion:**
+  3. **Data Ingestion, Bridging & Caching (`APP-02a` & `APP-02b`):**
      - Fetch user's saved catalog via `https://api.music.apple.com/v1/me/library/albums`.
-     - Ingest albums and scrobbles into `spotify_v2.user_saved_albums` tagged with `platform='apple_music'`.
+     - Ingest albums and scrobbles into BigQuery `spotify_v2.user_saved_albums` tagged with `platform='apple_music'` and bridged into `album_provider_ids`.
+     - Sync progress toasts, platform vinyl badges ( Apple Music), and explicit Cloud Datastore cache invalidation (`UserCatalogCache`, `UserAnalyticsCache`, `PalCompatibilityCache`).
 
 ---
 

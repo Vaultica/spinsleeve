@@ -37,7 +37,8 @@ def sync_apple_music_library(
     user_id: str,
     music_user_token: str,
     table_suffix: str = "",
-    max_albums: Optional[int] = None
+    max_albums: Optional[int] = None,
+    mock_mode: bool = False
 ) -> Dict[str, Any]:
     """
     Syncs the user's Apple Music saved library into BigQuery user_saved_albums.
@@ -45,12 +46,15 @@ def sync_apple_music_library(
     """
     if not user_id:
         raise ValueError("user_id is required for Apple Music sync")
-    if not music_user_token:
+    if not music_user_token and not mock_mode:
         raise AppleMusicAuthError("music_user_token must be provided")
+
+    token = music_user_token or ("mock_apple_music_token" if mock_mode else "")
 
     return sync_apple_music_saved_albums(
         user_id=user_id,
-        music_user_token=music_user_token,
+        music_user_token=token,
         table_suffix=table_suffix,
-        max_albums=max_albums
+        max_albums=max_albums,
+        mock_mode=mock_mode
     )

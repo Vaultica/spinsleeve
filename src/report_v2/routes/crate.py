@@ -192,9 +192,15 @@ def beta_index():
     unowned_albums = fetch_unowned_album_data(user_id)
     initial_tab = request.args.get("tab", "saved")
 
+    is_beta = request.path.startswith("/beta")
+    albums = data["albums"]
+    if not is_beta:
+        # Default route is reserved strictly for Spotify-only experience
+        albums = [a for a in albums if a.get("platform") != "apple_music"]
+
     return render_template(
         'explorer.html',
-        albums=data["albums"],
+        albums=albums,
         unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
         kpis=data.get("kpis", {}),

@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 import logging
 
-from flask import Flask, session, Response
+from flask import Flask, session, Response, request
 from google.cloud import secretmanager, bigquery
 
 from app_config import APP_VERSION, PROJECT_ID, ICON_A_SVG, ICON_GATEFOLD_SVG, ICON_FAVICON_SVG, ADMIN_USER_IDS, AVATAR_PRESETS
@@ -106,9 +106,11 @@ def inject_globals():
         and session.get("role") == "admin"
         and not session.get("is_impersonating", False)
     )
+    is_beta = bool(request and request.path and request.path.startswith("/beta"))
     return {
         "app_version": APP_VERSION,
         "is_admin": is_admin,
+        "is_beta": is_beta,
         "avatar_presets": AVATAR_PRESETS,
         "avatar_svgs": AVATAR_SVGS
     }

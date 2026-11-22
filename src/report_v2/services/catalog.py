@@ -140,6 +140,9 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 elif "summary" not in a and "album_description" in a:
                     a["summary"] = a["album_description"]
 
+                if "platform" not in a:
+                    a["platform"] = "apple_music" if safe_str(a.get("album_id")).startswith("am_") else "spotify"
+
             # Dynamically compute top_genres strictly from macro_genres present in cached albums
             macro_genre_counter = Counter()
             for a in cached_albums:
@@ -266,6 +269,16 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
             quality_score = safe_float(row.get("enrichment_quality_score"), 0.0)
 
+            platform_val = safe_str(row.get("platform"))
+            if not platform_val:
+                platform_val = "apple_music" if aid.startswith("am_") else "spotify"
+
+            if platform_val == "apple_music":
+                raw_am_id = aid.replace("am_mock_", "").replace("am_", "")
+                alb_url = f"https://music.apple.com/album/{raw_am_id}" if raw_am_id else f"https://music.apple.com/search?term={aname}"
+            else:
+                alb_url = f"https://open.spotify.com/album/{aid}" if aid else ""
+
             albums.append({
                 "album_id": aid,
                 "album_name": aname,
@@ -288,7 +301,8 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 "derived_moods": moods_list,
                 "descriptive_tags": tags_list,
                 "enrichment_quality_score": quality_score,
-                "album_url": f"https://open.spotify.com/album/{aid}" if aid else "",
+                "album_url": alb_url,
+                "platform": platform_val,
                 "has_gatefold": has_gf,
                 "image": img_url,
                 "artist_name": arname,

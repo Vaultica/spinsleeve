@@ -51,13 +51,15 @@ def login():
 @auth_bp.route("/beta/dev-login")
 def dev_login():
     """Local development login helper to bypass Spotify OAuth when running locally."""
-    session["user_id"] = "sergebou"
-    session["display_name"] = "Serge"
-    session["role"] = "admin"
+    user = request.args.get("user", "sergebou")
+    session["user_id"] = user
+    session["display_name"] = "Serge" if user == "sergebou" else user
+    session["role"] = "admin" if user in ADMIN_USER_IDS else "user"
     session["admin_user_id"] = "sergebou"
     session["pals_opt_in"] = True
     session["is_impersonating"] = False
-    return redirect("/")
+    target = "/beta" if request.path.startswith("/beta") else "/"
+    return redirect(target)
 
 
 @auth_bp.route("/roadmap")

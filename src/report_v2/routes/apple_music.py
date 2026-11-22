@@ -62,13 +62,19 @@ def api_sync_library():
     if not user_id:
         return jsonify({"status": "error", "message": "Authentication required"}), 401
 
-    # Extract user token from header or JSON payload
-    music_user_token = request.headers.get("Music-User-Token")
-    if not music_user_token:
-        body = request.get_json(silent=True) or {}
-        music_user_token = body.get("music_user_token")
+    # Extract user token and mock mode from header or JSON payload
+    body = request.get_json(silent=True) or {}
+    music_user_token = request.headers.get("Music-User-Token") or body.get("music_user_token")
+    mock_mode = bool(
+        body.get("mock_mode", False)
+        or (music_user_token and music_user_token.startswith("mock_"))
+        or request.headers.get("X-Mock-Mode") == "true"
+    )
 
-    if not music_user_token:
+    if mock_mode and not music_user_token:
+        music_user_token = "mock_apple_music_token"
+
+    if not music_user_token and not mock_mode:
         return jsonify({
             "status": "error",
             "message": "Missing required 'Music-User-Token' in headers or request body."
@@ -77,11 +83,14 @@ def api_sync_library():
     try:
         # Check for optional QA table suffix in development/testing
         table_suffix = request.headers.get("X-Table-Suffix", "")
-        result = sync_apple_music_library(
-            user_id=user_id,
-            music_user_token=music_user_token,
-            table_suffix=table_suffix
-        )
+        sync_kwargs = {
+            "user_id": user_id,
+            "music_user_token": music_user_token,
+            "table_suffix": table_suffix
+        }
+        if mock_mode:
+            sync_kwargs["mock_mode"] = True
+        result = sync_apple_music_library(**sync_kwargs)
         return jsonify(result), 200
 
     except AppleMusicAuthError as e:
