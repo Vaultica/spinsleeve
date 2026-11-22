@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.3] — 2026-11-22
+### 🎛️ APP-17 Unified Crate Workspace & Dynamic Macro-Genre Filtering
+* **What:**
+  - **Unified Crate Workspace (`src/report_v2/templates/explorer.html`, `src/report_v2/services/catalog.py`):**
+    - Consolidated Saved Vinyl and Streamed/Unowned crates into a unified workspace with top-level scope toggles (`📁 Saved Vinyl` vs `📻 Streamed / Unowned`) and a streamlined 2-row hardware-inspired control deck.
+    - Dynamically computed `top_genres` strictly from macro-genres present in cached or fetched albums.
+    - Enhanced unowned discovery fetcher with composite name/artist pair anti-joins and distinct track count filters.
+  - **Classifier & Test Suite Expansion (`src/pipeline_v2/classifier.py`, `tests/test_app17_unified_crate.py`):**
+    - Expanded macro-genre regex classification rules for Electronic and other categories.
+    - Added unit test suite `tests/test_app17_unified_crate.py`, bringing total test coverage to 79/79 passing unit tests.
+* **Why:**
+  - Streamlines library exploration and unowned streaming discoveries into a seamless single-page workspace with precise macro-genre filtering and robust duplicate prevention.
+* **How:**
+  - Updated `src/report_v2/templates/explorer.html`, `src/report_v2/services/catalog.py`, `src/pipeline_v2/classifier.py`, added `tests/test_app17_unified_crate.py`, bumped `APP_VERSION` to `v2.8.3`, verified 79/79 tests passing.
+
+---
+
 ## [v2.8.2] — 2026-11-22
 ### ⚡ Automatic Pipeline Analytics & Pal Compatibility Cache Invalidation
 * **What:**

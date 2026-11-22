@@ -140,6 +140,15 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 elif "summary" not in a and "album_description" in a:
                     a["summary"] = a["album_description"]
 
+            # Dynamically compute top_genres strictly from macro_genres present in cached albums
+            macro_genre_counter = Counter()
+            for a in cached_albums:
+                mg = safe_str(a.get("macro_genre"), "")
+                if mg and mg not in ("Eclectic / Other", "Unknown"):
+                    macro_genre_counter[mg] += 1
+
+            ds_cached["top_genres"] = [g for g, count in macro_genre_counter.most_common(15)]
+
             if "kpis" not in ds_cached:
                 tot_alb = len(cached_albums)
                 p_alb = sum(1 for a in cached_albums if a.get("total_plays", 0) > 0 or a.get("album_track_plays", 0) > 0)
@@ -182,9 +191,14 @@ def fetch_user_album_data(user_id, force_refresh=False):
         df = bq_client.query(query, job_config=job_config).to_dataframe()
 
         albums = []
+        macro_genre_counter = Counter()
         genre_counter = Counter()
 
         for _, row in df.iterrows():
+            mg = safe_str(row.get("macro_genre"), "")
+            if mg and mg not in ("Eclectic / Other", "Unknown"):
+                macro_genre_counter[mg] += 1
+
             genres_str = safe_str(row.get("album_genres"), "")
             if genres_str:
                 for g in genres_str.split(","):
@@ -314,7 +328,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
             "top_album_plays": top_album_plays
         }
 
-        top_genres = [g for g, count in genre_counter.most_common(10)]
+        top_genres = [g for g, count in macro_genre_counter.most_common(15)]
         payload = {"albums": albums, "top_genres": top_genres, "kpis": kpis}
 
         save_catalog_to_datastore(user_id, payload)
@@ -343,6 +357,11 @@ def fetch_unowned_album_data(user_id, horizon="all"):
           SELECT DISTINCT canonical_album_key
           FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
           WHERE user_id = @user_id AND canonical_album_key IS NOT NULL AND canonical_album_key != ''
+        ),
+        owned_pairs AS (
+          SELECT DISTINCT LOWER(TRIM(album_name)) as album_name, LOWER(TRIM(artist_name)) as artist_name
+          FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+          WHERE user_id = @user_id AND album_name IS NOT NULL AND artist_name IS NOT NULL
         )
         SELECT 
           p.album_name,
@@ -354,6 +373,11 @@ def fetch_unowned_album_data(user_id, horizon="all"):
         FROM `{PLAYBACK_HISTORY_TABLE}` p
         WHERE p.user_id = @user_id
           AND (p.canonical_album_key IS NULL OR p.canonical_album_key NOT IN (SELECT canonical_album_key FROM owned_keys))
+          AND NOT EXISTS (
+            SELECT 1 FROM owned_pairs op
+            WHERE LOWER(TRIM(p.album_name)) = op.album_name
+              AND LOWER(TRIM(p.artist_name)) = op.artist_name
+          )
           {horizon_clause}
         GROUP BY p.album_name, p.artist_name
         HAVING distinct_tracks >= 2
