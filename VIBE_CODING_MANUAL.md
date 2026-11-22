@@ -54,13 +54,29 @@ Subagents execute in isolated context loops on `gemini-3.1-flash-lite` so long t
 
 ---
 
-## 5. Context Hygiene (`.geminiignore`)
+## 5. Parallel Spec-Driven Builds (Git Worktrees)
+
+When running multiple autonomous agents in parallel (see `AGENT_WORKFLOW_GUARDRAILS.md`):
+
+1. **Spin Up One Worktree per Feature ID:**
+   ```bash
+   git worktree add ../spinsleeve-app-16 -b feat/app-16-semantic-enrichment
+   git worktree add ../spinsleeve-polish-14 -b feat/polish-14-unified-crate
+   ```
+
+2. **Isolate Feature Environment & Ports:**
+   - Use distinct local ports or isolated test runs.
+   - Never commit version bumps or shared config changes in parallel branches.
+
+---
+
+## 6. Context Hygiene (`.geminiignore`)
 
 `.geminiignore` excludes `.venv/`, `__pycache__/`, `.pytest_cache/`, `.git/`, `.env`, and temporary artifacts so file searches stay fast and cheap. Restart Gemini CLI after editing `.geminiignore`.
 
 ---
 
-## 6. Fast Developer Cheatsheet
+## 7. Fast Developer Cheatsheet
 
 ```bash
 # Run full standardized unit test suite:

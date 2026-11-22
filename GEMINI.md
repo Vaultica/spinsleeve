@@ -36,6 +36,9 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
    - `pipeline_v2/sync.py` MUST skip users where `sync_paused == True`.
 8. **Python Module Headers & Modularity:**
    - Every `.py` file MUST begin with a module docstring stating its architectural purpose, responsibilities, and key exports. Keep modules focused (<400 lines where practical).
+9. **Parallel Agent & Dev/QA Isolation (`AGENT_WORKFLOW_GUARDRAILS.md`):**
+  - Parallel or unattended sessions MUST run in an isolated git worktree/branch (`feat/<feature-id>-<slug>`) with declared file ownership; never edit `CHANGELOG.md`, `app_config.py` (`APP_VERSION`), or `firebase.json` inside parallel feature branches.
+  - Pipeline, schema, and backfill changes MUST target feature-suffixed BigQuery QA tables (e.g., `*_app_16`) and mocked or namespaced Datastore keys—never live production tables or live `User`/cache entities.
 
 ---
 
@@ -52,7 +55,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
   * `enrich.py`: Wikipedia/Discogs scraper + NLP mood/genre classifier populating `album_enriched_metadata`.
 * **`tests/`:** `unittest` suite covering invariants, caching, routes, and pipelines.
 * **`.gemini/agents/`:** Specialized subagents (`reviewer`, `tester`, `scribe`, `deploy_assistant`, `session_closer`).
-* **Docs:** `VIBE_CODING_MANUAL.md` (Agent Orchestration), `PROJECT_ROADMAP.md` (What/Why & Backlog), `ROADMAP_TECHNICAL_SPECS.md` (Future Specs), `ARCHITECTURE_AND_FEATURES.md` (As-Built Architecture & Features), `CHANGELOG.md` (Full Release History), `INFRASTRUCTURE_RUNBOOK.md` (DR & DDL).
+* **Docs:** `VIBE_CODING_MANUAL.md` (Agent Orchestration), `AGENT_WORKFLOW_GUARDRAILS.md` (Parallel & Autonomous Safety), `PROJECT_ROADMAP.md` (What/Why & Backlog), `ROADMAP_TECHNICAL_SPECS.md` (Schemas/Contracts), `ARCHITECTURE_AND_FEATURES.md` (As-Built Ledger), `CHANGELOG.md` (Full Release History), `INFRASTRUCTURE_RUNBOOK.md` (DR & DDL).
 
 ---
 
@@ -93,10 +96,10 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 ## 7. Agent Autonomy & Operational Workflow
 
-* **Autonomous Code & Test Modifications:** 
+* **Autonomous Code & Test Modifications:**
   - The agent is fully authorized to edit source code (`src/`), test files (`tests/`), and configuration files directly when fulfilling user feature requests or bug fixes during active development sessions.
-* **Gated Actions (Explicit Approval Required):**
-  - **Live Deployments:** Pushing code/containers to Cloud Run (`gcloud run deploy`), Firebase Hosting, or production remotes requires explicit user sign-off.
-  - **Data Changes:** Destructive BigQuery DML operations, schema migrations, or production Datastore modifications require prior user confirmation.
+* **Gated Actions (Explicit Approval Required — Never Execute in Unattended / Non-Interactive Mode):**
+  - **Live Deployments & Remote Git:** Pushing code/containers to Cloud Run (`gcloud run deploy`, `gcloud run jobs deploy`), Firebase Hosting (`firebase deploy`), Cloud Scheduler updates, or `git push` require explicit user sign-off.
+  - **Data & Schema Changes:** BigQuery DDL/DML on live `spotify_v2` tables (non-suffixed), schema migrations, or production Datastore writes/invalidations require prior user confirmation.
 * **Validation Standard:**
   - Every code modification must be verified by running the unit test suite (`.venv/bin/python3 -m unittest discover tests`) to ensure all tests pass successfully prior to reporting completion.
