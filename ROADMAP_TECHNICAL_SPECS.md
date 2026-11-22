@@ -270,8 +270,8 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
-### `APP-02`: Cross-Platform Apple Music Library Onboarding (`APP-02a`, `APP-02b`)
-* **Technical Objective:** Support Apple Music subscribers via Apple MusicKit JS v3 and automated backend ingestion, expanding collector community beyond Spotify's 25-user sandbox limit. Both `APP-02a` (backend pipeline & ingestion) and `APP-02b` (frontend client, mock collection, route isolation) are fully implemented and verified (97/97 unit tests passing).
+### `APP-02`: Cross-Platform Apple Music Library Onboarding (`APP-02a`, `APP-02b`) [🔄 **In Progress** — PR #11 on `feat/app-02b-musickit-frontend`]
+* **Technical Objective:** Support Apple Music subscribers via Apple MusicKit JS v3 and automated backend ingestion, expanding collector community beyond Spotify's 25-user sandbox limit. `APP-02a` (backend pipeline & ingestion) is completed (`v2.8.5`). `APP-02b` (frontend client, mock collection, route isolation) is fully implemented with 97/97 unit tests passing on branch `feat/app-02b-musickit-frontend` (PR #11). Live Apple Developer Program enrollment (£79) is currently pending.
 * **Architecture & Authentication:**
   1. **Developer Key & Token Generation (`APP-02a`):**
      - Apple Developer Account MusicKit private key (`.p8`), Team ID, Key ID.

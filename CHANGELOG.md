@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.6 - In Progress] — 2026-11-22
+### 🍏 APP-02b: MusicKit JS v3 Frontend Client & Onboarding UI (PR #11)
+* **What:**
+  - **MusicKit JS v3 Integration & Onboarding UI (`src/report_v2/templates/explorer.html`, `src/report_v2/routes/apple_music.py`):**
+    - Implemented route-scoped `/beta` isolation preserving Spotify-only default root (`/` / `/crate`).
+    - Integrated Apple MusicKit JS v3 script loading, configuration, and authorization workflow.
+    - Added header connection dropdown trigger with platform status indicators and Onboarding & Authorization modal supporting Live and Sandbox/Mock Test Collection toggles (enabling instant offline testing and QA without a live Apple Developer subscription).
+    - Developed sync progress toasts and platform vinyl badges (` Apple Music`) for cross-platform library attribution.
+  - **Comprehensive Frontend Unit Test Suite (`tests/test_apple_music_frontend.py`):**
+    - Added rigorous unit test coverage for Apple Music frontend routes, authorization flows, and mock catalog synchronization, bringing the total test suite to 97/97 passing unit tests.
+    - Pushed branch `feat/app-02b-musickit-frontend` to PR #11. Note: Live Apple Developer Program enrollment (£79) is currently pending.
+* **Why:**
+  - Provides a seamless cross-platform front-end collector onboarding and library exploration experience for Apple Music users while maintaining strict route isolation and robust testability.
+* **How:**
+  - Implemented MusicKit JS v3 client workflows, modal templates, source filters, and `tests/test_apple_music_frontend.py`, verifying 97/97 unit tests passing on branch `feat/app-02b-musickit-frontend` (PR #11).
+
+---
+
 ## [v2.8.5] — 2026-11-22
 ### 🍏 APP-02a: Apple Music Backend Pipeline & JWT Ingestion Service
 * **What:**

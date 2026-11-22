@@ -68,6 +68,9 @@ src/report_v2/
 ### Apple Music Backend Pipeline & JWT Ingestion (`APP-02a`)
 * **Workflow:** Automated ES256 developer JWT token minting and caching via ECDSA P-256 and SHA-256 (`src/pipeline_v2/apple_music.py`), fetching user library albums from Apple Music API (`GET /v1/me/library/albums`) with cursor pagination and rate-limit handling, normalizing into `user_saved_albums`, bridging via `album_provider_ids` (`provider='apple_music'`), and invalidating Cloud Datastore caches.
 
+### Apple MusicKit JS v3 Frontend Client & Onboarding UI (`APP-02b` - In Progress / PR #11)
+* **Workflow:** Route-scoped `/beta` isolation (`src/report_v2/routes/apple_music.py`, `src/report_v2/templates/explorer.html`) preserving Spotify-only default root, MusicKit JS v3 script integration, header connection dropdown trigger, Onboarding & Authorization modal with Live and Sandbox/Mock Test Collection toggles (allowing instant offline testing and QA without live Apple Developer subscription), sync progress toasts, platform vinyl badges ( Apple Music), and library source filters. Verified by `tests/test_apple_music_frontend.py` (97/97 total tests passing). Live Apple Developer Program enrollment (£79) currently pending.
+
 ---
 
 ## 4. Deep-Dive: Metadata Enrichment Pipeline (`src/pipeline_v2/enrich.py`)
