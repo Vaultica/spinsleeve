@@ -16,7 +16,7 @@ Key Exports:
 """
 
 import os
-import sys
+import re
 import time
 import json
 import base64
@@ -32,9 +32,30 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
-from pipeline_v2.sync import compute_canonical_album_key
-
 logger = logging.getLogger("spinsleeve_apple_music")
+
+EDITION_BLACKLIST = [
+    "deluxe", "remastered", "anniversary", "edition", "version", "reissue",
+    "expanded", "collector", "live", "acoustic", "mono", "stereo", "remix",
+    "deluxe edition", "anniversary edition", "expanded edition", "remaster",
+    "archive collection", "archive", "super deluxe", "remastered edition",
+    "collector's edition", "ultimate edition"
+]
+
+
+def compute_canonical_album_key(artist_name: str, album_name: str) -> str:
+    """Computes a canonical sibling key for grouping editions (e.g. Deluxe vs Standard)."""
+    if not artist_name or not album_name:
+        return ""
+    artist = str(artist_name).lower().strip()
+    album = str(album_name).lower().strip()
+    pattern_paren = r'\s*\((?:' + '|'.join(EDITION_BLACKLIST) + r')[^)]*\)'
+    pattern_bracket = r'\s*\[(?:' + '|'.join(EDITION_BLACKLIST) + r')[^\]]*\]'
+    album = re.sub(pattern_paren, '', album, flags=re.IGNORECASE)
+    album = re.sub(pattern_bracket, '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s*-\s*(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix).*$', '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s+', ' ', album).strip()
+    return f"{artist}::{album}"
 
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
 DATASET_V2 = "spotify_v2"
