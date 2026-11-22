@@ -416,7 +416,17 @@
     </div>
 
     <script>
-        const ALL_ALBUMS = {{ albums | tojson }};
+        {% if not is_beta %}
+        const ALL_ALBUMS = ({{ albums | tojson }}).filter(a => {
+            const aid = (a.album_id || '');
+            return a.platform !== 'apple_music' && !aid.startsWith('am_') && !aid.startsWith('mock_') && !a.is_mock;
+        });
+        {% else %}
+        const ALL_ALBUMS = ({{ albums | tojson }}).filter(a => {
+            const aid = (a.album_id || '');
+            return !aid.startsWith('am_mock_') && !aid.startsWith('mock_') && !a.is_mock;
+        });
+        {% endif %}
         let selectedTarget = 'heavy_30d';
         let selectedHorizon = '30d';
         let selectedMode = 'favorites';

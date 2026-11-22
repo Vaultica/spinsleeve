@@ -595,7 +595,17 @@
     </div>
 
     <script>
-        const ALL_ALBUMS = {{ albums | tojson }};
+        {% if not is_beta %}
+        const ALL_ALBUMS = ({{ albums | tojson }}).filter(a => {
+            const aid = (a.album_id || '');
+            return a.platform !== 'apple_music' && !aid.startsWith('am_') && !aid.startsWith('mock_') && !a.is_mock;
+        });
+        {% else %}
+        const ALL_ALBUMS = ({{ albums | tojson }}).filter(a => {
+            const aid = (a.album_id || '');
+            return !aid.startsWith('am_mock_') && !aid.startsWith('mock_') && !a.is_mock;
+        });
+        {% endif %}
         const UNOWNED_ALBUMS = {{ (unowned_albums or []) | tojson }};
         let filteredAlbums = [...ALL_ALBUMS];
         let filteredUnowned = [...UNOWNED_ALBUMS];
@@ -1059,6 +1069,11 @@
             else selectedTarget = 'all';
 
             filteredAlbums = ALL_ALBUMS.filter(a => {
+                const aid = (a.album_id || '');
+                if (aid.startsWith('am_mock_') || aid.startsWith('mock_') || a.is_mock) return false;
+                {% if not is_beta %}
+                if (a.platform === 'apple_music' || aid.startsWith('am_')) return false;
+                {% endif %}
                 const matchQ = !query || a.album_name.toLowerCase().includes(query) || a.album_artist_name.toLowerCase().includes(query);
                 const matchG = genre === "all" || 
                                (a.macro_genre && (a.macro_genre.toLowerCase() === genre || a.macro_genre.toLowerCase().includes(genre))) || 

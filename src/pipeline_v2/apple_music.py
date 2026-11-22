@@ -232,6 +232,7 @@ def normalize_apple_music_album(item: Dict[str, Any], user_id: str) -> Dict[str,
         artist_id = safe_str(artists_data[0].get("id"), default=None)
 
     canonical_key = compute_canonical_album_key(raw_artist_name, raw_album_name)
+    is_mock_album = bool(album_id.startswith("am_mock_") or album_id.startswith("mock_"))
 
     return {
         "user_id": str(user_id),
@@ -249,7 +250,8 @@ def normalize_apple_music_album(item: Dict[str, Any], user_id: str) -> Dict[str,
         "image_url": image_url,
         "genres": genres,
         "canonical_album_key": canonical_key,
-        "platform": "apple_music"
+        "platform": "apple_music",
+        "is_mock": is_mock_album
     }
 
 
@@ -268,7 +270,7 @@ def parse_apple_music_library(items: List[Dict[str, Any]], user_id: str) -> pd.D
             "user_id", "album_id", "album_uri", "album_name", "artist_id",
             "artist_name", "added_at", "release_date", "release_year",
             "tracks_total", "album_type", "label", "image_url", "genres",
-            "canonical_album_key", "platform"
+            "canonical_album_key", "platform", "is_mock"
         ])
 
     df = pd.DataFrame(rows)
@@ -391,6 +393,7 @@ def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
                 "releaseDate": "1997-05-21",
                 "trackCount": 12,
                 "recordLabel": "XL Recordings",
+                "dateAdded": "2018-05-21T12:00:00Z",
                 "artwork": {
                     "url": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/a4/82/3d/a4823d14-3686-218f-2879-11c50352ef2e/{w}x{h}bb.jpg",
                     "width": 1400,
@@ -408,6 +411,7 @@ def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
                 "releaseDate": "2001-03-12",
                 "trackCount": 14,
                 "recordLabel": "Parlophone France",
+                "dateAdded": "2019-03-12T10:00:00Z",
                 "artwork": {
                     "url": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/e0/75/ca/e075caec-c6ec-07ec-d4c3-58586f4a86f1/{w}x{h}bb.jpg",
                     "width": 1400,
@@ -425,6 +429,7 @@ def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
                 "releaseDate": "2015-03-15",
                 "trackCount": 16,
                 "recordLabel": "Top Dawg Entertainment / Aftermath",
+                "dateAdded": "2020-04-01T15:00:00Z",
                 "artwork": {
                     "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/71/f1/b7/71f1b70d-f2eb-cf0d-5872-9fbda9278bf6/{w}x{h}bb.jpg",
                     "width": 1400,
@@ -442,6 +447,7 @@ def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
                 "releaseDate": "1977-02-04",
                 "trackCount": 11,
                 "recordLabel": "Warner Records",
+                "dateAdded": "2017-02-14T09:00:00Z",
                 "artwork": {
                     "url": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/4b/36/53/4b365318-6c84-18fa-35e6-ec083b7083a2/{w}x{h}bb.jpg",
                     "width": 1400,
@@ -459,6 +465,7 @@ def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
                 "releaseDate": "1959-08-17",
                 "trackCount": 5,
                 "recordLabel": "Columbia / Legacy",
+                "dateAdded": "2016-08-17T11:00:00Z",
                 "artwork": {
                     "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/bb/e4/22/bbe42273-df33-3151-51fb-0e42d99d1461/{w}x{h}bb.jpg",
                     "width": 1400,
@@ -476,6 +483,7 @@ def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
                 "releaseDate": "1994-08-22",
                 "trackCount": 11,
                 "recordLabel": "Go! Beat",
+                "dateAdded": "2019-08-22T14:00:00Z",
                 "artwork": {
                     "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/3d/bf/99/3dbf999f-7e8c-8f43-aeb6-928f24419cb7/{w}x{h}bb.jpg",
                     "width": 1400,
@@ -493,6 +501,7 @@ def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
                 "releaseDate": "1985-09-16",
                 "trackCount": 12,
                 "recordLabel": "Fish People",
+                "dateAdded": "2018-09-16T16:00:00Z",
                 "artwork": {
                     "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/28/bf/ee/28bfee82-a554-ce13-7ff1-ae28fcfece4a/{w}x{h}bb.jpg",
                     "width": 1400,

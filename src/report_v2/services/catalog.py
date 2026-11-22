@@ -30,6 +30,7 @@ def fetch_landing_showcase_albums():
         SELECT album_id, album_name, album_artist_name, album_image_url, release_year
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         WHERE album_image_url IS NOT NULL AND album_image_url != ''
+          AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         GROUP BY album_id, album_name, album_artist_name, album_image_url, release_year
         ORDER BY RAND()
         LIMIT 12
@@ -114,6 +115,20 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
         if ds_cached:
             cached_albums = ds_cached.get("albums", [])
+            # Defensive guard: purge any mock Apple Music albums from cached catalog
+            clean_cached = [
+                a for a in cached_albums
+                if not (
+                    safe_str(a.get("album_id")).startswith("am_mock_")
+                    or safe_str(a.get("album_id")).startswith("mock_")
+                    or a.get("is_mock") is True
+                )
+            ]
+            if len(clean_cached) != len(cached_albums):
+                logger.info("[%s] Purged %d mock albums from Datastore UserCatalogCache", user_id, len(cached_albums) - len(clean_cached))
+                ds_cached["albums"] = clean_cached
+
+            cached_albums = ds_cached.get("albums", [])
             for a in cached_albums:
                 if "album_image_url" not in a and "image" in a:
                     a["album_image_url"] = a["image"]
@@ -140,8 +155,11 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 elif "summary" not in a and "album_description" in a:
                     a["summary"] = a["album_description"]
 
-                if "platform" not in a:
-                    a["platform"] = "apple_music" if safe_str(a.get("album_id")).startswith("am_") else "spotify"
+                aid = safe_str(a.get("album_id"))
+                if aid.startswith("am_") or aid.startswith("mock_"):
+                    a["platform"] = "apple_music"
+                elif "platform" not in a:
+                    a["platform"] = "spotify"
 
             # Dynamically compute top_genres strictly from macro_genres present in cached albums
             macro_genre_counter = Counter()
@@ -186,6 +204,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
             macro_genre, derived_moods, descriptive_tags, enrichment_quality_score
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         WHERE user_id = @user_id
+          AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         ORDER BY album_plays_30d DESC, album_plays DESC
         """
         job_config = bigquery.QueryJobConfig(
@@ -198,6 +217,9 @@ def fetch_user_album_data(user_id, force_refresh=False):
         genre_counter = Counter()
 
         for _, row in df.iterrows():
+            aid = safe_str(row.get("album_id"))
+            if aid.startswith("am_mock_") or aid.startswith("mock_"):
+                continue
             mg = safe_str(row.get("macro_genre"), "")
             if mg and mg not in ("Other / Unclassified", "Unknown"):
                 macro_genre_counter[mg] += 1
@@ -370,12 +392,18 @@ def fetch_unowned_album_data(user_id, horizon="all"):
         WITH owned_keys AS (
           SELECT DISTINCT canonical_album_key
           FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-          WHERE user_id = @user_id AND canonical_album_key IS NOT NULL AND canonical_album_key != ''
+          WHERE user_id = @user_id 
+            AND canonical_album_key IS NOT NULL 
+            AND canonical_album_key != ''
+            AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         ),
         owned_pairs AS (
           SELECT DISTINCT LOWER(TRIM(album_name)) as album_name, LOWER(TRIM(artist_name)) as artist_name
           FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-          WHERE user_id = @user_id AND album_name IS NOT NULL AND artist_name IS NOT NULL
+          WHERE user_id = @user_id 
+            AND album_name IS NOT NULL 
+            AND artist_name IS NOT NULL
+            AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         )
         SELECT 
           p.album_name,

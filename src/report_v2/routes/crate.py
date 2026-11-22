@@ -194,9 +194,24 @@ def beta_index():
 
     is_beta = request.path.startswith("/beta")
     albums = data["albums"]
+    # Defensive filter: strictly purge any mock albums
+    albums = [
+        a for a in albums
+        if not (
+            str(a.get("album_id", "")).startswith("am_mock_")
+            or str(a.get("album_id", "")).startswith("mock_")
+            or a.get("is_mock") is True
+        )
+    ]
     if not is_beta:
-        # Default route is reserved strictly for Spotify-only experience
-        albums = [a for a in albums if a.get("platform") != "apple_music"]
+        # Default route (live app root) is reserved strictly for Spotify-only experience
+        albums = [
+            a for a in albums
+            if a.get("platform") != "apple_music"
+            and not str(a.get("album_id", "")).startswith("am_")
+            and not str(a.get("album_id", "")).startswith("mock_")
+            and not a.get("is_mock")
+        ]
 
     return render_template(
         'explorer.html',
@@ -221,9 +236,28 @@ def beta_recommend():
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
     unowned_albums = fetch_unowned_album_data(user_id)
 
+    is_beta = request.path.startswith("/beta")
+    albums = data["albums"]
+    albums = [
+        a for a in albums
+        if not (
+            str(a.get("album_id", "")).startswith("am_mock_")
+            or str(a.get("album_id", "")).startswith("mock_")
+            or a.get("is_mock") is True
+        )
+    ]
+    if not is_beta:
+        albums = [
+            a for a in albums
+            if a.get("platform") != "apple_music"
+            and not str(a.get("album_id", "")).startswith("am_")
+            and not str(a.get("album_id", "")).startswith("mock_")
+            and not a.get("is_mock")
+        ]
+
     return render_template(
         'explorer.html',
-        albums=data["albums"],
+        albums=albums,
         unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
         kpis=data.get("kpis", {}),

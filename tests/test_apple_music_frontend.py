@@ -124,7 +124,7 @@ class TestAppleMusicFrontendAndMockSync(unittest.TestCase):
                         "play_count_30d": 5
                     },
                     {
-                        "album_id": "am_mock_1440857781",
+                        "album_id": "am_1440857781",
                         "album_name": "OK Computer",
                         "album_artist_name": "Radiohead",
                         "album_image_url": "https://example.com/art2.jpg",
@@ -150,6 +150,35 @@ class TestAppleMusicFrontendAndMockSync(unittest.TestCase):
                         "has_gatefold": False,
                         "total_plays": 0,
                         "play_count_30d": 0
+                    },
+                    {
+                        "album_id": "am_mock_1440879161",
+                        "album_name": "Discovery Mock",
+                        "album_artist_name": "Daft Punk",
+                        "album_image_url": "https://example.com/art3.jpg",
+                        "release_year": "2001",
+                        "added_at": "2024-01-03",
+                        "album_genres": "Electronic",
+                        "album_track_plays": 0,
+                        "album_plays": 0.0,
+                        "album_track_plays_30d": 0,
+                        "album_plays_30d": 0.0,
+                        "album_tracks_total": 14,
+                        "album_description": "",
+                        "personnel": [],
+                        "pitchfork_score": "",
+                        "discogs_rating": 0.0,
+                        "enriched_styles": "",
+                        "macro_genre": "Electronic",
+                        "derived_moods": [],
+                        "descriptive_tags": [],
+                        "enrichment_quality_score": 0.0,
+                        "album_url": "https://music.apple.com/album/1440879161",
+                        "platform": "apple_music",
+                        "is_mock": True,
+                        "has_gatefold": False,
+                        "total_plays": 0,
+                        "play_count_30d": 0
                     }
                 ],
                 "top_genres": ["Alternative", "Rock"],
@@ -169,6 +198,8 @@ class TestAppleMusicFrontendAndMockSync(unittest.TestCase):
                 self.assertIn("appleMusicModal", html_beta)
                 self.assertIn("appleMusicSyncToast", html_beta)
                 self.assertIn("OK Computer", html_beta)
+                # Mock albums are purged from /beta view as well
+                self.assertNotIn("Discovery Mock", html_beta)
 
                 # 2. Accessing default root / route: is_beta is False
                 res_root = client.get("/")
@@ -179,9 +210,49 @@ class TestAppleMusicFrontendAndMockSync(unittest.TestCase):
                 self.assertNotIn("Connect Apple Music", html_root)
                 self.assertNotIn("appleMusicModal", html_root)
                 self.assertNotIn("appleMusicSyncToast", html_root)
-                # Apple Music albums are filtered out on default root route
+                # Apple Music albums and mock albums are filtered out on default root route
                 self.assertNotIn("OK Computer", html_root)
+                self.assertNotIn("Discovery Mock", html_root)
                 self.assertIn("In Rainbows", html_root)
+
+    @patch("services.catalog.get_catalog_from_datastore")
+    def test_mock_albums_filtered_from_catalog_cache(self, mock_get_ds):
+        """Verifies fetch_user_album_data actively purges mock albums from Datastore cache."""
+        from services.catalog import fetch_user_album_data, _user_album_cache
+        _user_album_cache.clear()
+
+        cached_payload = {
+            "albums": [
+                {
+                    "album_id": "spot_1",
+                    "album_name": "In Rainbows",
+                    "artist_name": "Radiohead",
+                    "added_at": "2024-01-01",
+                    "macro_genre": "Alternative",
+                    "total_plays": 10,
+                    "play_count_30d": 5
+                },
+                {
+                    "album_id": "am_mock_1440857781",
+                    "album_name": "OK Computer",
+                    "artist_name": "Radiohead",
+                    "added_at": "2026-11-22",
+                    "macro_genre": "Rock",
+                    "total_plays": 0,
+                    "play_count_30d": 0,
+                    "is_mock": True
+                }
+            ],
+            "top_genres": ["Alternative", "Rock"],
+            "kpis": {"total_albums": 2}
+        }
+        mock_get_ds.return_value = cached_payload
+
+        res = fetch_user_album_data("test_user_purge")
+        album_ids = [a["album_id"] for a in res["albums"]]
+        self.assertIn("spot_1", album_ids)
+        self.assertNotIn("am_mock_1440857781", album_ids)
+        self.assertEqual(len(res["albums"]), 1)
 
     @patch("routes.apple_music.sync_apple_music_library")
     def test_route_mock_sync_post(self, mock_sync):
