@@ -61,7 +61,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.8.6` (Apple MusicKit JS v3 Frontend Client, Mock Isolation & Production Deployment, 98/98 unit tests passing).
+* **Current Production Release:** `v2.8.7` (APP-18 Zero-Shot Semantic Text Classification, Profiling Reports, Analytics Alignment, 98/98 unit tests passing).
 * **Next Planned Milestone:** `Phase 8` — Live Apple Developer Account Enrollment & Web API Token Exchange (`APP-02c`).
 
 ---
@@ -88,9 +88,9 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.8.4`** | 2026-11-22 | 4 | ~150,000 | ~3,500 | **~$0.01** | Macro-genre fallback rename to `"Other / Unclassified"`, decision table alignment, 79/79 unit tests passing. |
 | **`v2.8.5`** | 2026-11-22 | 6 | ~250,000 | ~4,000 | **~$0.01** | APP-02a Apple Music Backend Pipeline & JWT Ingestion Service, ES256 JWT minting, BigQuery ingestion, provider bridging, 93/93 unit tests passing. |
 | **`v2.8.6`** | 2026-11-22 | 7 | ~280,000 | ~5,500 | **~$0.02** | APP-02b MusicKit JS v3 Frontend Client & Onboarding UI, route-scoped `/beta` isolation, mock collection toggle, source filters, mock filtering, packaging updates, BQ cleanup, 98/98 unit tests passing, PR #11 (`feat/app-02b-musickit-frontend`), production revision `spotify-dashboard-beta-00073-r5n`. |
+| **`v2.8.7`** | 2026-11-23 | 5 | ~200,000 | ~4,500 | **~$0.01** | APP-18 Zero-Shot Semantic Text Classification (`sentence-transformers/all-MiniLM-L6-v2`) in `classifier.py`, profiling script & report (`classifier_comparison_report.md`), Analytics page macro-genre filter alignment, 98/98 unit tests passing, deployed Cloud Run revision `spotify-dashboard-beta-00074-9hb`. |
 
 ---
 

@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.7] — 2026-11-23
+### 🧠 APP-18: Zero-Shot Semantic Text Classification & Analytics Alignment
+* **What:**
+  - **Zero-Shot Semantic Text Classification (`src/pipeline_v2/classifier.py`):**
+    - Integrated `sentence-transformers/all-MiniLM-L6-v2` semantic text classification into the metadata enrichment pipeline with robust regex fallback.
+    - Enables semantic genre and mood classification with cosine similarity confidence scoring and threshold analysis.
+  - **Profiling & Reporting (`scripts/profile_classifier_comparison.py`, `classifier_comparison_report.md`):**
+    - Created profiling script and materialized side-by-side distribution comparison report evaluating semantic vs regex macro-genre classification.
+  - **Analytics Alignment (`src/report_v2/services/analytics.py`):**
+    - Aligned Analytics page genre filters and Genre Ecosystem charts with normalized macro-genres.
+  - **Validation & Production Deployment:**
+    - Verified 98/98 unit tests passing successfully. Built and deployed container revision `spotify-dashboard-beta-00074-9hb` to Cloud Run (`europe-west2`).
+* **Why:**
+  - Enhances metadata classification accuracy for rare, stylistic, or non-standard genre tags using state-of-the-art sentence embeddings while maintaining fast fallback and robust analytical consistency.
+* **How:**
+  - Implemented semantic classification in `classifier.py`, added comparative profiling scripts and reports, aligned analytics services, verified 98/98 tests passing, and deployed live revision `spotify-dashboard-beta-00074-9hb`.
+
+---
+
 ## [v2.8.6] — 2026-11-22
 ### 🍏 APP-02b: MusicKit JS v3 Frontend Client, Mock Isolation & Production Deployment (PR #11)
 * **What:**

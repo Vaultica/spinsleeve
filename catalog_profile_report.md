@@ -32,9 +32,9 @@ Generated for user: **sergebou**
   Classic (<2000)    : 257 ( 13.5%) ███
 
 ### 3. Play Status Distribution
-  Cold Shelf             : 1579 ( 82.8%) ████████████████████
+  Cold Shelf             : 1574 ( 82.6%) ████████████████████
   Unplayed Gems          : 187 (  9.8%) ██
-  Heavy Rotation (30D)   : 140 (  7.3%) █
+  Heavy Rotation (30D)   : 145 (  7.6%) █
 
 ### 4. Matrix: Macro-Genre x Era
 ```
@@ -61,21 +61,21 @@ All                             257               658             991  1906
 ```
 status              Cold Shelf  Heavy Rotation (30D)  Unplayed Gems   All
 macro_genre                                                              
-Ambient                    185                    20             16   221
+Ambient                    180                    25             16   221
 Blues                        4                     0              2     6
 Classical                  131                     6             16   153
-Eclectic / Other           443                    40             35   518
-Electronic                 145                    12             21   178
+Eclectic / Other           442                    41             35   518
+Electronic                 144                    13             21   178
 Folk / Country             114                    11             15   140
 Hip-Hop                     21                     2              4    27
-Jazz                       115                    12             29   156
+Jazz                       118                     9             29   156
 Latin / World               14                     1              3    18
 Pop                        104                     6              6   116
 Punk / Alternative          62                     9             15    86
-R&B / Soul                  51                     4              3    58
+R&B / Soul                  50                     5              3    58
 Reggae / Dub                 3                     1              0     4
 Rock                       187                    16             22   225
-All                       1579                   140            187  1906
+All                       1574                   145            187  1906
 ```
 
 ### 6. Coverage Gaps & Imbalances Highlight

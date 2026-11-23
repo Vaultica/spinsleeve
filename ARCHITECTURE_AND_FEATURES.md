@@ -71,6 +71,9 @@ src/report_v2/
 ### Apple MusicKit JS v3 Frontend Client & Onboarding UI (`APP-02b` - In Progress / PR #11)
 * **Workflow:** Route-scoped `/beta` isolation (`src/report_v2/routes/apple_music.py`, `src/report_v2/templates/explorer.html`) preserving Spotify-only default root, MusicKit JS v3 script integration, header connection dropdown trigger, Onboarding & Authorization modal with Live and Sandbox/Mock Test Collection toggles (allowing instant offline testing and QA without live Apple Developer subscription), sync progress toasts, platform vinyl badges ( Apple Music), and library source filters. Verified by `tests/test_apple_music_frontend.py` (97/97 total tests passing). Live Apple Developer Program enrollment (£79) currently pending.
 
+### Zero-Shot Semantic Text Classification (`APP-18`)
+* **Workflow:** Integrated `sentence-transformers/all-MiniLM-L6-v2` zero-shot semantic text classification into `src/pipeline_v2/classifier.py` with robust regex fallback. Evaluates sentence embeddings to classify genre and mood tags into normalized macro-genres with cosine similarity confidence scoring and threshold analysis. Backed by comparative profiling scripts (`scripts/profile_classifier_comparison.py`) and materialized distribution comparison reports (`classifier_comparison_report.md`). Aligned analytics genre filters (`src/report_v2/services/analytics.py`) and verified 98/98 unit tests passing.
+
 ---
 
 ## 4. Deep-Dive: Metadata Enrichment Pipeline (`src/pipeline_v2/enrich.py`)
