@@ -359,18 +359,22 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 #### `APP-01`: 12" Gatefold Tracklisting & Side A / Side B Disc Breakdown
 * **Problem:**  
-  The gatefold modal provides rich narrative liner notes and personnel rosters, but lacks the tracklist—the core structural element of a vinyl record sleeve.
-* **Agreed Architectural Design (Hybrid Model & Option A):**
-  1. **Primary Structural Source (Spotify Web API `sp.album_tracks(album_id)`):**
-     - Fetch exact track sequence, titles, durations (`duration_ms`), explicit flags, and Spotify track URIs (`spotify:track:...`) using existing `album_id`.
+  The gatefold modal provides rich narrative liner notes and personnel rosters, but lacks the tracklist—the core structural element of a vinyl record sleeve. As content expands, users need effortless navigation without vertical overflow.
+* **Agreed Architectural & UI Design (Hybrid Model, Anchor Nav & 13" Laptop Optimization):**
+  1. **Primary Structural Source (Spotify Web API `sp.album_tracks(album_id)` / Apple Music API):**
+     - Fetch exact track sequence, titles, durations (`duration_ms`), explicit flags, and track URIs using existing `album_id`.
      - Direct technical alignment with upcoming turntable player (`APP-08`).
   2. **Storage & Caching (Option A - On-Demand Datastore Cache):**
-     - Dedicated endpoint: `/api/album/<album_id>/tracks`
-     - On first open of an album's gatefold modal, fetch from Spotify API, compute vinyl sides, and cache in Cloud Datastore (`AlbumTracksCache`, shared across all tenants) with a 30-day TTL. Sub-50ms subsequent loads with zero BQ migrations.
+     - Dedicated endpoint: `/beta/api/album/<album_id>/tracks`
+     - Cached in Cloud Datastore (`AlbumTracksCache`, shared across all tenants) with a 30-day TTL. Sub-50ms subsequent loads with zero BQ migrations.
   3. **Physical Vinyl Splitting Algorithm:**
      - **Single Disc (`disc_count == 1`):** Split $N$ tracks into Side A ($1 \dots \lceil N/2 \rceil$) and Side B ($\lceil N/2 \rceil + 1 \dots N$).
      - **Multi-Disc (`disc_count >= 2`):** Map Disc 1 to Side A / Side B, Disc 2 to Side C / Side D.
-  4. **Inline Needle-Drop Auditioning:**
+  4. **Right-Side Minimalist Anchor Navigation & 13" Laptop Fit:**
+     - Floating vertical anchor pill on the right side with icons & tooltips (`📖` Narrative, `⭐` Reviews, `🎵` Tracklisting, `🎷` Vibe & Mood, `📓` Personal Crate Notes).
+     - **Gutter Clearance (`pr-24`):** Ensures scrollable content never overlaps the floating anchor panel.
+     - **Responsive Viewport Height (`max-h-[85vh]`):** Fully optimized to fit gracefully on 13" laptop screens without vertical overflow.
+  5. **Inline Needle-Drop Auditioning:**
      - Clicking any track name audits that track's 30s snippet using Spotify `preview_url` or falling back to `/api/preview?artist=...&track=...` via iTunes.
 * **Effort & Complexity:** ~4–6 hours (0.5 to 1 day) • **Complexity:** **Low–Medium**
 

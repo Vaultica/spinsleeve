@@ -238,9 +238,9 @@ All new features and architectural changes must strictly adhere to these verifie
 ## 4. Category: Core Application & Vinyl Streaming (`APP`)
 
 ### `APP-01`: 12" Gatefold Tracklisting & Side A / Side B Breakdown
-* **Technical Objective:** Embed complete vinyl tracklists into the 12" gatefold modal with physical disc breakdown and inline audio previews.
+* **Technical Objective:** Embed complete vinyl tracklists into the 12" gatefold modal with physical disc breakdown, right-side anchor navigation, gutter padding, and inline audio previews.
 * **Data Ingestion & Caching (Approved Hybrid Model & Option A):**
-  - **Primary API:** Spotify Web API `sp.album_tracks(album_id)`.
+  - **Primary API:** Spotify Web API `sp.album_tracks(album_id)` / Apple Music API.
   - **Endpoint:** `GET /beta/api/album/<album_id>/tracks`
   - **Storage:** Cloud Datastore `Kind: AlbumTracksCache` (shared across all tenants, 30-day TTL). Zero BigQuery DDL migrations.
 * **Vinyl Side Splitting Algorithm:**
@@ -264,6 +264,10 @@ All new features and architectural changes must strictly adhere to these verifie
           side_idx += 1
       return sides
   ```
+* **UI & Viewport Optimizations (Right-Side Anchor Nav & 13" Laptop Fit):**
+  - **Floating Anchor Pill:** Right-side vertical panel with tooltips (`📖 Narrative`, `⭐ Reviews`, `🎵 Tracklisting`, `🎷 Vibe & Mood`, `📓 Personal`).
+  - **Gutter Clearance (`pr-24`):** Ensures scrollable content never overlaps the floating anchor panel.
+  - **Responsive Viewport Height (`max-h-[85vh]`):** Optimized to fit gracefully on 13" laptop screens without vertical overflow.
 * **Inline Needle-Drop Auditioning:**
   - Clicking any track name calls `playTrackSnippet(track_id, track_name, artist_name)`.
   - Uses Spotify `preview_url` if present, falling back to `/beta/api/preview?artist={artist}&track={track}` (iTunes Search API).
