@@ -56,3 +56,11 @@ To prevent parallel test runs or pipeline jobs from corrupting production BigQue
      ```
 2. **Verification Gate:**
    - Run the full test suite (`.venv/bin/python3 -m unittest discover tests`) after rebasing and before signaling completion.
+
+---
+
+## 5. Roadmap Reconciliation & Session Closure Audit
+
+1. **Mandatory Checklist Reconciliation:**
+   - During session closure (`@session_closer`), agents **MUST** audit `CHANGELOG.md` and recent git commits against `PROJECT_ROADMAP.md`.
+   - Every feature ID (`APP-XX`, `POLISH-XX`, etc.) completed during the session must have its corresponding status matrix row checked off (`✅ ~~...~~`) with the correct release tag before commit and push.
