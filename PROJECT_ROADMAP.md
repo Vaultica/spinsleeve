@@ -842,6 +842,24 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+<a id="debt-category"></a>
+### ⚡ Category: Architectural Technical Debt (`DEBT`)
+
+#### `DEBT-01`: Route Blueprint Data Access Decoupling
+* **Problem:**  
+  Audit findings revealed that several legacy Flask route handlers in `src/report_v2/routes/` (`crate.py`, `auth.py`, `admin.py`, `pals.py`) directly import `google.cloud` BigQuery and Datastore clients and execute database read/write operations. This violates `GEMINI.md` Invariant #1 (*"Route handlers MUST NEVER import BigQuery or Datastore clients directly; all data access and business logic live in services/"*).
+* **Technical Details & Violations (1.):**
+  - **`src/report_v2/routes/crate.py` (`api_save_album`):** Directly instantiates `bigquery.Client()` and executes `client.insert_rows_json()` to insert user-saved albums, and calls `ds_client.delete()` for cache invalidation.
+  - **`src/report_v2/routes/auth.py` (`oauth_callback`):** Directly queries and updates Datastore user entities (`ds_client.get()`, `ds_client.put()`).
+  - **`src/report_v2/routes/admin.py` & `src/report_v2/routes/pals.py`:** Directly perform Datastore queries and entity updates inside admin and social route handlers.
+* **Risk Assessment (2.):**
+  - **Architectural Coupling & Testability:** Route handlers become tightly coupled to database client libraries, complicating unit testing without live GCP connections.
+  - **Maintainability & Separation of Concerns:** Mixing I/O transport and rendering with database write logic increases code complexity.
+  - **Severity:** **Medium** (Functional correctness and app stability are unaffected, but violates architectural constitution).
+* **Effort & Complexity:** ~4–6 hours • **Complexity:** **Medium**
+
+---
+
 <a id="docs-category"></a>
 ### 📚 Category: Architecture Mapping & Documentation (`DOCS`)
 
@@ -899,5 +917,5 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`BRAND-01`** | ✅ ~~Landing Page Redesign & Feature Showcase~~ | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | ✅ **Completed** (`v2.5.2`): Professional public landing page with feature showcase, authentic album artwork CDN integration, and admin test switchers. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`BRAND-03`** | ✅ ~~Public Roadmap & Release Transparency Portal (`/roadmap`)~~ | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | ✅ **Completed** (`v2.5.2`): Public release transparency portal at `/roadmap` showcasing shipped and upcoming features. |
-| **`BRAND-04`** | ✅ ~~Software License & IP Protection Review~~ | Legal & Brand | 2–4h | PolyForm Noncommercial 1.0.0 | ✅ **Completed** (`v2.2.2`): Migrated repository to PolyForm Noncommercial 1.0.0 to prevent unauthorized commercial exploitation while keeping non-commercial use & contributions free. |
+| **`DEBT-01`**    | Route Blueprint Data Access Decoupling (Move direct BQ/Datastore queries from routes to services)  | Technical Debt      | 4–6 hours        | Medium (Ensures strict compliance with Invariant #1: Blueprint vs. Service layer separation)             |
 | **`DOCS-01`** | ✅ ~~Technical Architecture Map (README Overhaul)~~ | Documentation | 3–4h | Markdown, Mermaid Diagrams | ✅ **Completed**: Complete developer transparency and comprehensive system mapping with Mermaid topology diagram. |

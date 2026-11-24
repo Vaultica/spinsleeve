@@ -637,6 +637,21 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
+## 6.5. Category: Technical Debt (`DEBT`)
+
+### `DEBT-01`: Route Blueprint Data Access Decoupling
+* **Technical Objective:** Decouple legacy Flask route handlers (`src/report_v2/routes/*.py`) from direct `google.cloud` BigQuery and Cloud Datastore client calls, migrating all data access and business logic into `src/report_v2/services/*.py` in strict compliance with `GEMINI.md` Invariant #1.
+* **Technical Details & Violations (1.):**
+  - **`src/report_v2/routes/crate.py` (`api_save_album`):** Directly instantiates `bigquery.Client()`, executes `client.insert_rows_json()` for saved albums, and deletes Datastore cache entities.
+  - **`src/report_v2/routes/auth.py` (`oauth_callback`):** Directly queries, instantiates, and saves Datastore user entities (`ds_client.get()`, `datastore.Entity()`, `ds_client.put()`).
+  - **`src/report_v2/routes/admin.py` & `src/report_v2/routes/pals.py`:** Directly perform Datastore queries and entity updates inside admin and social route handlers.
+* **Risk Assessment (2.):**
+  - **Architectural Coupling & Testability:** Route handlers become tightly coupled to database client libraries, complicating unit testing without live GCP connections.
+  - **Maintainability & Separation of Concerns:** Mixing I/O transport and rendering with database write logic increases code complexity and violates non-negotiable architectural invariants.
+  - **Severity & Mitigation:** Medium severity. Functional correctness is unaffected, but architectural debt must be refactored into dedicated service modules prior to major scaling milestones.
+
+---
+
 ## 7. Category: Technical Documentation (`DOCS`)
 
 ### `DOCS-01`: Comprehensive Architecture Blueprint (Mermaid Topology)
