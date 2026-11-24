@@ -472,14 +472,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 ---
 
 #### `APP-16`: Semantic Liner Notes & Description Classification for Crate Digger Relevance
+* **Scope Boundary (`APP-01` Excluded):**
+  - `APP-01` (12" Gatefold Tracklisting & Side A / Side B Breakdown using on-demand `sp.album_tracks(album_id)` + Datastore `AlbumTracksCache` with 30-day TTL, no BigQuery track storage) remains a separate track/build and is NOT bundled into this enrichment/metadata build.
+  - This build covers the two-tier raw-to-golden metadata model, `enrich.py` multi-source candidate scoring/resolution, and `APP-16` semantic classification (`macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`).
 * **Problem:**  
   Raw Spotify API genre tags give a jarring mix of broad tags ("Rock") and hyper-niche tags ("Kosmische Musik"), making Crate Digger discovery and vibe filtering noisy and imprecise.
-* **Solution:**  
-  1. **Enrichment Text Parsing (`src/pipeline_v2/enrich.py`):** Pass scraped Wikipedia and Discogs archival descriptions and gatefold liner notes through text classification, keyword scoring, and atmosphere extraction.
-  2. **Derived Structured Attributes:** Automatically map unstructured narratives into clean macro-categories (`derived_moods`, `macro_genre`, `descriptive_tags`) during the daily enrichment pipeline.
-  3. **Semantic Similarity & "If You Like This Gatefold..." Recommendations:** Vectorize narrative descriptions (via TF-IDF or lightweight keyword scoring) to power kindred spirit recommendations in Crate Digger even when official Spotify tags differ.
-  4. **Zero-Latency Read Path:** Pre-computed BigQuery columns queried instantly by Crate Digger (`/recommend`) with zero runtime latency penalty.
-* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
+* **Solution (Two-Tier Enrichment & Metadata Architecture):**  
+  1. **Streaming Provider Bridge (`album_provider_ids`):** Maps external streaming IDs (`provider`, `external_album_id`) to `canonical_album_key` (with `raw_album_name`, `raw_artist_name`, `updated_at`), clustered by `canonical_album_key, provider` (supporting Spotify and Apple Music).
+  2. **Tier 1 — Append-Only Raw Source Tables:** Separate tables for `enrichment_raw_musicbrainz`, `enrichment_raw_wikipedia`, and `enrichment_raw_discogs`, each partitioned by `DATE(fetched_at)` and clustered by `canonical_album_key`, storing `fetched_at TIMESTAMP NOT NULL`, `extractor_version`, `confidence_score`, `raw_payload`, and source-specific fields/IDs/URLs.
+  3. **Tier 2 — Golden Serving Table (`album_enriched_metadata`):** Clustered by `canonical_album_key`, retaining backward-compatible gatefold/review/Discogs columns while adding `canonical_album_key`, `macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`, source provenance, and timestamps.
+  4. **Enrichment Pipeline (`src/pipeline_v2/enrich.py` & `APP-16` Classifier):** Seeds initial raw rows from existing `album_enriched_metadata` records rather than re-scraping unnecessarily, and synthesizes golden rows via candidate scoring / `QUALIFY ROW_NUMBER()` + `APP-16` classification without hitting raw tables on hot user read paths.
+  5. **Operational Invariants:** Joins `user_albums_features_table` to golden `album_enriched_metadata` on `canonical_album_key` (with `album_id` fallback), invalidates affected Datastore caches (`UserCatalogCache`, `PalCompatibilityCache`, `UserAnalyticsCache`) on updates, and enforces BigQuery cost guardrails (`maximum_bytes_billed`, partition/year-batched DML) and `GEMINI.md` architectural invariants.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium–High**
 
 ---
 

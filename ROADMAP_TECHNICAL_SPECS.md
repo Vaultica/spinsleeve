@@ -499,25 +499,31 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
-### `APP-16`: Semantic Liner Notes & Description Classification for Crate Digger Relevance
-* **Technical Objective:** Parse enriched album descriptions and gatefold liner notes (`album_enriched_metadata`) using text classification, keyword scoring, and atmosphere extraction to derive clean macro-categories (`derived_moods`, `macro_genre`, `descriptive_tags`) and enable semantic "If You Like This Gatefold..." recommendations in Crate Digger.
-* **Pipeline Implementation (`src/pipeline_v2/enrich.py`):**
-  1. **Text Extraction & Tokenization:** When Wikipedia/Discogs scraper fetches archival narratives, pass raw description text through a lightweight NLP classifier (keyword dictionaries / TF-IDF scoring).
-  2. **Derived Structured Attributes:**
-     - `macro_genre` (STRING): Normalized high-level genre (e.g. *Electronic, Ambient, Post-Punk, Jazz*).
-     - `derived_moods` (ARRAY<STRING>): Extracted atmospheric attributes (e.g. *["Chill", "Immersive", "Late Night", "Driving"]*).
-     - `descriptive_tags` (ARRAY<STRING>): Stylistic markers (e.g. *["Synthesizers", "Sequencer Loops", "Minimalist"]*).
-  3. **BigQuery Table Schema Update (`spotify_v2.album_enriched_metadata`):**
-     ```sql
-     ALTER TABLE `secret-compass-181513.spotify_v2.album_enriched_metadata`
-     ADD COLUMN IF NOT EXISTS macro_genre STRING,
-     ADD COLUMN IF NOT EXISTS derived_moods ARRAY<STRING>,
-     ADD COLUMN IF NOT EXISTS descriptive_tags ARRAY<STRING>;
-     ```
-  4. **Semantic Similarity Scoring for Crate Digger:**
-     - Compute cosine similarity or Jaccard overlap on derived mood/tag arrays and TF-IDF feature vectors of liner notes.
-     - When a user views an album or uses Crate Digger, query kindred spirit albums sharing narrative descriptions even if official Spotify tags differ.
-* **Zero-Latency Read Path:** Pre-computed during daily Cloud Run enrichment job (`spotify-v2-enrichment-job`), ensuring zero runtime query latency for frontend Crate Digger filters.
+### `APP-16`: Two-Tier Album Enrichment & Metadata Architecture & Semantic Classification
+* **Scope Boundary (`APP-01` Excluded):**
+  - `APP-01` (12" Gatefold Tracklisting & Side A / Side B Breakdown using on-demand `sp.album_tracks(album_id)` + Datastore `AlbumTracksCache` with 30-day TTL, no BigQuery track storage) remains a separate track/build and is NOT bundled into this enrichment/metadata build.
+  - This build covers the two-tier raw-to-golden metadata model, `enrich.py` multi-source candidate scoring/resolution, and `APP-16` semantic classification (`macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`).
+* **Technical Objective:** Establish a robust two-tier raw-to-golden album metadata architecture in BigQuery (`secret-compass-181513.spotify_v2`, US) combining multi-source ingestion (MusicBrainz, Wikipedia, Discogs) with APP-16 semantic classification (`macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`) to power zero-latency Crate Digger recommendations and gatefold discovery.
+* **BigQuery Schema & Two-Tier Architecture:**
+  1. **Streaming Provider Bridge (`album_provider_ids`):**
+     - Maps external streaming IDs (`provider`, `external_album_id`) to `canonical_album_key` (`raw_album_name`, `raw_artist_name`, `updated_at`).
+     - Clustered by `(canonical_album_key, provider)` to support Spotify and Apple Music (`APP-02`).
+  2. **Tier 1 — Append-Only Raw Source Tables:**
+     - Separate tables: `enrichment_raw_musicbrainz`, `enrichment_raw_wikipedia`, and `enrichment_raw_discogs`.
+     - Partitioned by `DATE(fetched_at)` and clustered by `canonical_album_key`.
+     - Columns: `canonical_album_key`, `fetched_at TIMESTAMP NOT NULL`, `extractor_version`, `confidence_score`, `raw_payload`, and source-specific IDs/URLs.
+  3. **Tier 2 — Golden Serving Table (`album_enriched_metadata`):**
+     - Clustered by `canonical_album_key`.
+     - Retains backward-compatible gatefold/review/Discogs columns while adding `canonical_album_key`, `macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`, source provenance, and timestamps.
+* **Pipeline Materialization & Seeding Strategy (`src/pipeline_v2/enrich.py`):**
+  - Seed initial raw source rows directly from existing `album_enriched_metadata` records rather than re-scraping unnecessarily.
+  - Synthesize golden rows via multi-source candidate scoring / `QUALIFY ROW_NUMBER() OVER(PARTITION BY canonical_album_key ORDER BY enrichment_quality_score DESC)` + APP-16 classification without hitting raw tables on hot user read paths.
+  - Join `user_albums_features_table` to golden `album_enriched_metadata` on `canonical_album_key` (with `album_id` fallback).
+* **Operational Invariants & Guardrails:**
+  - **Cache Invalidation:** Updates to metadata or sync completion invalidate affected Datastore cache keys (`UserCatalogCache`, `PalCompatibilityCache`, `UserAnalyticsCache`).
+  - **Cost & Partition Guardrails:** All queries and DML operations enforce `maximum_bytes_billed` limits and batch by year/partition to prevent `400 Too many partitions` errors.
+  - **Data Cleanliness:** All string and numerical values pass through sanitization helpers (`safe_str()`, `safe_int()`, `safe_float()`) to eliminate raw `NaN` or `NaT` values.
+  - **Strict Architecture:** Route handlers in `src/report_v2/routes/` handle HTTP I/O only; all data access and business logic live in `src/report_v2/services/`. Explicit human sign-off is required before any BigQuery DDL/DML or live deployment.
 
 ---
 
