@@ -510,7 +510,11 @@
                 <div class="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto mx-auto shrink-0">
                     <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
                 </div>
-                <div class="hidden md:flex w-full mt-4 flex-col gap-2">
+
+                <!-- Vibe & Mood / Semantic Tag Strip directly under sleeve cover, above streaming buttons (Centered) -->
+                <div id="modalSemanticTags" class="flex flex-wrap items-center justify-center gap-1.5 mt-3 text-center hidden"></div>
+
+                <div class="hidden md:flex w-full mt-3 flex-col gap-2">
                     <a id="modalSpotifyLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition shadow">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.218.358-.684.472-1.042.254-2.855-1.745-6.449-2.14-10.684-1.173-.41.093-.816-.164-.91-.573-.093-.41.164-.817.573-.91 4.636-1.06 8.607-.611 11.81 1.35.358.218.472.684.253 1.052zm1.467-3.26c-.275.448-.865.59-1.313.315-3.268-2.008-8.25-2.59-12.115-1.416-.503.153-1.034-.136-1.187-.64-.153-.504.136-1.035.64-1.188 4.414-1.34 9.907-.69 13.66 1.616.448.275.59.865.315 1.313zm.126-3.41c-3.918-2.327-10.37-2.542-14.103-1.408-.6.183-1.238-.157-1.421-.758-.182-.601.157-1.239.758-1.421 4.29-1.303 11.41-1.053 15.908 1.616.539.32.716 1.02.396 1.56-.32.539-1.02.716-1.56.396z"/></svg>
                         <span>Play on Spotify</span>
@@ -563,23 +567,42 @@
                         <button onclick="closeGatefold()" class="text-gray-400 hover:text-white p-1 text-2xl font-bold">&times;</button>
                     </div>
 
-                    <!-- Archival Badges with External Deep Links -->
-                    <div id="modalScores" class="flex flex-wrap items-center gap-2 my-3"></div>
-
-                    <!-- Semantic Tag Strip: Macro Genre, Moods, Descriptive Tags (APP-16) -->
-                    <div id="modalSemanticTags" class="flex flex-wrap items-center gap-1.5 my-2.5 hidden"></div>
-
-                    <!-- Liner Notes & Personnel -->
+                    <!-- Liner Notes & Reordered Sections (APP-01 Sequence) -->
                     <div class="space-y-4 text-xs text-gray-300 leading-relaxed mt-4">
+                        <!-- 1. Narrative -->
                         <div id="modalDescriptionSection">
                             <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Album Narrative &amp; Critical Reception</h4>
                             <p id="modalDescription" class="italic text-gray-300">--</p>
                         </div>
+
+                        <!-- 2. Reviews & Scores -->
+                        <div id="modalScores" class="flex flex-wrap items-center gap-2 my-2"></div>
+
+                        <!-- 3. Tracklisting & Side A / Side B Breakdown -->
+                        <div id="modalTracklistSection" class="pt-3 border-t border-gray-800/80 pr-24">
+                            <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-2 flex items-center justify-between">
+                                <span>12" Gatefold Tracklisting &amp; Side Splits</span>
+                                <span id="modalTrackCount" class="text-emerald-400 font-mono">-- tracks</span>
+                            </h4>
+                            <div id="modalSidesContainer" class="space-y-3">
+                                <p class="text-xs text-gray-500 italic">Tracklisting available for commercial master releases (mock albums use preview fallback).</p>
+                            </div>
+                        </div>
+
+                        <!-- 4. Production & Personnel Credits -->
                         <div id="modalPersonnelSection">
                             <h4 class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Production &amp; Personnel Credits</h4>
                             <div id="modalPersonnel" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-gray-400"></div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Floating Right-Side Anchor Navigation (APP-01 Sequence) -->
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-2 bg-gray-900/90 border border-gray-800 p-1.5 rounded-full shadow-2xl backdrop-blur z-20">
+                    <a href="#modalDescriptionSection" title="Album Narrative" class="w-8 h-8 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs transition">📖</a>
+                    <a href="#modalScores" title="Reviews & Scores" class="w-8 h-8 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs transition">⭐</a>
+                    <a href="#modalTracklistSection" title="12-inch Tracklisting" class="w-8 h-8 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs transition">🎵</a>
+                    <a href="#modalPersonnelSection" title="Personnel Credits" class="w-8 h-8 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs transition">📓</a>
                 </div>
 
                 <!-- Footer with Meta Info and SpinSleeve Verified -->
@@ -1286,7 +1309,93 @@
             }
 
             document.getElementById("modalMetaInfo").innerText = `${album.release_year || 'Unknown Year'} • ${album.album_tracks_total || 0} tracks • ${album.album_track_plays || 0} total plays`;
+            
+            // Fetch 12" gatefold tracklisting (APP-01)
+            const sidesContainer = document.getElementById("modalSidesContainer");
+            if (sidesContainer) {
+                sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic animate-pulse">Loading physical vinyl tracklist...</p>';
+                try {
+                    const prefix = window.location.pathname.startsWith('/beta') ? '/beta' : '';
+                    const tRes = await fetch(`${prefix}/api/album/${album.album_id}/tracks`);
+                    const tData = await tRes.json();
+                    if (tData.status === 'success' && tData.sides) {
+                        renderModalTracklist(tData.sides, album);
+                    } else {
+                        sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic">Tracklisting unavailable for this release.</p>';
+                    }
+                } catch(e) {
+                    sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic">Could not load tracklist.</p>';
+                }
+            }
+
             document.getElementById("gatefoldModal").classList.remove("hidden");
+        }
+
+        function renderModalTracklist(sides, album) {
+            const container = document.getElementById('modalSidesContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            let totalTracks = 0;
+
+            for (const [sideName, tracks] of Object.entries(sides)) {
+                totalTracks += tracks.length;
+                const sideDiv = document.createElement('div');
+                sideDiv.className = 'bg-black/30 border border-gray-800/80 rounded-xl p-3';
+                
+                let tracksHtml = `<div class="flex items-center justify-between mb-2 pb-1 border-b border-gray-800"><span class="text-xs font-mono font-bold text-emerald-400 uppercase">${sideName}</span><span class="text-[10px] font-mono text-gray-500">${tracks.length} tracks</span></div><div class="space-y-1.5">`;
+                
+                tracks.forEach(t => {
+                    const previewUrl = t.preview_url || '';
+                    const explicitTag = t.explicit ? '<span class="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-mono">E</span>' : '';
+                    tracksHtml += `
+                    <div onclick="playTrackSnippet('${previewUrl}', '${t.name.replace(/'/g, "\\'")}', '${(album.album_artist_name || album.artist_name || '').replace(/'/g, "\\'")}')" 
+                         class="group flex items-center justify-between p-1.5 rounded-lg hover:bg-emerald-500/10 cursor-pointer transition">
+                        <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                            <span class="text-[10px] font-mono text-gray-500 w-4 text-right">${t.track_number}</span>
+                            <span class="text-xs font-medium text-gray-200 group-hover:text-emerald-400 truncate">${t.name}</span>
+                            ${explicitTag}
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-[10px] font-mono text-gray-500">${t.duration_str || ''}</span>
+                            <span class="text-[10px] text-emerald-400 opacity-0 group-hover:opacity-100 transition">▶</span>
+                        </div>
+                    </div>`;
+                });
+                tracksHtml += '</div>';
+                sideDiv.innerHTML = tracksHtml;
+                container.appendChild(sideDiv);
+            }
+            const countEl = document.getElementById('modalTrackCount');
+            if (countEl) countEl.textContent = `${totalTracks} tracks`;
+        }
+
+        function playTrackSnippet(previewUrl, trackName, artistName) {
+            if (!previewUrl || previewUrl === '') {
+                fetch(`/beta/api/preview?artist=${encodeURIComponent(artistName)}&album=${encodeURIComponent(trackName)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.preview_url) {
+                            playAudioUrl(data.preview_url, trackName);
+                        } else if (data.apple_music_url) {
+                            window.open(data.apple_music_url, '_blank');
+                        }
+                    })
+                    .catch(e => {});
+                return;
+            }
+            playAudioUrl(previewUrl, trackName);
+        }
+
+        function playAudioUrl(url, trackName) {
+            activeAudio.src = url;
+            activeAudio.play().then(() => {
+                updateModalPlayIcon(true);
+                updateModalProgress();
+                const trackEl = document.getElementById('gatefoldAudioTrack');
+                if (trackEl) trackEl.innerText = trackName;
+            }).catch(e => {
+                console.error("Audio playback error:", e);
+            });
         }
 
         async function toggleModalAudioPlayback() {

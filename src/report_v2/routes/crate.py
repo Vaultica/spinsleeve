@@ -75,6 +75,15 @@ def api_preview():
     return jsonify(payload)
 
 
+@crate_bp.route("/api/album/<album_id>/tracks")
+@crate_bp.route("/beta/api/album/<album_id>/tracks")
+def api_album_tracks(album_id):
+    """API endpoint to fetch 12" gatefold tracklisting and Side A/B splits (APP-01)."""
+    from services.catalog import fetch_album_tracks
+    result = fetch_album_tracks(album_id)
+    return jsonify(result)
+
+
 @crate_bp.route("/api/unowned-albums")
 @crate_bp.route("/beta/api/unowned-albums")
 @login_required

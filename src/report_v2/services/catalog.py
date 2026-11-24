@@ -11,7 +11,7 @@ import logging
 from collections import Counter
 import pandas as pd
 import spotipy
-from google.cloud import bigquery
+from google.cloud import bigquery, datastore
 
 from app_config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
 from services.datastore import get_datastore_client, get_catalog_from_datastore, save_catalog_to_datastore
@@ -532,3 +532,113 @@ def compute_normalized_album_plays(track_plays, tracks_total, is_30d=False):
         display_badge = f"🔥 {norm_plays} Plays{badge_suffix}"
 
     return norm_plays, display_badge, tooltip
+
+
+def split_vinyl_sides(tracks):
+    """Splits album tracks into physical vinyl sides (Side A, Side B, etc.) (APP-01)."""
+    discs = {}
+    for t in tracks:
+        disc_num = t.get("disc_number", 1)
+        discs.setdefault(disc_num, []).append(t)
+    
+    sides = {}
+    side_letters = ["A", "B", "C", "D", "E", "F", "G", "H"]
+    side_idx = 0
+    for disc_num in sorted(discs.keys()):
+        disc_tracks = discs[disc_num]
+        n = len(disc_tracks)
+        half = (n + 1) // 2  # Ceiling half for Side A / Side C
+        if side_idx < len(side_letters):
+            sides[f"Side {side_letters[side_idx]}"] = disc_tracks[:half]
+            side_idx += 1
+        if side_idx < len(side_letters):
+            sides[f"Side {side_letters[side_idx]}"] = disc_tracks[half:]
+            side_idx += 1
+    return sides
+
+
+def fetch_album_tracks(album_id):
+    """
+    Fetches tracklisting for an album with Cloud Datastore cache (AlbumTracksCache, 30-day TTL).
+    Falls back to Spotify Web API via ClientCredentials.
+    Returns a dict with sides breakdown: {"Side A": [...], "Side B": [...]}. (APP-01)
+    """
+    if not album_id:
+        return {"status": "error", "message": "Missing album_id", "sides": {}}
+
+    ds_client = get_datastore_client()
+    if ds_client:
+        try:
+            key = ds_client.key("AlbumTracksCache", album_id)
+            entity = ds_client.get(key)
+            if entity:
+                updated_at = entity.get("updated_at")
+                if updated_at and (datetime.datetime.now(datetime.timezone.utc) - updated_at).days < 30:
+                    tracks_json = entity.get("tracks_json")
+                    if tracks_json:
+                        tracks = json.loads(tracks_json)
+                        return {
+                            "status": "success",
+                            "album_id": album_id,
+                            "sides": split_vinyl_sides(tracks),
+                            "cached": True
+                        }
+        except Exception as e:
+            logger.warning("Datastore read error for AlbumTracksCache %s: %s", album_id, e)
+
+    # Fetch from Spotify API
+    try:
+        from spotipy.oauth2 import SpotifyClientCredentials
+        client_credentials_manager = SpotifyClientCredentials()
+        sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager, requests_timeout=10)
+        
+        results = sp.album_tracks(album_id)
+        raw_items = results.get("items", [])
+        
+        tracks = []
+        for idx, item in enumerate(raw_items, 1):
+            duration_ms = item.get("duration_ms", 0)
+            mins = duration_ms // 60000
+            secs = (duration_ms % 60000) // 1000
+            duration_str = f"{mins}:{secs:02d}"
+            
+            tracks.append({
+                "track_number": item.get("track_number", idx),
+                "disc_number": item.get("disc_number", 1),
+                "name": item.get("name", "Unknown Track"),
+                "duration_ms": duration_ms,
+                "duration_str": duration_str,
+                "explicit": item.get("explicit", False),
+                "preview_url": item.get("preview_url", ""),
+                "uri": item.get("uri", "")
+            })
+            
+        sides = split_vinyl_sides(tracks)
+        
+        # Save to Datastore cache
+        if ds_client:
+            try:
+                key = ds_client.key("AlbumTracksCache", album_id)
+                entity = datastore.Entity(key=key)
+                entity.update({
+                    "album_id": album_id,
+                    "tracks_json": json.dumps(tracks),
+                    "updated_at": datetime.datetime.now(datetime.timezone.utc)
+                })
+                ds_client.put(entity)
+            except Exception as e:
+                logger.warning("Could not save AlbumTracksCache for %s: %s", album_id, e)
+
+        return {
+            "status": "success",
+            "album_id": album_id,
+            "sides": sides,
+            "cached": False
+        }
+    except Exception as e:
+        logger.error("Error fetching album tracks for %s: %s", album_id, e)
+        return {
+            "status": "error",
+            "message": str(e),
+            "sides": {}
+        }
