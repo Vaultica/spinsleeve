@@ -54,7 +54,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
   * `sync.py`: Multi-tenant token refresh & incremental Spotify play/library sync into `spotify_v2`.
   * `enrich.py`: Wikipedia/Discogs scraper + NLP mood/genre classifier populating `album_enriched_metadata`.
 * **`tests/`:** `unittest` suite covering invariants, caching, routes, and pipelines.
-* **`.gemini/agents/`:** Specialized subagents (`reviewer`, `tester`, `scribe`, `deploy_assistant`, `session_closer`).
+* **`.gemini/agents/`:** Specialized subagents (`reviewer`, `session_reviewer`, `tester`, `scribe`, `deploy_assistant`, `session_closer`).
 * **Docs:** `VIBE_CODING_MANUAL.md` (Agent Orchestration), `AGENT_WORKFLOW_GUARDRAILS.md` (Parallel & Autonomous Safety), `PROJECT_ROADMAP.md` (What/Why & Backlog), `ROADMAP_TECHNICAL_SPECS.md` (Schemas/Contracts), `ARCHITECTURE_AND_FEATURES.md` (As-Built Ledger), `CHANGELOG.md` (Full Release History), `INFRASTRUCTURE_RUNBOOK.md` (DR & DDL).
 
 ---
