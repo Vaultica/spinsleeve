@@ -557,10 +557,10 @@ def split_vinyl_sides(tracks):
     return sides
 
 
-def fetch_album_tracks(album_id):
+def fetch_album_tracks(album_id, user_id=None):
     """
     Fetches tracklisting for an album with Cloud Datastore cache (AlbumTracksCache, 30-day TTL).
-    Falls back to Spotify Web API via ClientCredentials.
+    Prioritizes logged-in user's active Spotify OAuth token, falling back to ClientCredentials.
     Returns a dict with sides breakdown: {"Side A": [...], "Side B": [...]}. (APP-01)
     """
     if not album_id:
@@ -586,12 +586,29 @@ def fetch_album_tracks(album_id):
         except Exception as e:
             logger.warning("Datastore read error for AlbumTracksCache %s: %s", album_id, e)
 
-    # Fetch from Spotify API
+    # Fetch from Spotify API using user token first, then client credentials
+    sp = None
+    if user_id:
+        try:
+            from services.spotify import get_token_for_user
+            token_info = get_token_for_user(user_id, None)
+            if token_info and token_info.get("access_token"):
+                sp = spotipy.Spotify(auth=token_info.get("access_token"), requests_timeout=10)
+        except Exception as e:
+            logger.warning("Could not get token for user %s: %s", user_id, e)
+
+    if not sp:
+        try:
+            from spotipy.oauth2 import SpotifyClientCredentials
+            client_credentials_manager = SpotifyClientCredentials()
+            sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager, requests_timeout=10)
+        except Exception as e:
+            logger.warning("Could not initialize SpotifyClientCredentials: %s", e)
+
+    if not sp:
+        return {"status": "error", "message": "Spotify client initialization failed", "sides": {}}
+
     try:
-        from spotipy.oauth2 import SpotifyClientCredentials
-        client_credentials_manager = SpotifyClientCredentials()
-        sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager, requests_timeout=10)
-        
         results = sp.album_tracks(album_id)
         raw_items = results.get("items", [])
         

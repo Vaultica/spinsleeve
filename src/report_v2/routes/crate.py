@@ -80,7 +80,8 @@ def api_preview():
 def api_album_tracks(album_id):
     """API endpoint to fetch 12" gatefold tracklisting and Side A/B splits (APP-01)."""
     from services.catalog import fetch_album_tracks
-    result = fetch_album_tracks(album_id)
+    user_id = session.get("user_id")
+    result = fetch_album_tracks(album_id, user_id=user_id)
     return jsonify(result)
 
 
