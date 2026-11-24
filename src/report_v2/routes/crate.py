@@ -75,6 +75,16 @@ def api_preview():
     return jsonify(payload)
 
 
+@crate_bp.route("/api/album/<album_id>/tracks")
+@crate_bp.route("/beta/api/album/<album_id>/tracks")
+def api_album_tracks(album_id):
+    """API endpoint to fetch 12" gatefold tracklisting and Side A/B splits (APP-01)."""
+    from services.catalog import fetch_album_tracks
+    user_id = session.get("user_id")
+    result = fetch_album_tracks(album_id, user_id=user_id)
+    return jsonify(result)
+
+
 @crate_bp.route("/api/unowned-albums")
 @crate_bp.route("/beta/api/unowned-albums")
 @login_required
@@ -192,9 +202,30 @@ def beta_index():
     unowned_albums = fetch_unowned_album_data(user_id)
     initial_tab = request.args.get("tab", "saved")
 
+    is_beta = request.path.startswith("/beta")
+    albums = data["albums"]
+    # Defensive filter: strictly purge any mock albums
+    albums = [
+        a for a in albums
+        if not (
+            str(a.get("album_id", "")).startswith("am_mock_")
+            or str(a.get("album_id", "")).startswith("mock_")
+            or a.get("is_mock") is True
+        )
+    ]
+    if not is_beta:
+        # Default route (live app root) is reserved strictly for Spotify-only experience
+        albums = [
+            a for a in albums
+            if a.get("platform") != "apple_music"
+            and not str(a.get("album_id", "")).startswith("am_")
+            and not str(a.get("album_id", "")).startswith("mock_")
+            and not a.get("is_mock")
+        ]
+
     return render_template(
         'explorer.html',
-        albums=data["albums"],
+        albums=albums,
         unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
         kpis=data.get("kpis", {}),
@@ -215,9 +246,28 @@ def beta_recommend():
     data = fetch_user_album_data(user_id, force_refresh=force_refresh)
     unowned_albums = fetch_unowned_album_data(user_id)
 
+    is_beta = request.path.startswith("/beta")
+    albums = data["albums"]
+    albums = [
+        a for a in albums
+        if not (
+            str(a.get("album_id", "")).startswith("am_mock_")
+            or str(a.get("album_id", "")).startswith("mock_")
+            or a.get("is_mock") is True
+        )
+    ]
+    if not is_beta:
+        albums = [
+            a for a in albums
+            if a.get("platform") != "apple_music"
+            and not str(a.get("album_id", "")).startswith("am_")
+            and not str(a.get("album_id", "")).startswith("mock_")
+            and not a.get("is_mock")
+        ]
+
     return render_template(
         'explorer.html',
-        albums=data["albums"],
+        albums=albums,
         unowned_albums=unowned_albums,
         top_genres=data["top_genres"],
         kpis=data.get("kpis", {}),

@@ -69,8 +69,8 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         conditions.append("EXTRACT(YEAR FROM p.played_at) = EXTRACT(YEAR FROM CURRENT_TIMESTAMP())")
 
     if genre_param and genre_param != "all":
-        conditions.append("LOWER(COALESCE(a.genres, '')) LIKE @genre_filter")
-        query_params.append(bigquery.ScalarQueryParameter("genre_filter", "STRING", f"%{genre_param.lower()}%"))
+        conditions.append("LOWER(COALESCE(uaft.macro_genre, 'Other / Unclassified')) = @genre_filter")
+        query_params.append(bigquery.ScalarQueryParameter("genre_filter", "STRING", genre_param.lower()))
 
     where_str = "WHERE " + " AND ".join(conditions)
 
@@ -96,6 +96,7 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
         COALESCE(a.image_url, g.image_url, uaft.image_url) as album_image_url,
         COALESCE(a.release_date, g.release_date, uaft.release_date) as album_release_date,
         COALESCE(a.genres, g.genres, uaft.genres) as album_genres,
+        COALESCE(uaft.macro_genre, 'Other / Unclassified') as macro_genre,
         fp.first_played_at
       FROM `{PLAYBACK_HISTORY_TABLE}` p
       LEFT JOIN (
@@ -125,7 +126,8 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
           album_id,
           MAX(album_image_url) as image_url,
           MAX(album_release_date) as release_date,
-          MAX(album_genres) as genres
+          MAX(album_genres) as genres,
+          MAX(macro_genre) as macro_genre
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         GROUP BY album_id
       ) uaft
@@ -240,14 +242,14 @@ def fetch_user_analytics_data(user_id, range_param="30d", genre_param="all", sta
     era_counts = df.groupby("era").size().to_dict()
     eras = [{"era": e, "plays": int(era_counts.get(e, 0))} for e in era_order if era_counts.get(e, 0) > 0]
 
-    genre_counter = Counter()
-    for g_str in df["album_genres"].dropna():
-        if g_str:
-            for g in str(g_str).split(","):
-                clean_g = g.strip().lower()
-                if clean_g:
-                    genre_counter[clean_g] += 1
-    genres = [{"genre": g.title(), "plays": count} for g, count in genre_counter.most_common(8)]
+    macro_plays = df.groupby("macro_genre")["ts"].count().to_dict() if "macro_genre" in df.columns else {}
+    genres = [
+        {"genre": mg, "plays": int(plays)}
+        for mg, plays in sorted(macro_plays.items(), key=lambda x: -x[1])
+        if mg and mg != "Other / Unclassified"
+    ][:8]
+    if not genres:
+        genres = [{"genre": "General", "plays": len(df)}]
 
     heatmap = [[0]*24 for _ in range(7)]
     for _, r in df.iterrows():

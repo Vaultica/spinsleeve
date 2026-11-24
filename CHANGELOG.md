@@ -6,6 +6,67 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.8] — 2026-11-23
+### 🎵 APP-01: 12" Gatefold Tracklisting & UX Refinements Prototype
+* **What:**
+  - **Interactive Gatefold Prototype (`prototypes/gatefold_app01_prototype.html`):**
+    - Developed and optimized an interactive 12" gatefold modal prototype featuring album switcher (Pink Floyd, Daft Punk, Radiohead), side A/B track splitting, and audio audition simulation.
+  - **UX & Viewport Refinements (`PROJECT_ROADMAP.md`, `ROADMAP_TECHNICAL_SPECS.md`):**
+    - Locked in Right-Side Minimalist Anchor Navigation (`📖` Narrative, `⭐` Reviews, `🎵` Tracklisting, `🎷` Vibe & Mood, `📓` Personal Crate Notes).
+    - Enforced Gutter Clearance (`pr-24`) to ensure scrollable content never overlaps floating anchor panels.
+    - Imposed Responsive Viewport Height Constraints (`max-h-[85vh]`) fully optimized for 13" laptop screens without vertical overflow.
+  - **Test Suite Verification:**
+    - Verified 98/98 unit tests passing successfully.
+* **Why:**
+  - Finalizes UX design and layout specifications for physical vinyl gatefold record sleeves with seamless multi-section navigation and compact viewport fit.
+* **How:**
+  - Materialized prototype, updated roadmap and technical specifications, verified 98/98 unit tests passing.
+
+---
+
+## [v2.8.7] — 2026-11-23
+### 🧠 APP-18: Zero-Shot Semantic Text Classification & Analytics Alignment
+* **What:**
+  - **Zero-Shot Semantic Text Classification (`src/pipeline_v2/classifier.py`):**
+    - Integrated `sentence-transformers/all-MiniLM-L6-v2` semantic text classification into the metadata enrichment pipeline with robust regex fallback.
+    - Enables semantic genre and mood classification with cosine similarity confidence scoring and threshold analysis.
+  - **Profiling & Reporting (`scripts/profile_classifier_comparison.py`, `classifier_comparison_report.md`):**
+    - Created profiling script and materialized side-by-side distribution comparison report evaluating semantic vs regex macro-genre classification.
+  - **Analytics Alignment (`src/report_v2/services/analytics.py`):**
+    - Aligned Analytics page genre filters and Genre Ecosystem charts with normalized macro-genres.
+  - **Validation & Production Deployment:**
+    - Verified 98/98 unit tests passing successfully. Built and deployed container revision `spotify-dashboard-beta-00074-9hb` to Cloud Run (`europe-west2`).
+* **Why:**
+  - Enhances metadata classification accuracy for rare, stylistic, or non-standard genre tags using state-of-the-art sentence embeddings while maintaining fast fallback and robust analytical consistency.
+* **How:**
+  - Implemented semantic classification in `classifier.py`, added comparative profiling scripts and reports, aligned analytics services, verified 98/98 tests passing, and deployed live revision `spotify-dashboard-beta-00074-9hb`.
+
+---
+
+## [v2.8.6] — 2026-11-22
+### 🍏 APP-02b: MusicKit JS v3 Frontend Client, Mock Isolation & Production Deployment (PR #11)
+* **What:**
+  - **MusicKit JS v3 Integration & Onboarding UI (`src/report_v2/templates/explorer.html`, `src/report_v2/routes/apple_music.py`):**
+    - Implemented route-scoped `/beta` isolation preserving Spotify-only default root (`/` / `/crate`).
+    - Integrated Apple MusicKit JS v3 script loading, configuration, and authorization workflow.
+    - Added header connection dropdown trigger with platform status indicators and Onboarding & Authorization modal supporting Live and Sandbox/Mock Test Collection toggles (enabling instant offline testing and QA without a live Apple Developer subscription).
+    - Developed sync progress toasts and platform vinyl badges (` Apple Music`) for cross-platform library attribution.
+  - **Mock Filtering & Strict Route Isolation (`src/report_v2/services/catalog.py`, `src/report_v2/routes/apple_music.py`):**
+    - Filtered mock album covers and enforced strict Spotify-only isolation on default root (`/` / `/crate`).
+  - **Container Packaging & Production Deployment (`Dockerfile`, `src/report_v2/Dockerfile`):**
+    - Packaged `pipeline_v2` dependency in web container and decoupled `apple_music` from sync.
+    - Executed BigQuery DML cleanup (7 mock rows deleted from `user_saved_albums` and `album_provider_ids`, `user_albums_features_table` refreshed with 0 mock albums remaining, `UserCatalogCache/sergebou` invalidated).
+    - Deployed production revision `spotify-dashboard-beta-00073-r5n` live on `europe-west2` serving 100% traffic, verified HTTP 200 on `https://spinsleeve.cc/` and `https://spinsleeve.cc/beta/`.
+  - **Comprehensive Unit Test Suite (`tests/test_apple_music_frontend.py`, `tests/`):**
+    - Added rigorous unit test coverage, bringing the total test suite to 98/98 passing unit tests cleanly.
+    - Pushed branch `feat/app-02b-musickit-frontend` to PR #11. Note: Live Apple Developer Program enrollment (£79) is currently pending.
+* **Why:**
+  - Provides a seamless cross-platform front-end collector onboarding and library exploration experience for Apple Music users while maintaining strict route isolation, clean production telemetry, and robust testability.
+* **How:**
+  - Implemented MusicKit JS v3 client workflows, modal templates, source filters, mock filtering, packaging updates, BQ cleanup, and unit tests (`tests/test_apple_music_frontend.py`), verifying 98/98 unit tests passing on branch `feat/app-02b-musickit-frontend` (PR #11) and deploying live revision `spotify-dashboard-beta-00073-r5n`.
+
+---
+
 ## [v2.8.5] — 2026-11-22
 ### 🍏 APP-02a: Apple Music Backend Pipeline & JWT Ingestion Service
 * **What:**

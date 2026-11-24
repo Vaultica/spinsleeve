@@ -15,6 +15,7 @@ COPY app.py .
 COPY routes/ routes/
 COPY services/ services/
 COPY templates/ templates/
+COPY pipeline_v2/ pipeline_v2/
 
 EXPOSE 8080
 

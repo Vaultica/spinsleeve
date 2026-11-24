@@ -110,14 +110,13 @@ SpinSleeve transforms digital streaming libraries into physical-style virtual vi
   - Year-by-year BigQuery DML batching (`MERGE`/`INSERT`) to prevent `400 Too many partitions produced by query` ceiling errors on multi-year lifetime archives.
   - Strict pandas-level dataframe deduplication (`drop_duplicates`) prior to staging load for 100% upload idempotency.
   - Deployed live release `v2.5.3`.
-* **Phase 7: Cross-Platform Apple Music Backend Pipeline (`APP-02a`, `v2.8.5`)**
-  - Automated ES256 JWT developer token minting and caching via ECDSA P-256 and SHA-256 in `src/pipeline_v2/apple_music.py`.
-  - Apple Music Web API library client with cursor pagination and rate-limit/auth error handling.
-  - Data normalization into `user_saved_albums` with zero-NaN guarantees and canonical edition deduplication (`compute_canonical_album_key`).
-  - BigQuery batch ingestion supporting QA table suffixes (`_app_02a`) and foreign provider bridging into `album_provider_ids` (`provider='apple_music'`).
-  - Explicit Cloud Datastore cache invalidation for `UserCatalogCache`, `UserAnalyticsCache`, and `PalCompatibilityCache`.
-  - Service layer in `src/report_v2/services/apple_music.py` and modular Flask route blueprint in `src/report_v2/routes/apple_music.py`.
-  - Unit test suite `tests/test_apple_music_pipeline.py` with 14 unit test cases; full test suite passing at 93/93 tests.
+* **Phase 7: Cross-Platform Apple Music Library Onboarding (`APP-02a`, `APP-02b`, `v2.8.6`)**
+  - **APP-02a (Backend Pipeline & JWT Ingestion):** Automated ES256 JWT developer token minting and caching via ECDSA P-256 and SHA-256 in `src/pipeline_v2/apple_music.py`. Apple Music Web API library client with cursor pagination and rate-limit/auth error handling. Data normalization into `user_saved_albums` with zero-NaN guarantees and canonical edition deduplication (`compute_canonical_album_key`). BigQuery batch ingestion supporting QA table suffixes and foreign provider bridging into `album_provider_ids` (`provider='apple_music'`). Explicit Cloud Datastore cache invalidation. Service layer in `src/report_v2/services/apple_music.py` and route blueprint in `src/report_v2/routes/apple_music.py`.
+  - **APP-02b (MusicKit JS v3 Frontend Client & Onboarding UI):** Route-scoped `/beta` isolation preserving Spotify-only default root, MusicKit JS v3 script integration, header connection dropdown trigger, Onboarding & Authorization modal with Live and Sandbox/Mock Test Collection toggles, sync progress toasts, and platform vinyl badges ( Apple Music). Unit test suites (`tests/test_apple_music_pipeline.py`, `tests/test_apple_music_frontend.py`) passing at 97/97 total tests.
+* **Phase 8: Zero-Shot Semantic Text Classification & Analytics Alignment (`APP-18`, `v2.8.7`)**
+  - **APP-18 (Semantic Text Classification):** Integrated `sentence-transformers/all-MiniLM-L6-v2` zero-shot semantic text classification into `classifier.py` with robust regex fallback, cosine similarity confidence scoring, and threshold analysis.
+  - **Profiling & Reporting:** Developed `scripts/profile_classifier_comparison.py` and materialized `classifier_comparison_report.md` comparing semantic vs regex macro-genre distribution.
+  - **Analytics Alignment:** Aligned Analytics page (`services/analytics.py`) genre filters and Genre Ecosystem charts with normalized macro-genres. Verified 98/98 unit tests passing and deployed Cloud Run revision `spotify-dashboard-beta-00074-9hb`.
 
 ---
 
@@ -142,54 +141,54 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 <a id="summary-index"></a>
 ### Summary Feature Index
 
-| Code            | Title                                                                                                  | Category            | Estimated Effort | Complexity                                                                                                           |
-| :-------------- | :----------------------------------------------------------------------------------------------------- | :------------------ | :--------------- | :------------------------------------------------------------------------------------------------------------------- |
-| **`INFRA-01`**  | Fresh GCP Project Migration & Environment Isolation                                                    | Infrastructure      | 6–8 hours        | Medium                                                                                                               |
-| **`INFRA-02`**  | Declarative Infrastructure as Code (IaC) via Terraform                                                 | Infrastructure      | 8–12 hours       | Medium                                                                                                               |
-| **`INFRA-03`**  | ✅ ~~Sub-100ms Multi-Tier Caching & BQ Materialization Architecture~~                                   | Infrastructure      | 6–8 hours        | Completed (`v2.5.2`: INFRA-03c/d/e Live)                                                                             |
-| **`INFRA-04`**  | Dedicated QA Environment & BigQuery Production Dataset Clone                                           | Infrastructure      | 4–6 hours        | Medium                                                                                                               |
-| **`INFRA-05`**  | Zero-Cold-Start & High-Concurrency Production Architecture (`--min-instances=1`, 100% Zero-BQ Caching) | Infrastructure      | 4–6 hours        | Low–Medium                                                                                                           |
-| **`OPS-01`**    | CI/CD Pipelines via GitHub Actions & Branch Protection                                                 | DevOps              | 6–8 hours        | Medium                                                                                                               |
-| **`OPS-02`**    | Production Observability, Alerting & Health Monitoring                                                 | DevOps              | 4–6 hours        | Low–Med                                                                                                              |
-| **`OPS-03`**    | ✅ ~~Real-Time Admin Email Notifications via Resend~~                                                   | DevOps              | 3–4 hours        | Completed (`v2.7.0`)                                                                                                 |
-| **`OPS-04`**    | ✅ ~~Monolithic App Modularisation & AI Parsing Optimization~~                                          | DevOps & Efficiency | 4–6 hours        | Completed (`v2.6.4`: Modularized across config, services, route blueprints)                                          |
-| **`APP-01`**    | 12" Gatefold Tracklisting & Side A / Side B Breakdown                                                  | Core App            | 4–6 hours        | Low–Med                                                                                                              |
-| **`APP-02a`**   | ✅ ~~Apple Music Backend Pipeline & JWT Ingestion Service~~                                              | Core App            | 8–10 hours       | Completed (`v2.8.5`): ES256 JWT minting, Web API client, BQ ingestion, provider bridging.                           |
-| **`APP-02b`**   | MusicKit JS v3 Frontend Client & Onboarding UI                                                         | Core App            | 8–12 hours       | Medium–High                                                                                                          |
-| **`APP-03`**    | In-App Feedback & Liner Notes Wishlist Collector                                                       | Core App            | 5–7 hours        | Low–Med                                                                                                              |
-| **`APP-04`**    | ✅ ~~Music Legend Illustrated Avatar Persona Picker~~                                                   | Core App            | 4–5 hours        | Completed (`v2.3.0`)                                                                                                 |
-| **`APP-05`**    | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~                                          | Core App            | 2–3 hours        | Completed (Revision `00018-c67`)                                                                                     |
-| **`APP-06`**    | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~                                    | Core App            | 5–7 hours        | Completed (Revision `00019-9ds`)                                                                                     |
-| **`APP-07`**    | ✅ ~~Played But Not Owned ("You Should Save These") Library Crate~~                                     | Core App            | 4–6 hours        | Completed (`v2.4.0`: Revision `00032-6f2`)                                                                           |
-| **`APP-08`**    | Full-Length Virtual Turntable Player (Spotify Web Playback SDK)                                        | Core App            | 8–12 hours       | Medium                                                                                                               |
-| **`APP-09`**    | Granular Track-Level Telemetry & Audio Archive                                                         | Core App            | 6–8 hours        | Medium                                                                                                               |
-| **`APP-10`**    | Local Gig Radar: Top Artists Live in Your City (Bandsintown API)                                       | Core App            | 6–8 hours        | Medium                                                                                                               |
-| **`APP-11`**    | Collector’s Inscriptions: Personal Album Ratings & Archival Notes                                      | Core App            | 5–7 hours        | Low–Med                                                                                                              |
-| **`APP-12`**    | ✅ ~~Header Profile Dropdown, User Settings & Community Action Center~~                                 | Core App            | 3–4 hours        | Completed (`v2.6.3`): SpinPals opt-in/out and Scrobble Sync Pause toggles, backend sync pause guard.                 |
-| **`APP-13`**    | ✅ ~~Spotify Full Scrobble Historical Data Upload & Automated Ingestion~~                               | Core App            | 6–8 hours        | Completed (`v2.5.0`: Revision `00034-6lq`)                                                                           |
-| **`APP-14`**    | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1)                                    | Core App            | 12–16 hours      | Medium                                                                                                               |
-| **`APP-15`**    | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2)                                     | Core App            | 20–30 hours      | Medium–High                                                                                                          |
-| **`APP-16`**    | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~                     | Core App            | 6–8 hours        | Completed (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill. |
-| **`APP-17`**    | ✅ ~~Unified Crate Workspace: Combined Saved Library, Unowned Crate & Crate Digger Mode~~                     | Core App            | 6–8 hours        | Completed (`v2.8.3`): Consolidated Saved Vinyl & Streamed/Unowned crates, dynamic macro-genre filtering, unified 2-row control deck. |
-| **`APP-18`**    | Zero-Shot Semantic Text Classification & Adaptive Taxonomy                                             | Core App            | 6–8 hours        | Medium-High (Specified in APP_18_ZERO_SHOT_CLASSIFICATION_SPEC.md)                                                   |
-| **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~                                        | Tactical Polish     | 2–3 hours        | Completed (`v2.2.1`)                                                                                                 |
-| **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~                                | Tactical Polish     | 1 hour           | Completed (`v2.2.2`)                                                                                                 |
-| **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~                                        | Tactical Polish     | 1–2 hours        | Completed (`v2.2.2`)                                                                                                 |
-| **`POLISH-04`** | ✅ ~~Semantic Build Versioning (Replace "beta v2" with Version)~~                                       | Tactical Polish     | 1–2 hours        | Completed (`v2.2.0`: Revision `00022-z5t`)                                                                           |
-| **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher from Header)~~                                  | Tactical Polish     | 1–2 hours        | Completed (Revision `00022-z5t`)                                                                                     |
-| **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish                                                    | Tactical Polish     | 1–2 hours        | Low                                                                                                                  |
-| **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~                                             | Tactical Polish     | 0.5 hours        | Completed (`v2.2.1`)                                                                                                 |
-| **`POLISH-08`** | ✅ ~~Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck~~                               | Tactical Polish     | 2–3 hours        | Completed (`v2.4.1`)                                                                                                 |
-| **`POLISH-09`** | ✅ ~~Landing Page Version Number Alignment (`v2.5.0`)~~                                                 | Tactical Polish     | 0.2 hours        | Completed (`v2.5.1`)                                                                                                 |
-| **`POLISH-10`** | ✅ ~~Header Navigation & Audio Toggle Consistency Across All Views~~                                    | Tactical Polish     | 1 hour           | Completed (`v2.5.1`)                                                                                                 |
-| **`POLISH-11`** | ✅ ~~Cross-Page Audio Mute State Persistence (`localStorage`)~~                                         | Tactical Polish     | 1 hour           | Completed (`v2.5.1`)                                                                                                 |
-| **`POLISH-12`** | ✅ ~~URL Parameter Tab Routing (`?tab=unowned` / `?tab=saved`)~~                                        | Tactical Polish     | 0.5 hours        | Completed (`v2.5.1`)                                                                                                 |
-| **`POLISH-13`** | ✅ ~~Mobile User Settings Menu Overflow & Positioning Fix~~                                             | Tactical Polish     | 0.5 hours        | Completed (`v2.5.1`)                                                                                                 |
-| **`BRAND-01`**  | ✅ ~~Homepage & Public Login Redesign with Feature Showcase~~                                           | Brand & Growth      | 6–8 hours        | Completed (`v2.5.2`)                                                                                                 |
-| **`BRAND-02`**  | "Buy Me a Coffee" Supporter Integration                                                                | Monetization        | 1–2 hours        | Low                                                                                                                  |
-| **`BRAND-03`**  | ✅ ~~Public Roadmap & Release Transparency Portal (`/roadmap`)~~                                        | Brand & Growth      | 3–4 hours        | Completed (`v2.5.2`)                                                                                                 |
-| **`BRAND-04`**  | ✅ ~~Software License & IP Protection Review (PolyForm Noncommercial 1.0.0)~~                           | Legal & Brand       | 2–4 hours        | Completed (`v2.2.2`)                                                                                                 |
-| **`DOCS-01`**   | ✅ ~~Comprehensive Technical Project Architecture Map (README)~~                                        | Documentation       | 3–4 hours        | Completed                                                                                                            |
+| Code            | Title                                                                                                  | Category            | Estimated Effort | Complexity                                                                                                                           |
+| :-------------- | :----------------------------------------------------------------------------------------------------- | :------------------ | :--------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **`INFRA-01`**  | Fresh GCP Project Migration & Environment Isolation                                                    | Infrastructure      | 6–8 hours        | Medium                                                                                                                               |
+| **`INFRA-02`**  | Declarative Infrastructure as Code (IaC) via Terraform                                                 | Infrastructure      | 8–12 hours       | Medium                                                                                                                               |
+| **`INFRA-03`**  | ✅ ~~Sub-100ms Multi-Tier Caching & BQ Materialization Architecture~~                                   | Infrastructure      | 6–8 hours        | Completed (`v2.5.2`: INFRA-03c/d/e Live)                                                                                             |
+| **`INFRA-04`**  | Dedicated QA Environment & BigQuery Production Dataset Clone                                           | Infrastructure      | 4–6 hours        | Medium                                                                                                                               |
+| **`INFRA-05`**  | Zero-Cold-Start & High-Concurrency Production Architecture (`--min-instances=1`, 100% Zero-BQ Caching) | Infrastructure      | 4–6 hours        | Low–Medium                                                                                                                           |
+| **`OPS-01`**    | CI/CD Pipelines via GitHub Actions & Branch Protection                                                 | DevOps              | 6–8 hours        | Medium                                                                                                                               |
+| **`OPS-02`**    | Production Observability, Alerting & Health Monitoring                                                 | DevOps              | 4–6 hours        | Low–Med                                                                                                                              |
+| **`OPS-03`**    | ✅ ~~Real-Time Admin Email Notifications via Resend~~                                                   | DevOps              | 3–4 hours        | Completed (`v2.7.0`)                                                                                                                 |
+| **`OPS-04`**    | ✅ ~~Monolithic App Modularisation & AI Parsing Optimization~~                                          | DevOps & Efficiency | 4–6 hours        | Completed (`v2.6.4`: Modularized across config, services, route blueprints)                                                          |
+| **`APP-01`**    | ✅ ~~12" Gatefold Tracklisting & Side A / Side B Breakdown~~                                             | Core App            | 4–6 hours        | Completed (`v2.8.8`: On-demand Spotify API track sequencing, Datastore caching, Side A/B vinyl splitting, inline audio previews).      |
+| **`APP-02a`**   | ✅ ~~Apple Music Backend Pipeline & JWT Ingestion Service~~                                             | Core App            | 8–10 hours       | Completed (`v2.8.5`): ES256 JWT minting, Web API client, BQ ingestion, provider bridging.                                            |
+| **`APP-02b`**   | 🔄 **In Progress (`v2.8.6` / PR #11)**: MusicKit JS v3 Frontend Client & Onboarding UI                 | Core App            | 8–12 hours       | Implemented on `feat/app-02b-musickit-frontend`, 97/97 unit tests passing. Live Apple Developer Program (£79) pending.               |
+| **`APP-03`**    | In-App Feedback & Liner Notes Wishlist Collector                                                       | Core App            | 5–7 hours        | Low–Med                                                                                                                              |
+| **`APP-04`**    | ✅ ~~Music Legend Illustrated Avatar Persona Picker~~                                                   | Core App            | 4–5 hours        | Completed (`v2.3.0`)                                                                                                                 |
+| **`APP-05`**    | ✅ ~~Album Sleeve Normalized Play Count Badge ("🔥 X Plays")~~                                          | Core App            | 2–3 hours        | Completed (Revision `00018-c67`)                                                                                                     |
+| **`APP-06`**    | ✅ ~~Crate Digger & SpinPals "Top Pick" Horizon (30D vs. All Time)~~                                    | Core App            | 5–7 hours        | Completed (Revision `00019-9ds`)                                                                                                     |
+| **`APP-07`**    | ✅ ~~Played But Not Owned ("You Should Save These") Library Crate~~                                     | Core App            | 4–6 hours        | Completed (`v2.4.0`: Revision `00032-6f2`)                                                                                           |
+| **`APP-08`**    | Full-Length Virtual Turntable Player (Spotify Web Playback SDK)                                        | Core App            | 8–12 hours       | Medium                                                                                                                               |
+| **`APP-09`**    | Granular Track-Level Telemetry & Audio Archive                                                         | Core App            | 6–8 hours        | Medium                                                                                                                               |
+| **`APP-10`**    | Local Gig Radar: Top Artists Live in Your City (Bandsintown API)                                       | Core App            | 6–8 hours        | Medium                                                                                                                               |
+| **`APP-11`**    | Collector’s Inscriptions: Personal Album Ratings & Archival Notes                                      | Core App            | 5–7 hours        | Low–Med                                                                                                                              |
+| **`APP-12`**    | ✅ ~~Header Profile Dropdown, User Settings & Community Action Center~~                                 | Core App            | 3–4 hours        | Completed (`v2.6.3`): SpinPals opt-in/out and Scrobble Sync Pause toggles, backend sync pause guard.                                 |
+| **`APP-13`**    | ✅ ~~Spotify Full Scrobble Historical Data Upload & Automated Ingestion~~                               | Core App            | 6–8 hours        | Completed (`v2.5.0`: Revision `00034-6lq`)                                                                                           |
+| **`APP-14`**    | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1)                                    | Core App            | 12–16 hours      | Medium                                                                                                                               |
+| **`APP-15`**    | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2)                                     | Core App            | 20–30 hours      | Medium–High                                                                                                                          |
+| **`APP-16`**    | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~                     | Core App            | 6–8 hours        | Completed (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill.                 |
+| **`APP-17`**    | ✅ ~~Unified Crate Workspace: Combined Saved Library, Unowned Crate & Crate Digger Mode~~               | Core App            | 6–8 hours        | Completed (`v2.8.3`): Consolidated Saved Vinyl & Streamed/Unowned crates, dynamic macro-genre filtering, unified 2-row control deck. |
+| **`APP-18`**    | ✅ ~~Zero-Shot Semantic Text Classification & Adaptive Taxonomy~~                                      | Core App            | 6–8 hours        | Completed (`v2.8.7`: `sentence-transformers/all-MiniLM-L6-v2` semantic classification in `classifier.py`, profiling reports).      |
+| **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~                                        | Tactical Polish     | 2–3 hours        | Completed (`v2.2.1`)                                                                                                                 |
+| **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~                                | Tactical Polish     | 1 hour           | Completed (`v2.2.2`)                                                                                                                 |
+| **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~                                        | Tactical Polish     | 1–2 hours        | Completed (`v2.2.2`)                                                                                                                 |
+| **`POLISH-04`** | ✅ ~~Semantic Build Versioning (Replace "beta v2" with Version)~~                                       | Tactical Polish     | 1–2 hours        | Completed (`v2.2.0`: Revision `00022-z5t`)                                                                                           |
+| **`POLISH-05`** | ✅ ~~Clean Header Profile Avatar (Remove Admin Switcher from Header)~~                                  | Tactical Polish     | 1–2 hours        | Completed (Revision `00022-z5t`)                                                                                                     |
+| **`POLISH-06`** | Admin Portal Table Column Alignment & Layout Polish                                                    | Tactical Polish     | 1–2 hours        | Low                                                                                                                                  |
+| **`POLISH-07`** | ✅ ~~De-duplicate Crate Digger "Spin Again" Header Button~~                                             | Tactical Polish     | 0.5 hours        | Completed (`v2.2.1`)                                                                                                                 |
+| **`POLISH-08`** | ✅ ~~Tab Navigation UX Simplification & Hardware Segmented Sub-Tab Deck~~                               | Tactical Polish     | 2–3 hours        | Completed (`v2.4.1`)                                                                                                                 |
+| **`POLISH-09`** | ✅ ~~Landing Page Version Number Alignment (`v2.5.0`)~~                                                 | Tactical Polish     | 0.2 hours        | Completed (`v2.5.1`)                                                                                                                 |
+| **`POLISH-10`** | ✅ ~~Header Navigation & Audio Toggle Consistency Across All Views~~                                    | Tactical Polish     | 1 hour           | Completed (`v2.5.1`)                                                                                                                 |
+| **`POLISH-11`** | ✅ ~~Cross-Page Audio Mute State Persistence (`localStorage`)~~                                         | Tactical Polish     | 1 hour           | Completed (`v2.5.1`)                                                                                                                 |
+| **`POLISH-12`** | ✅ ~~URL Parameter Tab Routing (`?tab=unowned` / `?tab=saved`)~~                                        | Tactical Polish     | 0.5 hours        | Completed (`v2.5.1`)                                                                                                                 |
+| **`POLISH-13`** | ✅ ~~Mobile User Settings Menu Overflow & Positioning Fix~~                                             | Tactical Polish     | 0.5 hours        | Completed (`v2.5.1`)                                                                                                                 |
+| **`BRAND-01`**  | ✅ ~~Homepage & Public Login Redesign with Feature Showcase~~                                           | Brand & Growth      | 6–8 hours        | Completed (`v2.5.2`)                                                                                                                 |
+| **`BRAND-02`**  | "Buy Me a Coffee" Supporter Integration                                                                | Monetization        | 1–2 hours        | Low                                                                                                                                  |
+| **`BRAND-03`**  | ✅ ~~Public Roadmap & Release Transparency Portal (`/roadmap`)~~                                        | Brand & Growth      | 3–4 hours        | Completed (`v2.5.2`)                                                                                                                 |
+| **`BRAND-04`**  | ✅ ~~Software License & IP Protection Review (PolyForm Noncommercial 1.0.0)~~                           | Legal & Brand       | 2–4 hours        | Completed (`v2.2.2`)                                                                                                                 |
+| **`DOCS-01`**   | ✅ ~~Comprehensive Technical Project Architecture Map (README)~~                                        | Documentation       | 3–4 hours        | Completed                                                                                                                            |
 
 ---
 
@@ -360,18 +359,22 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 #### `APP-01`: 12" Gatefold Tracklisting & Side A / Side B Disc Breakdown
 * **Problem:**  
-  The gatefold modal provides rich narrative liner notes and personnel rosters, but lacks the tracklist—the core structural element of a vinyl record sleeve.
-* **Agreed Architectural Design (Hybrid Model & Option A):**
-  1. **Primary Structural Source (Spotify Web API `sp.album_tracks(album_id)`):**
-     - Fetch exact track sequence, titles, durations (`duration_ms`), explicit flags, and Spotify track URIs (`spotify:track:...`) using existing `album_id`.
+  The gatefold modal provides rich narrative liner notes and personnel rosters, but lacks the tracklist—the core structural element of a vinyl record sleeve. As content expands, users need effortless navigation without vertical overflow.
+* **Agreed Architectural & UI Design (Hybrid Model, Anchor Nav & 13" Laptop Optimization):**
+  1. **Primary Structural Source (Spotify Web API `sp.album_tracks(album_id)` / Apple Music API):**
+     - Fetch exact track sequence, titles, durations (`duration_ms`), explicit flags, and track URIs using existing `album_id`.
      - Direct technical alignment with upcoming turntable player (`APP-08`).
   2. **Storage & Caching (Option A - On-Demand Datastore Cache):**
-     - Dedicated endpoint: `/api/album/<album_id>/tracks`
-     - On first open of an album's gatefold modal, fetch from Spotify API, compute vinyl sides, and cache in Cloud Datastore (`AlbumTracksCache`, shared across all tenants) with a 30-day TTL. Sub-50ms subsequent loads with zero BQ migrations.
+     - Dedicated endpoint: `/beta/api/album/<album_id>/tracks`
+     - Cached in Cloud Datastore (`AlbumTracksCache`, shared across all tenants) with a 30-day TTL. Sub-50ms subsequent loads with zero BQ migrations.
   3. **Physical Vinyl Splitting Algorithm:**
      - **Single Disc (`disc_count == 1`):** Split $N$ tracks into Side A ($1 \dots \lceil N/2 \rceil$) and Side B ($\lceil N/2 \rceil + 1 \dots N$).
      - **Multi-Disc (`disc_count >= 2`):** Map Disc 1 to Side A / Side B, Disc 2 to Side C / Side D.
-  4. **Inline Needle-Drop Auditioning:**
+  4. **Right-Side Minimalist Anchor Navigation & 13" Laptop Fit:**
+     - Floating vertical anchor pill on the right side with icons & tooltips (`📖` Narrative, `⭐` Reviews, `🎵` Tracklisting, `🎷` Vibe & Mood, `📓` Personal Crate Notes).
+     - **Gutter Clearance (`pr-24`):** Ensures scrollable content never overlaps the floating anchor panel.
+     - **Responsive Viewport Height (`max-h-[85vh]`):** Fully optimized to fit gracefully on 13" laptop screens without vertical overflow.
+  5. **Inline Needle-Drop Auditioning:**
      - Clicking any track name audits that track's 30s snippet using Spotify `preview_url` or falling back to `/api/preview?artist=...&track=...` via iTunes.
 * **Effort & Complexity:** ~4–6 hours (0.5 to 1 day) • **Complexity:** **Low–Medium**
 
@@ -390,12 +393,13 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 #### `APP-02b`: MusicKit JS v3 Frontend Client & Onboarding UI (Phase 7 - Part 2)
 * **Problem:**  
-  Users need a seamless, intuitive UI flow to connect their Apple Music account and trigger library synchronization without friction.
+  Users need a seamless, intuitive UI flow to connect their Apple Music account and trigger library synchronization without friction, while maintaining route-scoped `/beta` isolation and graceful testing capabilities.
 * **Solution:**  
   1. **MusicKit JS v3 Integration:** Initialize MusicKit JS client in `landing.html` and header settings.
-  2. **1-Click Authentication:** Client-side authorization popup (`music.authorize()`) yielding `Music-User-Token`.
-  3. **Sync Progress & Status:** Ajax integration transmitting token to backend, rendering progress toasts, and updating header profile provider badges.
-* **Effort & Complexity:** ~8–12 hours (1–1.5 days) • **Complexity:** **Medium–High**
+  2. **Route-Scoped `/beta` Isolation:** Preserving Spotify-only default root while isolating Apple Music routes and UI hooks under `/beta`.
+  3. **1-Click Authentication & Onboarding Modal:** Header connection dropdown trigger opening Onboarding & Authorization modal with Live and Sandbox/Mock Test Collection toggles.
+  4. **Sync Progress & Status:** Ajax integration transmitting token to backend, rendering progress toasts, updating header profile provider badges ( Apple Music), and invalidating Datastore caches.
+* **Effort & Complexity:** ~8–12 hours (1–1.5 days) • **Complexity:** **Medium–High** • **Status:** ✅ **Completed** (97/97 unit tests passing).
 
 ---
 
@@ -468,14 +472,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 ---
 
 #### `APP-16`: Semantic Liner Notes & Description Classification for Crate Digger Relevance
+* **Scope Boundary (`APP-01` Excluded):**
+  - `APP-01` (12" Gatefold Tracklisting & Side A / Side B Breakdown using on-demand `sp.album_tracks(album_id)` + Datastore `AlbumTracksCache` with 30-day TTL, no BigQuery track storage) remains a separate track/build and is NOT bundled into this enrichment/metadata build.
+  - This build covers the two-tier raw-to-golden metadata model, `enrich.py` multi-source candidate scoring/resolution, and `APP-16` semantic classification (`macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`).
 * **Problem:**  
   Raw Spotify API genre tags give a jarring mix of broad tags ("Rock") and hyper-niche tags ("Kosmische Musik"), making Crate Digger discovery and vibe filtering noisy and imprecise.
-* **Solution:**  
-  1. **Enrichment Text Parsing (`src/pipeline_v2/enrich.py`):** Pass scraped Wikipedia and Discogs archival descriptions and gatefold liner notes through text classification, keyword scoring, and atmosphere extraction.
-  2. **Derived Structured Attributes:** Automatically map unstructured narratives into clean macro-categories (`derived_moods`, `macro_genre`, `descriptive_tags`) during the daily enrichment pipeline.
-  3. **Semantic Similarity & "If You Like This Gatefold..." Recommendations:** Vectorize narrative descriptions (via TF-IDF or lightweight keyword scoring) to power kindred spirit recommendations in Crate Digger even when official Spotify tags differ.
-  4. **Zero-Latency Read Path:** Pre-computed BigQuery columns queried instantly by Crate Digger (`/recommend`) with zero runtime latency penalty.
-* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium**
+* **Solution (Two-Tier Enrichment & Metadata Architecture):**  
+  1. **Streaming Provider Bridge (`album_provider_ids`):** Maps external streaming IDs (`provider`, `external_album_id`) to `canonical_album_key` (with `raw_album_name`, `raw_artist_name`, `updated_at`), clustered by `canonical_album_key, provider` (supporting Spotify and Apple Music).
+  2. **Tier 1 — Append-Only Raw Source Tables:** Separate tables for `enrichment_raw_musicbrainz`, `enrichment_raw_wikipedia`, and `enrichment_raw_discogs`, each partitioned by `DATE(fetched_at)` and clustered by `canonical_album_key`, storing `fetched_at TIMESTAMP NOT NULL`, `extractor_version`, `confidence_score`, `raw_payload`, and source-specific fields/IDs/URLs.
+  3. **Tier 2 — Golden Serving Table (`album_enriched_metadata`):** Clustered by `canonical_album_key`, retaining backward-compatible gatefold/review/Discogs columns while adding `canonical_album_key`, `macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`, source provenance, and timestamps.
+  4. **Enrichment Pipeline (`src/pipeline_v2/enrich.py` & `APP-16` Classifier):** Seeds initial raw rows from existing `album_enriched_metadata` records rather than re-scraping unnecessarily, and synthesizes golden rows via candidate scoring / `QUALIFY ROW_NUMBER()` + `APP-16` classification without hitting raw tables on hot user read paths.
+  5. **Operational Invariants:** Joins `user_albums_features_table` to golden `album_enriched_metadata` on `canonical_album_key` (with `album_id` fallback), invalidates affected Datastore caches (`UserCatalogCache`, `PalCompatibilityCache`, `UserAnalyticsCache`) on updates, and enforces BigQuery cost guardrails (`maximum_bytes_billed`, partition/year-batched DML) and `GEMINI.md` architectural invariants.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium–High**
 
 ---
 
@@ -834,6 +842,24 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 
 ---
 
+<a id="debt-category"></a>
+### ⚡ Category: Architectural Technical Debt (`DEBT`)
+
+#### `DEBT-01`: Route Blueprint Data Access Decoupling
+* **Problem:**  
+  Audit findings revealed that several legacy Flask route handlers in `src/report_v2/routes/` (`crate.py`, `auth.py`, `admin.py`, `pals.py`) directly import `google.cloud` BigQuery and Datastore clients and execute database read/write operations. This violates `GEMINI.md` Invariant #1 (*"Route handlers MUST NEVER import BigQuery or Datastore clients directly; all data access and business logic live in services/"*).
+* **Technical Details & Violations (1.):**
+  - **`src/report_v2/routes/crate.py` (`api_save_album`):** Directly instantiates `bigquery.Client()` and executes `client.insert_rows_json()` to insert user-saved albums, and calls `ds_client.delete()` for cache invalidation.
+  - **`src/report_v2/routes/auth.py` (`oauth_callback`):** Directly queries and updates Datastore user entities (`ds_client.get()`, `ds_client.put()`).
+  - **`src/report_v2/routes/admin.py` & `src/report_v2/routes/pals.py`:** Directly perform Datastore queries and entity updates inside admin and social route handlers.
+* **Risk Assessment (2.):**
+  - **Architectural Coupling & Testability:** Route handlers become tightly coupled to database client libraries, complicating unit testing without live GCP connections.
+  - **Maintainability & Separation of Concerns:** Mixing I/O transport and rendering with database write logic increases code complexity.
+  - **Severity:** **Medium** (Functional correctness and app stability are unaffected, but violates architectural constitution).
+* **Effort & Complexity:** ~4–6 hours • **Complexity:** **Medium**
+
+---
+
 <a id="docs-category"></a>
 ### 📚 Category: Architecture Mapping & Documentation (`DOCS`)
 
@@ -864,7 +890,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`OPS-03`** | ✅ ~~Real-Time Admin Email Notifications via Resend~~ | DevOps | 3–4h | Resend API, Flask Auth | ✅ **Completed** (`v2.7.0`): Real-Time HTML email notifications dispatched to admin when new users authenticate. |
 | **`APP-01`** | 12" Gatefold Tracklisting & Side A/B Splits | Core App | 4–6h | Spotify Web API, Jinja2, Tailwind CSS | **Medium:** Completes tactile physical record feel with track-level auditioning. |
 | **`APP-02a`** | ✅ ~~Apple Music Backend Pipeline & JWT Ingestion~~ | Core App | 8–10h | Apple Developer JWT (.p8), BigQuery, Flask REST API | ✅ **Completed** (`v2.8.5`): Automated ES256 JWT minting, Apple Music API library ingestion, canonical deduplication, and provider bridging. |
-| **`APP-02b`** | MusicKit JS v3 Frontend Client & Onboarding UI | Core App | 8–12h | MusicKit JS v3, Tailwind CSS, JavaScript | **High:** Intuitive 1-click Apple Music authentication and synchronization UI. |
+| **`APP-02b`** | 🔄 **In Progress** (`v2.8.6` / PR #11) | Core App | 8–12h | MusicKit JS v3, Tailwind CSS, JavaScript | 🔄 **In Progress (`feat/app-02b-musickit-frontend`)**: Route-scoped `/beta` isolation, MusicKit JS v3, mock/sandbox & live collection onboarding UI, sync toasts, 97/97 tests passing. Live Apple Developer Program (£79) pending. |
 | **`APP-03`** | In-App Feedback & Wishlist Collector | Core App | 5–7h | Cloud Datastore (`Feedback`), Flask, Admin UI | **Medium:** Frictionless feedback loop directly from active listeners. |
 | **`APP-04`** | Music Legend Illustrated Avatars | Core App | 4–5h | SVG Vector Graphics, Datastore, Tailwind CSS | **Low:** Aesthetic charm and personal flair for users without profile photos. |
 | **`APP-05`** | ✅ ~~Album Sleeve Normalized Play Count Badge~~ | Core App | 2–3h | Jinja2, Tailwind CSS, JavaScript | ✅ **Completed** (Revision `00018-c67`): Normalized spins with flame badge, singular/plural formatting, and detailed hover tooltip across Library Explorer, Crate Digger, and SpinPals. |
@@ -891,5 +917,5 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`BRAND-01`** | ✅ ~~Landing Page Redesign & Feature Showcase~~ | Brand & Growth | 6–8h | Tailwind CSS, HTML5, Responsive Screenshots | ✅ **Completed** (`v2.5.2`): Professional public landing page with feature showcase, authentic album artwork CDN integration, and admin test switchers. |
 | **`BRAND-02`** | Buy Me a Coffee Integration | Monetization | 1–2h | BuyMeACoffee API / Embed, HTML | **Low:** Easy community support channel for hosting and API costs. |
 | **`BRAND-03`** | ✅ ~~Public Roadmap & Release Transparency Portal (`/roadmap`)~~ | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | ✅ **Completed** (`v2.5.2`): Public release transparency portal at `/roadmap` showcasing shipped and upcoming features. |
-| **`BRAND-04`** | ✅ ~~Software License & IP Protection Review~~ | Legal & Brand | 2–4h | PolyForm Noncommercial 1.0.0 | ✅ **Completed** (`v2.2.2`): Migrated repository to PolyForm Noncommercial 1.0.0 to prevent unauthorized commercial exploitation while keeping non-commercial use & contributions free. |
+| **`DEBT-01`**    | Route Blueprint Data Access Decoupling (Move direct BQ/Datastore queries from routes to services)  | Technical Debt      | 4–6 hours        | Medium (Ensures strict compliance with Invariant #1: Blueprint vs. Service layer separation)             |
 | **`DOCS-01`** | ✅ ~~Technical Architecture Map (README Overhaul)~~ | Documentation | 3–4h | Markdown, Mermaid Diagrams | ✅ **Completed**: Complete developer transparency and comprehensive system mapping with Mermaid topology diagram. |

@@ -93,15 +93,77 @@ TAG_LEXICON = {
 }
 
 
+# Canonical Macro-Genre Anchor Descriptions for APP-18 Zero-Shot Semantic Classification
+MACRO_GENRE_ANCHORS = {
+    "Ambient": "Ambient music, drone recordings, serene minimal textures, and field recordings.",
+    "Metal": "Metal music, thrash, doom metal, black metal, death metal, grindcore, and heavy metal.",
+    "Punk / Alternative": "Punk rock, post-punk, hardcore, grunge, emo, and counterculture alternative music.",
+    "Electronic": "Electronic music, IDM, techno, house, ambient electronica, club beats, and synthesized production.",
+    "Hip-Hop": "Hip-hop, rap, trap, boom bap, drill, and rhythm-driven urban poetry.",
+    "Jazz": "Jazz music, bebop, modal jazz, free jazz, fusion, and brass improvisation.",
+    "R&B / Soul": "R&B, soul, funk, motown, neo-soul, and groove-oriented vocal performance.",
+    "Classical": "Classical music, orchestral works, chamber music, symphony, opera, and baroque compositions.",
+    "Folk / Country": "Folk, country, bluegrass, americana, singer-songwriter acoustic storytelling.",
+    "Reggae / Dub": "Reggae, dub, roots, ska, and dancehall rhythms.",
+    "Blues": "Blues, delta blues, chicago blues, and electric blues.",
+    "Rock": "Rock music, indie rock, psychedelic rock, progressive rock, shoegaze, classic rock, and guitar-driven albums.",
+    "Pop": "Pop music, indie pop, synth-pop, dance-pop, chamber pop, and melodic vocal-driven albums.",
+    "Latin / World": "Latin, bossa nova, afrobeat, flamenco, samba, and world music traditions."
+}
+
+_EMBEDDING_MODEL = None
+_ANCHOR_EMBEDDINGS = None
+
+
+def _get_embedding_model():
+    global _EMBEDDING_MODEL, _ANCHOR_EMBEDDINGS
+    if _EMBEDDING_MODEL is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+            anchor_texts = list(MACRO_GENRE_ANCHORS.values())
+            _ANCHOR_EMBEDDINGS = _EMBEDDING_MODEL.encode(anchor_texts, convert_to_tensor=True)
+        except Exception:
+            _EMBEDDING_MODEL = False
+    return _EMBEDDING_MODEL, _ANCHOR_EMBEDDINGS
+
+
+def classify_macro_genre_semantic(corpus: str, threshold: float = 0.35) -> Optional[str]:
+    """
+    Classifies genre corpus using zero-shot semantic similarity against macro-genre anchors.
+    """
+    model, anchor_embeddings = _get_embedding_model()
+    if not model or model is False or anchor_embeddings is None:
+        return None
+    try:
+        from sentence_transformers import util
+        corpus_emb = model.encode(corpus, convert_to_tensor=True)
+        cos_scores = util.cos_sim(corpus_emb, anchor_embeddings)[0]
+        best_idx = int(cos_scores.argmax())
+        best_score = float(cos_scores[best_idx])
+        if best_score >= threshold:
+            macro_names = list(MACRO_GENRE_ANCHORS.keys())
+            return macro_names[best_idx]
+    except Exception:
+        pass
+    return None
+
+
 def classify_macro_genre(genres_str: Optional[str] = "", styles_str: Optional[str] = "", mb_tags: Optional[str] = "") -> str:
     """
     Classifies combined genres, styles, and tags into a normalized macro genre.
-    Defaults to 'Other / Unclassified' if no pattern matches.
+    Tries zero-shot semantic classification first, falling back to deterministic regex rules.
     """
     corpus = f"{genres_str or ''} {styles_str or ''} {mb_tags or ''}".lower()
     if not corpus.strip():
         return "Other / Unclassified"
 
+    # 1. Try zero-shot semantic classification
+    semantic_result = classify_macro_genre_semantic(corpus)
+    if semantic_result:
+        return semantic_result
+
+    # 2. Fallback to regex rules
     for macro, patterns in MACRO_GENRE_RULES:
         for pat in patterns:
             if re.search(pat, corpus):

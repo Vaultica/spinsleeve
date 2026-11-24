@@ -11,7 +11,7 @@ import logging
 from collections import Counter
 import pandas as pd
 import spotipy
-from google.cloud import bigquery
+from google.cloud import bigquery, datastore
 
 from app_config import PROJECT_ID, DATASET_V2, PLAYBACK_HISTORY_TABLE, logger
 from services.datastore import get_datastore_client, get_catalog_from_datastore, save_catalog_to_datastore
@@ -30,6 +30,7 @@ def fetch_landing_showcase_albums():
         SELECT album_id, album_name, album_artist_name, album_image_url, release_year
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         WHERE album_image_url IS NOT NULL AND album_image_url != ''
+          AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         GROUP BY album_id, album_name, album_artist_name, album_image_url, release_year
         ORDER BY RAND()
         LIMIT 12
@@ -114,6 +115,20 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
         if ds_cached:
             cached_albums = ds_cached.get("albums", [])
+            # Defensive guard: purge any mock Apple Music albums from cached catalog
+            clean_cached = [
+                a for a in cached_albums
+                if not (
+                    safe_str(a.get("album_id")).startswith("am_mock_")
+                    or safe_str(a.get("album_id")).startswith("mock_")
+                    or a.get("is_mock") is True
+                )
+            ]
+            if len(clean_cached) != len(cached_albums):
+                logger.info("[%s] Purged %d mock albums from Datastore UserCatalogCache", user_id, len(cached_albums) - len(clean_cached))
+                ds_cached["albums"] = clean_cached
+
+            cached_albums = ds_cached.get("albums", [])
             for a in cached_albums:
                 if "album_image_url" not in a and "image" in a:
                     a["album_image_url"] = a["image"]
@@ -139,6 +154,12 @@ def fetch_user_album_data(user_id, force_refresh=False):
                     a["album_description"] = a["summary"]
                 elif "summary" not in a and "album_description" in a:
                     a["summary"] = a["album_description"]
+
+                aid = safe_str(a.get("album_id"))
+                if aid.startswith("am_") or aid.startswith("mock_"):
+                    a["platform"] = "apple_music"
+                elif "platform" not in a:
+                    a["platform"] = "spotify"
 
             # Dynamically compute top_genres strictly from macro_genres present in cached albums
             macro_genre_counter = Counter()
@@ -183,6 +204,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
             macro_genre, derived_moods, descriptive_tags, enrichment_quality_score
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         WHERE user_id = @user_id
+          AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         ORDER BY album_plays_30d DESC, album_plays DESC
         """
         job_config = bigquery.QueryJobConfig(
@@ -195,6 +217,9 @@ def fetch_user_album_data(user_id, force_refresh=False):
         genre_counter = Counter()
 
         for _, row in df.iterrows():
+            aid = safe_str(row.get("album_id"))
+            if aid.startswith("am_mock_") or aid.startswith("mock_"):
+                continue
             mg = safe_str(row.get("macro_genre"), "")
             if mg and mg not in ("Other / Unclassified", "Unknown"):
                 macro_genre_counter[mg] += 1
@@ -266,6 +291,16 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
             quality_score = safe_float(row.get("enrichment_quality_score"), 0.0)
 
+            platform_val = safe_str(row.get("platform"))
+            if not platform_val:
+                platform_val = "apple_music" if aid.startswith("am_") else "spotify"
+
+            if platform_val == "apple_music":
+                raw_am_id = aid.replace("am_mock_", "").replace("am_", "")
+                alb_url = f"https://music.apple.com/album/{raw_am_id}" if raw_am_id else f"https://music.apple.com/search?term={aname}"
+            else:
+                alb_url = f"https://open.spotify.com/album/{aid}" if aid else ""
+
             albums.append({
                 "album_id": aid,
                 "album_name": aname,
@@ -288,7 +323,8 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 "derived_moods": moods_list,
                 "descriptive_tags": tags_list,
                 "enrichment_quality_score": quality_score,
-                "album_url": f"https://open.spotify.com/album/{aid}" if aid else "",
+                "album_url": alb_url,
+                "platform": platform_val,
                 "has_gatefold": has_gf,
                 "image": img_url,
                 "artist_name": arname,
@@ -356,12 +392,18 @@ def fetch_unowned_album_data(user_id, horizon="all"):
         WITH owned_keys AS (
           SELECT DISTINCT canonical_album_key
           FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-          WHERE user_id = @user_id AND canonical_album_key IS NOT NULL AND canonical_album_key != ''
+          WHERE user_id = @user_id 
+            AND canonical_album_key IS NOT NULL 
+            AND canonical_album_key != ''
+            AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         ),
         owned_pairs AS (
           SELECT DISTINCT LOWER(TRIM(album_name)) as album_name, LOWER(TRIM(artist_name)) as artist_name
           FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
-          WHERE user_id = @user_id AND album_name IS NOT NULL AND artist_name IS NOT NULL
+          WHERE user_id = @user_id 
+            AND album_name IS NOT NULL 
+            AND artist_name IS NOT NULL
+            AND NOT (STARTS_WITH(album_id, 'am_mock_') OR STARTS_WITH(album_id, 'mock_'))
         )
         SELECT 
           p.album_name,
@@ -490,3 +532,130 @@ def compute_normalized_album_plays(track_plays, tracks_total, is_30d=False):
         display_badge = f"🔥 {norm_plays} Plays{badge_suffix}"
 
     return norm_plays, display_badge, tooltip
+
+
+def split_vinyl_sides(tracks):
+    """Splits album tracks into physical vinyl sides (Side A, Side B, etc.) (APP-01)."""
+    discs = {}
+    for t in tracks:
+        disc_num = t.get("disc_number", 1)
+        discs.setdefault(disc_num, []).append(t)
+    
+    sides = {}
+    side_letters = ["A", "B", "C", "D", "E", "F", "G", "H"]
+    side_idx = 0
+    for disc_num in sorted(discs.keys()):
+        disc_tracks = discs[disc_num]
+        n = len(disc_tracks)
+        half = (n + 1) // 2  # Ceiling half for Side A / Side C
+        if side_idx < len(side_letters):
+            sides[f"Side {side_letters[side_idx]}"] = disc_tracks[:half]
+            side_idx += 1
+        if side_idx < len(side_letters):
+            sides[f"Side {side_letters[side_idx]}"] = disc_tracks[half:]
+            side_idx += 1
+    return sides
+
+
+def fetch_album_tracks(album_id, user_id=None):
+    """
+    Fetches tracklisting for an album with Cloud Datastore cache (AlbumTracksCache, 30-day TTL).
+    Prioritizes logged-in user's active Spotify OAuth token, falling back to ClientCredentials.
+    Returns a dict with sides breakdown: {"Side A": [...], "Side B": [...]}. (APP-01)
+    """
+    if not album_id:
+        return {"status": "error", "message": "Missing album_id", "sides": {}}
+
+    ds_client = get_datastore_client()
+    if ds_client:
+        try:
+            key = ds_client.key("AlbumTracksCache", album_id)
+            entity = ds_client.get(key)
+            if entity:
+                updated_at = entity.get("updated_at")
+                if updated_at and (datetime.datetime.now(datetime.timezone.utc) - updated_at).days < 30:
+                    tracks_json = entity.get("tracks_json")
+                    if tracks_json:
+                        tracks = json.loads(tracks_json)
+                        return {
+                            "status": "success",
+                            "album_id": album_id,
+                            "sides": split_vinyl_sides(tracks),
+                            "cached": True
+                        }
+        except Exception as e:
+            logger.warning("Datastore read error for AlbumTracksCache %s: %s", album_id, e)
+
+    # Fetch from Spotify API using user token first, then client credentials
+    sp = None
+    if user_id:
+        try:
+            from services.spotify import get_token_for_user
+            token_info = get_token_for_user(user_id, None)
+            if token_info and token_info.get("access_token"):
+                sp = spotipy.Spotify(auth=token_info.get("access_token"), requests_timeout=10)
+        except Exception as e:
+            logger.warning("Could not get token for user %s: %s", user_id, e)
+
+    if not sp:
+        try:
+            from spotipy.oauth2 import SpotifyClientCredentials
+            client_credentials_manager = SpotifyClientCredentials()
+            sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager, requests_timeout=10)
+        except Exception as e:
+            logger.warning("Could not initialize SpotifyClientCredentials: %s", e)
+
+    if not sp:
+        return {"status": "error", "message": "Spotify client initialization failed", "sides": {}}
+
+    try:
+        results = sp.album_tracks(album_id)
+        raw_items = results.get("items", [])
+        
+        tracks = []
+        for idx, item in enumerate(raw_items, 1):
+            duration_ms = item.get("duration_ms", 0)
+            mins = duration_ms // 60000
+            secs = (duration_ms % 60000) // 1000
+            duration_str = f"{mins}:{secs:02d}"
+            
+            tracks.append({
+                "track_number": item.get("track_number", idx),
+                "disc_number": item.get("disc_number", 1),
+                "name": item.get("name", "Unknown Track"),
+                "duration_ms": duration_ms,
+                "duration_str": duration_str,
+                "explicit": item.get("explicit", False),
+                "preview_url": item.get("preview_url", ""),
+                "uri": item.get("uri", "")
+            })
+            
+        sides = split_vinyl_sides(tracks)
+        
+        # Save to Datastore cache
+        if ds_client:
+            try:
+                key = ds_client.key("AlbumTracksCache", album_id)
+                entity = datastore.Entity(key=key)
+                entity.update({
+                    "album_id": album_id,
+                    "tracks_json": json.dumps(tracks),
+                    "updated_at": datetime.datetime.now(datetime.timezone.utc)
+                })
+                ds_client.put(entity)
+            except Exception as e:
+                logger.warning("Could not save AlbumTracksCache for %s: %s", album_id, e)
+
+        return {
+            "status": "success",
+            "album_id": album_id,
+            "sides": sides,
+            "cached": False
+        }
+    except Exception as e:
+        logger.error("Error fetching album tracks for %s: %s", album_id, e)
+        return {
+            "status": "error",
+            "message": str(e),
+            "sides": {}
+        }

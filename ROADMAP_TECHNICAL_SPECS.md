@@ -238,9 +238,9 @@ All new features and architectural changes must strictly adhere to these verifie
 ## 4. Category: Core Application & Vinyl Streaming (`APP`)
 
 ### `APP-01`: 12" Gatefold Tracklisting & Side A / Side B Breakdown
-* **Technical Objective:** Embed complete vinyl tracklists into the 12" gatefold modal with physical disc breakdown and inline audio previews.
+* **Technical Objective:** Embed complete vinyl tracklists into the 12" gatefold modal with physical disc breakdown, right-side anchor navigation, gutter padding, and inline audio previews.
 * **Data Ingestion & Caching (Approved Hybrid Model & Option A):**
-  - **Primary API:** Spotify Web API `sp.album_tracks(album_id)`.
+  - **Primary API:** Spotify Web API `sp.album_tracks(album_id)` / Apple Music API.
   - **Endpoint:** `GET /beta/api/album/<album_id>/tracks`
   - **Storage:** Cloud Datastore `Kind: AlbumTracksCache` (shared across all tenants, 30-day TTL). Zero BigQuery DDL migrations.
 * **Vinyl Side Splitting Algorithm:**
@@ -264,24 +264,31 @@ All new features and architectural changes must strictly adhere to these verifie
           side_idx += 1
       return sides
   ```
+* **UI & Viewport Optimizations (Right-Side Anchor Nav & 13" Laptop Fit):**
+  - **Floating Anchor Pill:** Right-side vertical panel with tooltips (`📖 Narrative`, `⭐ Reviews`, `🎵 Tracklisting`, `🎷 Vibe & Mood`, `📓 Personal`).
+  - **Gutter Clearance (`pr-24`):** Ensures scrollable content never overlaps the floating anchor panel.
+  - **Responsive Viewport Height (`max-h-[85vh]`):** Optimized to fit gracefully on 13" laptop screens without vertical overflow.
 * **Inline Needle-Drop Auditioning:**
   - Clicking any track name calls `playTrackSnippet(track_id, track_name, artist_name)`.
   - Uses Spotify `preview_url` if present, falling back to `/beta/api/preview?artist={artist}&track={track}` (iTunes Search API).
 
 ---
 
-### `APP-02`: Cross-Platform Apple Music Library Onboarding
-* **Technical Objective:** Support Apple Music subscribers via Apple MusicKit JS v3, expanding collector community beyond Spotify's 25-user sandbox limit.
+### `APP-02`: Cross-Platform Apple Music Library Onboarding (`APP-02a`, `APP-02b`) [🔄 **In Progress** — PR #11 on `feat/app-02b-musickit-frontend`]
+* **Technical Objective:** Support Apple Music subscribers via Apple MusicKit JS v3 and automated backend ingestion, expanding collector community beyond Spotify's 25-user sandbox limit. `APP-02a` (backend pipeline & ingestion) is completed (`v2.8.5`). `APP-02b` (frontend client, mock collection, route isolation) is fully implemented with 97/97 unit tests passing on branch `feat/app-02b-musickit-frontend` (PR #11). Live Apple Developer Program enrollment (£79) is currently pending.
 * **Architecture & Authentication:**
-  1. **Developer Key & Token Generation:**
+  1. **Developer Key & Token Generation (`APP-02a`):**
      - Apple Developer Account MusicKit private key (`.p8`), Team ID, Key ID.
-     - Server generates developer bearer JWT (`exp`: 180 days).
-  2. **Client-Side Authorization:**
-     - Initialize `MusicKit.configure({ developerToken, app: { name: 'SpinSleeve', build: '2.2.1' } })`.
+     - Server generates developer bearer JWT (`exp`: 180 days) via ES256 / ECDSA P-256 in `src/pipeline_v2/apple_music.py`.
+  2. **Client-Side Authorization & UI (`APP-02b`):**
+     - Initialize `MusicKit.configure({ developerToken, app: { name: 'SpinSleeve', build: '2.8.6' } })`.
+     - Route-scoped `/beta` isolation preserving Spotify-only default root.
+     - Header connection dropdown trigger opening Onboarding & Authorization modal with Live and Sandbox/Mock Test Collection toggles.
      - User authorizes via Apple Music modal (`musicKit.authorize()`), returning `userToken`.
-  3. **Data Ingestion:**
+  3. **Data Ingestion, Bridging & Caching (`APP-02a` & `APP-02b`):**
      - Fetch user's saved catalog via `https://api.music.apple.com/v1/me/library/albums`.
-     - Ingest albums and scrobbles into `spotify_v2.user_saved_albums` tagged with `platform='apple_music'`.
+     - Ingest albums and scrobbles into BigQuery `spotify_v2.user_saved_albums` tagged with `platform='apple_music'` and bridged into `album_provider_ids`.
+     - Sync progress toasts, platform vinyl badges ( Apple Music), and explicit Cloud Datastore cache invalidation (`UserCatalogCache`, `UserAnalyticsCache`, `PalCompatibilityCache`).
 
 ---
 
@@ -492,25 +499,31 @@ All new features and architectural changes must strictly adhere to these verifie
 
 ---
 
-### `APP-16`: Semantic Liner Notes & Description Classification for Crate Digger Relevance
-* **Technical Objective:** Parse enriched album descriptions and gatefold liner notes (`album_enriched_metadata`) using text classification, keyword scoring, and atmosphere extraction to derive clean macro-categories (`derived_moods`, `macro_genre`, `descriptive_tags`) and enable semantic "If You Like This Gatefold..." recommendations in Crate Digger.
-* **Pipeline Implementation (`src/pipeline_v2/enrich.py`):**
-  1. **Text Extraction & Tokenization:** When Wikipedia/Discogs scraper fetches archival narratives, pass raw description text through a lightweight NLP classifier (keyword dictionaries / TF-IDF scoring).
-  2. **Derived Structured Attributes:**
-     - `macro_genre` (STRING): Normalized high-level genre (e.g. *Electronic, Ambient, Post-Punk, Jazz*).
-     - `derived_moods` (ARRAY<STRING>): Extracted atmospheric attributes (e.g. *["Chill", "Immersive", "Late Night", "Driving"]*).
-     - `descriptive_tags` (ARRAY<STRING>): Stylistic markers (e.g. *["Synthesizers", "Sequencer Loops", "Minimalist"]*).
-  3. **BigQuery Table Schema Update (`spotify_v2.album_enriched_metadata`):**
-     ```sql
-     ALTER TABLE `secret-compass-181513.spotify_v2.album_enriched_metadata`
-     ADD COLUMN IF NOT EXISTS macro_genre STRING,
-     ADD COLUMN IF NOT EXISTS derived_moods ARRAY<STRING>,
-     ADD COLUMN IF NOT EXISTS descriptive_tags ARRAY<STRING>;
-     ```
-  4. **Semantic Similarity Scoring for Crate Digger:**
-     - Compute cosine similarity or Jaccard overlap on derived mood/tag arrays and TF-IDF feature vectors of liner notes.
-     - When a user views an album or uses Crate Digger, query kindred spirit albums sharing narrative descriptions even if official Spotify tags differ.
-* **Zero-Latency Read Path:** Pre-computed during daily Cloud Run enrichment job (`spotify-v2-enrichment-job`), ensuring zero runtime query latency for frontend Crate Digger filters.
+### `APP-16`: Two-Tier Album Enrichment & Metadata Architecture & Semantic Classification
+* **Scope Boundary (`APP-01` Excluded):**
+  - `APP-01` (12" Gatefold Tracklisting & Side A / Side B Breakdown using on-demand `sp.album_tracks(album_id)` + Datastore `AlbumTracksCache` with 30-day TTL, no BigQuery track storage) remains a separate track/build and is NOT bundled into this enrichment/metadata build.
+  - This build covers the two-tier raw-to-golden metadata model, `enrich.py` multi-source candidate scoring/resolution, and `APP-16` semantic classification (`macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`).
+* **Technical Objective:** Establish a robust two-tier raw-to-golden album metadata architecture in BigQuery (`secret-compass-181513.spotify_v2`, US) combining multi-source ingestion (MusicBrainz, Wikipedia, Discogs) with APP-16 semantic classification (`macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`) to power zero-latency Crate Digger recommendations and gatefold discovery.
+* **BigQuery Schema & Two-Tier Architecture:**
+  1. **Streaming Provider Bridge (`album_provider_ids`):**
+     - Maps external streaming IDs (`provider`, `external_album_id`) to `canonical_album_key` (`raw_album_name`, `raw_artist_name`, `updated_at`).
+     - Clustered by `(canonical_album_key, provider)` to support Spotify and Apple Music (`APP-02`).
+  2. **Tier 1 — Append-Only Raw Source Tables:**
+     - Separate tables: `enrichment_raw_musicbrainz`, `enrichment_raw_wikipedia`, and `enrichment_raw_discogs`.
+     - Partitioned by `DATE(fetched_at)` and clustered by `canonical_album_key`.
+     - Columns: `canonical_album_key`, `fetched_at TIMESTAMP NOT NULL`, `extractor_version`, `confidence_score`, `raw_payload`, and source-specific IDs/URLs.
+  3. **Tier 2 — Golden Serving Table (`album_enriched_metadata`):**
+     - Clustered by `canonical_album_key`.
+     - Retains backward-compatible gatefold/review/Discogs columns while adding `canonical_album_key`, `macro_genre`, `derived_moods`, `descriptive_tags`, `enrichment_quality_score`, source provenance, and timestamps.
+* **Pipeline Materialization & Seeding Strategy (`src/pipeline_v2/enrich.py`):**
+  - Seed initial raw source rows directly from existing `album_enriched_metadata` records rather than re-scraping unnecessarily.
+  - Synthesize golden rows via multi-source candidate scoring / `QUALIFY ROW_NUMBER() OVER(PARTITION BY canonical_album_key ORDER BY enrichment_quality_score DESC)` + APP-16 classification without hitting raw tables on hot user read paths.
+  - Join `user_albums_features_table` to golden `album_enriched_metadata` on `canonical_album_key` (with `album_id` fallback).
+* **Operational Invariants & Guardrails:**
+  - **Cache Invalidation:** Updates to metadata or sync completion invalidate affected Datastore cache keys (`UserCatalogCache`, `PalCompatibilityCache`, `UserAnalyticsCache`).
+  - **Cost & Partition Guardrails:** All queries and DML operations enforce `maximum_bytes_billed` limits and batch by year/partition to prevent `400 Too many partitions` errors.
+  - **Data Cleanliness:** All string and numerical values pass through sanitization helpers (`safe_str()`, `safe_int()`, `safe_float()`) to eliminate raw `NaN` or `NaT` values.
+  - **Strict Architecture:** Route handlers in `src/report_v2/routes/` handle HTTP I/O only; all data access and business logic live in `src/report_v2/services/`. Explicit human sign-off is required before any BigQuery DDL/DML or live deployment.
 
 ---
 
@@ -621,6 +634,21 @@ All new features and architectural changes must strictly adhere to these verifie
   - Update root `LICENSE` file with updated copyright (`Copyright (c) 2017–2026 Serge Bouschet`) and chosen license grant.
   - Add standardized SPDX headers to source files (`SPDX-License-Identifier: AGPL-3.0-or-later` or `PolyForm-Noncommercial-1.0.0`).
   - Introduce `CONTRIBUTING.md` outlining IP ownership, contributor licensing, and Developer Certificate of Origin (DCO).
+
+---
+
+## 6.5. Category: Technical Debt (`DEBT`)
+
+### `DEBT-01`: Route Blueprint Data Access Decoupling
+* **Technical Objective:** Decouple legacy Flask route handlers (`src/report_v2/routes/*.py`) from direct `google.cloud` BigQuery and Cloud Datastore client calls, migrating all data access and business logic into `src/report_v2/services/*.py` in strict compliance with `GEMINI.md` Invariant #1.
+* **Technical Details & Violations (1.):**
+  - **`src/report_v2/routes/crate.py` (`api_save_album`):** Directly instantiates `bigquery.Client()`, executes `client.insert_rows_json()` for saved albums, and deletes Datastore cache entities.
+  - **`src/report_v2/routes/auth.py` (`oauth_callback`):** Directly queries, instantiates, and saves Datastore user entities (`ds_client.get()`, `datastore.Entity()`, `ds_client.put()`).
+  - **`src/report_v2/routes/admin.py` & `src/report_v2/routes/pals.py`:** Directly perform Datastore queries and entity updates inside admin and social route handlers.
+* **Risk Assessment (2.):**
+  - **Architectural Coupling & Testability:** Route handlers become tightly coupled to database client libraries, complicating unit testing without live GCP connections.
+  - **Maintainability & Separation of Concerns:** Mixing I/O transport and rendering with database write logic increases code complexity and violates non-negotiable architectural invariants.
+  - **Severity & Mitigation:** Medium severity. Functional correctness is unaffected, but architectural debt must be refactored into dedicated service modules prior to major scaling milestones.
 
 ---
 

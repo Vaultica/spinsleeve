@@ -10,12 +10,13 @@ Key Exports:
 - mint_developer_token: Generates ES256 JWT for Apple MusicKit authentication.
 - get_apple_developer_token: Retrieves cached or freshly minted developer token.
 - fetch_apple_music_library_albums: Paginates through user's Apple Music saved albums.
+- get_mock_apple_music_albums: Returns curated realistic Apple Music library records for testing.
 - parse_apple_music_library: Normalizes Apple Music records into sanitized DataFrame.
 - sync_apple_music_saved_albums: Full sync workflow (fetch -> normalize -> BQ -> cache invalidation).
 """
 
 import os
-import sys
+import re
 import time
 import json
 import base64
@@ -31,9 +32,30 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
-from pipeline_v2.sync import compute_canonical_album_key
-
 logger = logging.getLogger("spinsleeve_apple_music")
+
+EDITION_BLACKLIST = [
+    "deluxe", "remastered", "anniversary", "edition", "version", "reissue",
+    "expanded", "collector", "live", "acoustic", "mono", "stereo", "remix",
+    "deluxe edition", "anniversary edition", "expanded edition", "remaster",
+    "archive collection", "archive", "super deluxe", "remastered edition",
+    "collector's edition", "ultimate edition"
+]
+
+
+def compute_canonical_album_key(artist_name: str, album_name: str) -> str:
+    """Computes a canonical sibling key for grouping editions (e.g. Deluxe vs Standard)."""
+    if not artist_name or not album_name:
+        return ""
+    artist = str(artist_name).lower().strip()
+    album = str(album_name).lower().strip()
+    pattern_paren = r'\s*\((?:' + '|'.join(EDITION_BLACKLIST) + r')[^)]*\)'
+    pattern_bracket = r'\s*\[(?:' + '|'.join(EDITION_BLACKLIST) + r')[^\]]*\]'
+    album = re.sub(pattern_paren, '', album, flags=re.IGNORECASE)
+    album = re.sub(pattern_bracket, '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s*-\s*(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix).*$', '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s+', ' ', album).strip()
+    return f"{artist}::{album}"
 
 PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
 DATASET_V2 = "spotify_v2"
@@ -231,6 +253,7 @@ def normalize_apple_music_album(item: Dict[str, Any], user_id: str) -> Dict[str,
         artist_id = safe_str(artists_data[0].get("id"), default=None)
 
     canonical_key = compute_canonical_album_key(raw_artist_name, raw_album_name)
+    is_mock_album = bool(album_id.startswith("am_mock_") or album_id.startswith("mock_"))
 
     return {
         "user_id": str(user_id),
@@ -248,7 +271,8 @@ def normalize_apple_music_album(item: Dict[str, Any], user_id: str) -> Dict[str,
         "image_url": image_url,
         "genres": genres,
         "canonical_album_key": canonical_key,
-        "platform": "apple_music"
+        "platform": "apple_music",
+        "is_mock": is_mock_album
     }
 
 
@@ -267,7 +291,7 @@ def parse_apple_music_library(items: List[Dict[str, Any]], user_id: str) -> pd.D
             "user_id", "album_id", "album_uri", "album_name", "artist_id",
             "artist_name", "added_at", "release_date", "release_year",
             "tracks_total", "album_type", "label", "image_url", "genres",
-            "canonical_album_key", "platform"
+            "canonical_album_key", "platform", "is_mock"
         ])
 
     df = pd.DataFrame(rows)
@@ -375,28 +399,170 @@ def invalidate_user_datastore_caches(user_id: str, ds_client: Optional[datastore
         logger.warning("[%s] Error during Datastore cache invalidation: %s", user_id, e)
 
 
+def get_mock_apple_music_albums() -> List[Dict[str, Any]]:
+    """
+    Returns a curated collection of realistic Apple Music library album records
+    for development, sandbox testing, and users without an active Apple Developer subscription.
+    """
+    return [
+        {
+            "id": "am_mock_1440857781",
+            "type": "library-albums",
+            "attributes": {
+                "name": "OK Computer",
+                "artistName": "Radiohead",
+                "releaseDate": "1997-05-21",
+                "trackCount": 12,
+                "recordLabel": "XL Recordings",
+                "dateAdded": "2018-05-21T12:00:00Z",
+                "artwork": {
+                    "url": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/a4/82/3d/a4823d14-3686-218f-2879-11c50352ef2e/{w}x{h}bb.jpg",
+                    "width": 1400,
+                    "height": 1400
+                },
+                "genreNames": ["Alternative", "Rock"]
+            }
+        },
+        {
+            "id": "am_mock_1440879161",
+            "type": "library-albums",
+            "attributes": {
+                "name": "Discovery",
+                "artistName": "Daft Punk",
+                "releaseDate": "2001-03-12",
+                "trackCount": 14,
+                "recordLabel": "Parlophone France",
+                "dateAdded": "2019-03-12T10:00:00Z",
+                "artwork": {
+                    "url": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/e0/75/ca/e075caec-c6ec-07ec-d4c3-58586f4a86f1/{w}x{h}bb.jpg",
+                    "width": 1400,
+                    "height": 1400
+                },
+                "genreNames": ["Electronic", "Dance"]
+            }
+        },
+        {
+            "id": "am_mock_1440829233",
+            "type": "library-albums",
+            "attributes": {
+                "name": "To Pimp a Butterfly",
+                "artistName": "Kendrick Lamar",
+                "releaseDate": "2015-03-15",
+                "trackCount": 16,
+                "recordLabel": "Top Dawg Entertainment / Aftermath",
+                "dateAdded": "2020-04-01T15:00:00Z",
+                "artwork": {
+                    "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/71/f1/b7/71f1b70d-f2eb-cf0d-5872-9fbda9278bf6/{w}x{h}bb.jpg",
+                    "width": 1400,
+                    "height": 1400
+                },
+                "genreNames": ["Hip-Hop/Rap"]
+            }
+        },
+        {
+            "id": "am_mock_1440854483",
+            "type": "library-albums",
+            "attributes": {
+                "name": "Rumours",
+                "artistName": "Fleetwood Mac",
+                "releaseDate": "1977-02-04",
+                "trackCount": 11,
+                "recordLabel": "Warner Records",
+                "dateAdded": "2017-02-14T09:00:00Z",
+                "artwork": {
+                    "url": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/4b/36/53/4b365318-6c84-18fa-35e6-ec083b7083a2/{w}x{h}bb.jpg",
+                    "width": 1400,
+                    "height": 1400
+                },
+                "genreNames": ["Rock", "Pop"]
+            }
+        },
+        {
+            "id": "am_mock_1440838766",
+            "type": "library-albums",
+            "attributes": {
+                "name": "Kind of Blue",
+                "artistName": "Miles Davis",
+                "releaseDate": "1959-08-17",
+                "trackCount": 5,
+                "recordLabel": "Columbia / Legacy",
+                "dateAdded": "2016-08-17T11:00:00Z",
+                "artwork": {
+                    "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/bb/e4/22/bbe42273-df33-3151-51fb-0e42d99d1461/{w}x{h}bb.jpg",
+                    "width": 1400,
+                    "height": 1400
+                },
+                "genreNames": ["Jazz"]
+            }
+        },
+        {
+            "id": "am_mock_1440818299",
+            "type": "library-albums",
+            "attributes": {
+                "name": "Dummy",
+                "artistName": "Portishead",
+                "releaseDate": "1994-08-22",
+                "trackCount": 11,
+                "recordLabel": "Go! Beat",
+                "dateAdded": "2019-08-22T14:00:00Z",
+                "artwork": {
+                    "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/3d/bf/99/3dbf999f-7e8c-8f43-aeb6-928f24419cb7/{w}x{h}bb.jpg",
+                    "width": 1400,
+                    "height": 1400
+                },
+                "genreNames": ["Electronic", "Trip Hop"]
+            }
+        },
+        {
+            "id": "am_mock_1440866532",
+            "type": "library-albums",
+            "attributes": {
+                "name": "Hounds of Love",
+                "artistName": "Kate Bush",
+                "releaseDate": "1985-09-16",
+                "trackCount": 12,
+                "recordLabel": "Fish People",
+                "dateAdded": "2018-09-16T16:00:00Z",
+                "artwork": {
+                    "url": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/28/bf/ee/28bfee82-a554-ce13-7ff1-ae28fcfece4a/{w}x{h}bb.jpg",
+                    "width": 1400,
+                    "height": 1400
+                },
+                "genreNames": ["Pop", "Art Pop"]
+            }
+        }
+    ]
+
+
 def sync_apple_music_saved_albums(
     user_id: str,
     music_user_token: str,
     bq_client: Optional[bigquery.Client] = None,
     ds_client: Optional[datastore.Client] = None,
     table_suffix: str = "",
-    max_albums: Optional[int] = None
+    max_albums: Optional[int] = None,
+    mock_mode: bool = False
 ) -> Dict[str, Any]:
     """
     Executes full Apple Music saved catalog ingestion workflow:
-    1. Fetches library albums via Apple Music API.
+    1. Fetches library albums via Apple Music API (or mock generator if mock_mode=True).
     2. Parses and normalizes into sanitized DataFrame.
     3. Checks existing albums in BigQuery user_saved_albums{table_suffix}.
     4. Inserts new albums and bridges entries into album_provider_ids{table_suffix}.
     5. Invalidates Datastore caches for immediate UI refresh.
     """
-    logger.info("[%s] Beginning Apple Music library synchronization...", user_id)
+    is_mock = mock_mode or bool(music_user_token and music_user_token.startswith("mock_"))
+    logger.info("[%s] Beginning Apple Music library synchronization (mock_mode=%s)...", user_id, is_mock)
 
-    raw_items = fetch_apple_music_library_albums(
-        music_user_token=music_user_token,
-        max_albums=max_albums
-    )
+    if is_mock:
+        raw_items = get_mock_apple_music_albums()
+        if max_albums and len(raw_items) > max_albums:
+            raw_items = raw_items[:max_albums]
+    else:
+        raw_items = fetch_apple_music_library_albums(
+            music_user_token=music_user_token,
+            max_albums=max_albums
+        )
 
     if not raw_items:
         logger.info("[%s] No albums found in Apple Music library.", user_id)

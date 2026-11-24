@@ -1,0 +1,544 @@
+#!/usr/bin/env python3
+"""
+SpinSleeve V2 Automated Multi-Tenant Pipeline Sync Runner.
+Loops through all approved users in Google Cloud Datastore,
+refreshes their Spotify tokens, ingests recent listening history and newly saved albums,
+and updates BigQuery spotify_v2 tables.
+"""
+
+import os
+import sys
+import time
+import json
+import logging
+import datetime
+import re
+from google.cloud import bigquery, datastore, secretmanager, storage
+import pandas as pd
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("spinsleeve_pipeline_v2")
+
+PROJECT_ID = os.environ.get("GCP_PROJECT", "secret-compass-181513")
+BUCKET_NAME = os.environ.get("GCS_BUCKET", "secret-compass-181513")
+DATASET_V2 = "spotify_v2"
+
+
+def get_secret(secret_name, default=""):
+    val = os.getenv(secret_name)
+    if val:
+        return val.strip()
+    try:
+        sm_client = secretmanager.SecretManagerServiceClient()
+        path = f"projects/{PROJECT_ID}/secrets/{secret_name}/versions/latest"
+        res = sm_client.access_secret_version(request={"name": path})
+        return res.payload.data.decode("UTF-8").strip()
+    except Exception as e:
+        logger.debug("Could not fetch secret %s: %s", secret_name, e)
+        return default
+
+
+SPOTIPY_CLIENT_ID = get_secret("SPOTIPY_CLIENT_ID")
+SPOTIPY_CLIENT_SECRET = get_secret("SPOTIPY_CLIENT_SECRET")
+
+EDITION_BLACKLIST = [
+    "deluxe", "remastered", "anniversary", "edition", "version", "reissue",
+    "expanded", "collector", "live", "acoustic", "mono", "stereo", "remix",
+    "deluxe edition", "anniversary edition", "expanded edition", "remaster",
+    "archive collection", "archive", "super deluxe", "remastered edition",
+    "collector's edition", "ultimate edition"
+]
+
+def compute_canonical_album_key(artist_name, album_name):
+    """Computes a canonical sibling key for grouping editions (e.g. Deluxe vs Standard)."""
+    if not artist_name or not album_name:
+        return ""
+    artist = str(artist_name).lower().strip()
+    album = str(album_name).lower().strip()
+    pattern_paren = r'\s*\((?:' + '|'.join(EDITION_BLACKLIST) + r')[^)]*\)'
+    pattern_bracket = r'\s*\[(?:' + '|'.join(EDITION_BLACKLIST) + r')[^\]]*\]'
+    album = re.sub(pattern_paren, '', album, flags=re.IGNORECASE)
+    album = re.sub(pattern_bracket, '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s*-\s*(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix).*$', '', album, flags=re.IGNORECASE)
+    album = re.sub(r'\s+', ' ', album).strip()
+    return f"{artist}::{album}"
+
+
+def upload_blob(bucket_name, blob_text, destination_blob_name):
+    """Uploads a string as a blob to Google Cloud Storage."""
+    try:
+        storage_client = storage.Client(project=PROJECT_ID)
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_string(blob_text, content_type="application/json")
+        logger.info("Archived payload to gs://%s/%s", bucket_name, destination_blob_name)
+    except Exception as e:
+        logger.warning("Error uploading raw blob to GCS: %s", e)
+
+
+def fetch_artist_genres(sp, artist_ids):
+    """Fetches genres for unique artist IDs from Spotify in batches of 50."""
+    artist_genres = {}
+    unique_ids = [aid for aid in set(artist_ids) if aid]
+    for i in range(0, len(unique_ids), 50):
+        batch = unique_ids[i:i + 50]
+        try:
+            results = sp.artists(batch)
+            for artist in results.get("artists", []):
+                if artist and "id" in artist:
+                    genres = artist.get("genres", [])
+                    artist_genres[artist["id"]] = ", ".join(genres)
+        except Exception as e:
+            logger.warning("Error fetching artist genres: %s", e)
+    return artist_genres
+
+
+def sync_user_tracks(user_id, sp, bq_client):
+    """Syncs recent track play history into spotify_v2.playback_history."""
+    logger.info("[%s] Ingesting listening history...", user_id)
+
+    # 1. Query latest play timestamp in BigQuery
+    query = f"""
+    SELECT MAX(played_at) as latest_play
+    FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
+    WHERE user_id = @user_id
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("user_id", "STRING", user_id)]
+    )
+    df_latest = bq_client.query(query, job_config=job_config).to_dataframe()
+
+    after_ms = None
+    if not df_latest.empty and pd.notna(df_latest["latest_play"].iloc[0]):
+        latest_ts = df_latest["latest_play"].iloc[0]
+        # 10 minute lookback buffer for in-flight streams
+        buffered = latest_ts - datetime.timedelta(minutes=10)
+        after_ms = int(buffered.timestamp() * 1000)
+        logger.info("[%s] Latest play in BQ: %s. Fetching after: %s (epoch ms: %d)", user_id, latest_ts, buffered, after_ms)
+    else:
+        logger.info("[%s] No prior plays found in BQ. Fetching last 50 tracks.", user_id)
+
+    # 2. Query Spotify API
+    if after_ms:
+        recent = sp.current_user_recently_played(limit=50, after=after_ms)
+    else:
+        recent = sp.current_user_recently_played(limit=50)
+
+    items = recent.get("items", [])
+    if not items:
+        logger.info("[%s] No new tracks returned by Spotify.", user_id)
+        return 0
+
+    # Archive raw JSON
+    timestr = time.strftime("%Y%m%d_%H%M%S")
+    folders = time.strftime("%Y/%m/%d")
+    upload_blob(BUCKET_NAME, json.dumps(recent, indent=2), f"spotify_v2/{user_id}/{folders}/tracks_{timestr}.json")
+
+    # 3. Format and deduplicate
+    rows = []
+    for item in items:
+        track = item.get("track", {})
+        alb = track.get("album", {})
+        artists = track.get("artists", [])
+        artist_name = artists[0].get("name", "Unknown") if artists else "Unknown"
+        artist_id = artists[0].get("id", None) if artists else None
+        album_name = alb.get("name")
+        rows.append({
+            "user_id": user_id,
+            "played_at": item.get("played_at"),
+            "track_uri": track.get("uri"),
+            "track_id": track.get("id"),
+            "track_name": track.get("name"),
+            "artist_id": artist_id,
+            "artist_name": artist_name,
+            "album_id": alb.get("id"),
+            "album_name": album_name,
+            "canonical_album_key": compute_canonical_album_key(artist_name, album_name)
+        })
+
+    df = pd.DataFrame(rows)
+    df["played_at"] = pd.to_datetime(df["played_at"])
+
+    # Deduplicate against existing (track_uri, played_at) in BQ for this window
+    if after_ms:
+        existing_q = f"""
+        SELECT track_uri, played_at
+        FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
+        WHERE user_id = @user_id
+          AND played_at >= TIMESTAMP_MILLIS(@after_ms)
+        """
+        existing_cfg = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+                bigquery.ScalarQueryParameter("after_ms", "INT64", after_ms)
+            ]
+        )
+        df_existing = bq_client.query(existing_q, job_config=existing_cfg).to_dataframe()
+        if not df_existing.empty:
+            df_existing["played_at"] = pd.to_datetime(df_existing["played_at"])
+            merged = pd.merge(df, df_existing, on=["track_uri", "played_at"], how="left", indicator=True)
+            df = df[merged["_merge"] == "left_only"]
+
+    if df.empty:
+        logger.info("[%s] All %d fetched tracks were already recorded in BQ.", user_id, len(items))
+        return 0
+
+    table_ref = f"{PROJECT_ID}.{DATASET_V2}.playback_history"
+    load_cfg = bigquery.LoadJobConfig(schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION])
+    load_job = bq_client.load_table_from_dataframe(df, table_ref, job_config=load_cfg)
+    load_job.result()
+    logger.info("[%s] Successfully loaded %d new listening events into %s!", user_id, len(df), table_ref)
+    return len(df)
+
+
+def sync_user_saved_albums(user_id, sp, bq_client):
+    """Syncs recently saved albums into spotify_v2.user_saved_albums."""
+    logger.info("[%s] Ingesting saved albums...", user_id)
+
+    # 1. Fetch recently saved albums (limit 50)
+    saved = sp.current_user_saved_albums(limit=50)
+    items = saved.get("items", [])
+    if not items:
+        logger.info("[%s] No saved albums found.", user_id)
+        return 0
+
+    timestr = time.strftime("%Y%m%d_%H%M%S")
+    folders = time.strftime("%Y/%m/%d")
+    upload_blob(BUCKET_NAME, json.dumps(saved, indent=2), f"spotify_v2/{user_id}/{folders}/recent_albums_{timestr}.json")
+
+    # 2. Extract artist genres
+    artist_ids = []
+    for item in items:
+        artists = item.get("album", {}).get("artists", [])
+        if artists and "id" in artists[0]:
+            artist_ids.append(artists[0]["id"])
+    artist_genres_map = fetch_artist_genres(sp, artist_ids)
+
+    # 3. Format DataFrame
+    rows = []
+    for item in items:
+        alb = item.get("album", {})
+        artists = alb.get("artists", [])
+        artist_name = artists[0].get("name", "Unknown") if artists else "Unknown"
+        artist_id = artists[0].get("id", None) if artists else None
+        album_name = alb.get("name")
+        images = alb.get("images", [])
+        image_url = images[0].get("url", None) if images else None
+        rel_date = alb.get("release_date", "")
+        rel_year = int(rel_date[:4]) if rel_date and rel_date[:4].isdigit() else None
+        genres = artist_genres_map.get(artist_id, "")
+
+        rows.append({
+            "user_id": user_id,
+            "album_id": alb.get("id"),
+            "album_uri": alb.get("uri"),
+            "album_name": album_name,
+            "artist_id": artist_id,
+            "artist_name": artist_name,
+            "added_at": item.get("added_at"),
+            "release_date": rel_date,
+            "release_year": rel_year,
+            "tracks_total": alb.get("total_tracks"),
+            "album_type": alb.get("album_type"),
+            "label": alb.get("label", ""),
+            "image_url": image_url,
+            "genres": genres,
+            "canonical_album_key": compute_canonical_album_key(artist_name, album_name)
+        })
+
+    df = pd.DataFrame(rows)
+    df["added_at"] = pd.to_datetime(df["added_at"])
+
+    # 4. Check existing album_ids in BigQuery for this user
+    existing_q = f"""
+    SELECT DISTINCT album_id
+    FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+    WHERE user_id = @user_id
+    """
+    job_cfg = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("user_id", "STRING", user_id)]
+    )
+    df_existing = bq_client.query(existing_q, job_cfg).to_dataframe()
+    existing_ids = set(df_existing["album_id"]) if not df_existing.empty else set()
+
+    new_albums = df[~df["album_id"].isin(existing_ids)]
+
+    if new_albums.empty:
+        logger.info("[%s] All %d recent albums already exist in BQ user_saved_albums.", user_id, len(df))
+        return 0
+
+    table_ref = f"{PROJECT_ID}.{DATASET_V2}.user_saved_albums"
+    load_cfg = bigquery.LoadJobConfig(schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION])
+    load_job = bq_client.load_table_from_dataframe(new_albums, table_ref, job_config=load_cfg)
+    load_job.result()
+    logger.info("[%s] Successfully appended %d brand new albums into %s!", user_id, len(new_albums), table_ref)
+
+    # Bridge new albums to album_provider_ids
+    try:
+        provider_rows = []
+        now_ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        for _, row in new_albums.iterrows():
+            aid = row.get("album_id")
+            ckey = row.get("canonical_album_key")
+            if aid and ckey:
+                provider_rows.append({
+                    "provider": "spotify",
+                    "external_album_id": str(aid),
+                    "canonical_album_key": str(ckey),
+                    "raw_album_name": str(row.get("album_name") or ""),
+                    "raw_artist_name": str(row.get("artist_name") or ""),
+                    "updated_at": now_ts
+                })
+        if provider_rows:
+            p_table = f"{PROJECT_ID}.{DATASET_V2}.album_provider_ids"
+            p_job = bq_client.load_table_from_json(provider_rows, p_table)
+            p_job.result()
+            logger.info("[%s] Synced %d entries into album_provider_ids", user_id, len(provider_rows))
+    except Exception as e:
+        logger.warning("[%s] Error populating album_provider_ids: %s", user_id, e)
+
+    return len(new_albums)
+
+
+def run_pipeline():
+    logger.info("=== Starting SpinSleeve V2 Multi-Tenant Ingestion Pipeline ===")
+    ds_client = datastore.Client(project=PROJECT_ID)
+    bq_client = bigquery.Client(project=PROJECT_ID)
+
+    # 1. Fetch all approved users with refresh tokens
+    query = ds_client.query(kind="User")
+    query.add_filter("is_approved", "=", True)
+    approved_users = list(query.fetch())
+
+    logger.info("Found %d approved users in Datastore.", len(approved_users))
+
+    sp_oauth = SpotifyOAuth(
+        client_id=SPOTIPY_CLIENT_ID,
+        client_secret=SPOTIPY_CLIENT_SECRET,
+        redirect_uri="http://127.0.0.1:8080/callback"
+    )
+
+    total_new_tracks = 0
+    total_new_albums = 0
+
+    for user in approved_users:
+        user_id = user.key.name or user.get("spotify_id")
+        display_name = user.get("display_name", user_id)
+        refresh_token = user.get("refresh_token")
+
+        if not refresh_token:
+            logger.warning("Skipping user '%s' (%s): No refresh token stored in Datastore.", user_id, display_name)
+            continue
+
+        if user.get("sync_paused", False):
+            logger.info("Skipping user '%s' (%s): Scrobble sync is paused by user.", user_id, display_name)
+            continue
+
+        logger.info("------------------------------------------------------------")
+        logger.info("Processing user: %s (%s)", display_name, user_id)
+
+        try:
+            token_info = sp_oauth.refresh_access_token(refresh_token)
+            sp = spotipy.Spotify(auth=token_info["access_token"])
+
+            new_tracks = sync_user_tracks(user_id, sp, bq_client)
+            new_albums = sync_user_saved_albums(user_id, sp, bq_client)
+
+            total_new_tracks += new_tracks
+            total_new_albums += new_albums
+
+            if new_tracks > 0 or new_albums > 0:
+                invalidate_user_catalog_cache(user_id, ds_client)
+                invalidate_user_analytics_cache(user_id, ds_client)
+                invalidate_pal_compatibility_cache(user_id, ds_client)
+
+            user["last_sync_at"] = datetime.datetime.now(datetime.timezone.utc)
+            user["sync_status"] = "idle"
+            ds_client.put(user)
+
+        except Exception as e:
+            logger.error("Failed to sync user '%s': %s", user_id, e)
+            try:
+                user["sync_status"] = "error"
+                ds_client.put(user)
+            except Exception:
+                pass
+
+    # Re-materialize clustered physical table for sub-second web app queries (INFRA-03a)
+    rematerialize_user_albums_features(bq_client)
+
+    logger.info("============================================================")
+    logger.info("SpinSleeve V2 Ingestion Pipeline Run Finished.")
+    logger.info("Summary: %d new tracks, %d new albums synced across %d users.", total_new_tracks, total_new_albums, len(approved_users))
+    logger.info("============================================================")
+
+
+def invalidate_user_catalog_cache(user_id, ds_client):
+    """Deletes cached catalog in Datastore when new listening events are synced (INFRA-03b)."""
+    try:
+        key = ds_client.key("UserCatalogCache", user_id)
+        ds_client.delete(key)
+        logger.info("[%s] Invalidated Datastore UserCatalogCache.", user_id)
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate Datastore UserCatalogCache: %s", user_id, e)
+
+
+def invalidate_user_analytics_cache(user_id, ds_client):
+    """Deletes cached analytics in Datastore when new listening events are synced."""
+    try:
+        query = ds_client.query(kind="UserAnalyticsCache")
+        keys_to_delete = [e.key for e in query.fetch() if e.key.name and e.key.name.startswith(f"{user_id}::")]
+        if keys_to_delete:
+            ds_client.delete_multi(keys_to_delete)
+            logger.info("[%s] Invalidated %d Datastore UserAnalyticsCache entities.", user_id, len(keys_to_delete))
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate UserAnalyticsCache: %s", user_id, e)
+
+
+def invalidate_pal_compatibility_cache(user_id, ds_client):
+    """Deletes cached pal compatibility in Datastore when new listening events are synced."""
+    try:
+        query = ds_client.query(kind="PalCompatibilityCache")
+        keys_to_delete = [e.key for e in query.fetch() if e.key.name and (e.key.name.startswith(f"{user_id}::") or f"::{user_id}::" in e.key.name)]
+        if keys_to_delete:
+            ds_client.delete_multi(keys_to_delete)
+            logger.info("[%s] Invalidated %d Datastore PalCompatibilityCache entities.", user_id, len(keys_to_delete))
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate PalCompatibilityCache: %s", user_id, e)
+
+
+def rematerialize_user_albums_features(bq_client):
+    """Materializes the dynamic user_albums_features view into a clustered physical table (INFRA-03a) with canonical album key deduplication."""
+    logger.info("Materializing %s.user_albums_features_table...", DATASET_V2)
+    remat_q = f"""
+    CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
+    CLUSTER BY user_id AS
+    WITH album_plays_by_id AS (
+      SELECT 
+        user_id,
+        album_id,
+        COUNT(*) as track_plays_by_id,
+        COUNTIF(played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)) as track_plays_by_id_30d
+      FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
+      WHERE album_id IS NOT NULL AND album_id != ""
+      GROUP BY user_id, album_id
+    ),
+    album_plays_by_name AS (
+      SELECT 
+        user_id,
+        LOWER(TRIM(album_name)) as norm_album_name,
+        LOWER(TRIM(artist_name)) as norm_artist_name,
+        COUNT(*) as track_plays_by_name,
+        COUNTIF(played_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)) as track_plays_by_name_30d
+      FROM `{PROJECT_ID}.{DATASET_V2}.playback_history`
+      GROUP BY user_id, norm_album_name, norm_artist_name
+    ),
+    raw_albums AS (
+      SELECT 
+        a.*,
+        ROW_NUMBER() OVER(
+          PARTITION BY a.user_id, CONCAT(
+            LOWER(TRIM(a.artist_name)), 
+            '::', 
+            TRIM(
+              REGEXP_REPLACE(
+                REGEXP_REPLACE(
+                  REGEXP_REPLACE(
+                    LOWER(TRIM(a.album_name)),
+                    r'\s*\((?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix|archive collection|archive|super deluxe|remaster|ultimate edition)[^)]*\)',
+                    ''
+                  ),
+                  r'\s*\[(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix|archive collection|archive|super deluxe|remaster|ultimate edition)[^\]]*\]',
+                  ''
+                ),
+                r'\s*-\s*(?:deluxe|remastered|anniversary|edition|version|reissue|expanded|collector|live|acoustic|mono|stereo|remix|archive collection|archive|super deluxe|remaster).*$',
+                ''
+              )
+            )
+          )
+          ORDER BY 
+            CASE 
+              WHEN STARTS_WITH(a.album_id, 'am_mock_') OR STARTS_WITH(a.album_id, 'mock_') THEN 3
+              WHEN a.image_url IS NOT NULL AND a.image_url != "" THEN 1 
+              ELSE 2 
+            END ASC,
+            a.added_at DESC
+        ) as dedupe_rank
+      FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` a
+      WHERE COALESCE(a.tracks_total, 0) > 2
+        AND NOT (STARTS_WITH(a.album_id, 'am_mock_') OR STARTS_WITH(a.album_id, 'mock_'))
+    ),
+    deduped AS (
+      SELECT * FROM raw_albums WHERE dedupe_rank = 1
+    ),
+    golden_enriched AS (
+      SELECT * EXCEPT(dedup_rank)
+      FROM (
+        SELECT *,
+          ROW_NUMBER() OVER(
+            PARTITION BY canonical_album_key 
+            ORDER BY 
+              COALESCE(enrichment_quality_score, 0.0) DESC,
+              CASE WHEN album_description IS NOT NULL AND album_description != "" THEN 1 ELSE 2 END ASC,
+              updated_at DESC
+          ) as dedup_rank
+        FROM `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata`
+        WHERE canonical_album_key IS NOT NULL AND canonical_album_key != ""
+      )
+      WHERE dedup_rank = 1
+    )
+    SELECT 
+      d.user_id,
+      d.album_id,
+      d.album_name,
+      d.artist_name as album_artist_name,
+      d.added_at,
+      d.release_date as album_release_date,
+      d.release_year,
+      d.tracks_total as album_tracks_total,
+      d.album_type,
+      d.label as album_label,
+      d.image_url as album_image_url,
+      d.genres as album_genres,
+      GREATEST(COALESCE(pid.track_plays_by_id, 0), COALESCE(pname.track_plays_by_name, 0)) as album_track_plays,
+      ROUND(GREATEST(COALESCE(pid.track_plays_by_id, 0), COALESCE(pname.track_plays_by_name, 0)) / NULLIF(d.tracks_total, 0), 1) as album_plays,
+      GREATEST(COALESCE(pid.track_plays_by_id_30d, 0), COALESCE(pname.track_plays_by_name_30d, 0)) as album_track_plays_30d,
+      ROUND(GREATEST(COALESCE(pid.track_plays_by_id_30d, 0), COALESCE(pname.track_plays_by_name_30d, 0)) / NULLIF(d.tracks_total, 0), 1) as album_plays_30d,
+      CONCAT("https://open.spotify.com/album/", d.album_id) as album_url,
+      COALESCE(NULLIF(d.canonical_album_key, ''), CONCAT(LOWER(TRIM(d.artist_name)), '::', LOWER(TRIM(d.album_name)))) as canonical_album_key,
+      e.pitchfork_score,
+      e.metacritic_score,
+      e.allmusic_score,
+      e.discogs_rating,
+      e.discogs_votes,
+      e.album_description,
+      e.personnel,
+      e.wikipedia_url,
+      e.discogs_url,
+      e.styles as enriched_styles,
+      e.macro_genre,
+      e.derived_moods,
+      e.descriptive_tags,
+      e.enrichment_quality_score
+    FROM deduped d
+    LEFT JOIN album_plays_by_id pid
+      ON d.user_id = pid.user_id AND d.album_id = pid.album_id
+    LEFT JOIN album_plays_by_name pname
+      ON d.user_id = pname.user_id 
+      AND LOWER(TRIM(d.album_name)) = pname.norm_album_name
+      AND LOWER(TRIM(d.artist_name)) = pname.norm_artist_name
+    LEFT JOIN golden_enriched e
+      ON COALESCE(NULLIF(d.canonical_album_key, ''), CONCAT(LOWER(TRIM(d.artist_name)), '::', LOWER(TRIM(d.album_name)))) = e.canonical_album_key
+    """
+    try:
+        job = bq_client.query(remat_q)
+        job.result()
+        logger.info("Successfully refreshed %s.user_albums_features_table!", DATASET_V2)
+    except Exception as e:
+        logger.error("Error refreshing materialized user_albums_features_table: %s", e)
+
+
+if __name__ == "__main__":
+    run_pipeline()

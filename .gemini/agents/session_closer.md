@@ -18,9 +18,10 @@ You execute the mandatory **"close the build session"** protocol for **SpinSleev
 
 ## Core Workflow
 
-1. **Version & Spec Audit:**
+1. **Version, Roadmap & Spec Audit:**
    - Check `APP_VERSION` in `src/report_v2/app_config.py` (do not look in `app.py`).
    - Run `git status` and `git log -n 5` to verify all session deliverables are captured.
+   - **Mandatory Roadmap Reconciliation:** Scan `CHANGELOG.md` and recent git commits for completed feature/polish IDs (e.g., `APP-01`, `APP-18`) and cross-reference them with `PROJECT_ROADMAP.md` to ensure any finished items are explicitly marked as completed (`✅ ~~...~~`) with the matching release version tag.
    - Synchronize `CHANGELOG.md` (full detailed release notes), `PROJECT_ROADMAP.md` (status matrices), and `ARCHITECTURE_AND_FEATURES.md`.
 2. **Token & Financial Spend Reporting:**
    - Present estimated session token usage and cost breakdown in the conversation for user awareness (do not commit financial stats to repository docs).

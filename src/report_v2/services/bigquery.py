@@ -63,11 +63,16 @@ def rematerialize_user_albums_features(bq_client):
             )
           )
           ORDER BY 
-            CASE WHEN a.image_url IS NOT NULL AND a.image_url != "" THEN 1 ELSE 2 END ASC,
+            CASE 
+              WHEN STARTS_WITH(a.album_id, 'am_mock_') OR STARTS_WITH(a.album_id, 'mock_') THEN 3
+              WHEN a.image_url IS NOT NULL AND a.image_url != "" THEN 1 
+              ELSE 2 
+            END ASC,
             a.added_at DESC
         ) as dedupe_rank
       FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums` a
       WHERE COALESCE(a.tracks_total, 0) > 2
+        AND NOT (STARTS_WITH(a.album_id, 'am_mock_') OR STARTS_WITH(a.album_id, 'mock_'))
     ),
     deduped AS (
       SELECT * FROM raw_albums WHERE dedupe_rank = 1
