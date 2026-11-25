@@ -7,20 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [v2.8.8] — 2026-11-23
-### 🎵 APP-01: 12" Gatefold Tracklisting & UX Refinements Prototype
+### 🎵 12" Gatefold Enrichment Diagnostics, `--missing-gatefolds` CLI Mode & Attribution Alignment
 * **What:**
-  - **Interactive Gatefold Prototype (`prototypes/gatefold_app01_prototype.html`):**
-    - Developed and optimized an interactive 12" gatefold modal prototype featuring album switcher (Pink Floyd, Daft Punk, Radiohead), side A/B track splitting, and audio audition simulation.
-  - **UX & Viewport Refinements (`PROJECT_ROADMAP.md`, `ROADMAP_TECHNICAL_SPECS.md`):**
-    - Locked in Right-Side Minimalist Anchor Navigation (`📖` Narrative, `⭐` Reviews, `🎵` Tracklisting, `🎷` Vibe & Mood, `📓` Personal Crate Notes).
-    - Enforced Gutter Clearance (`pr-24`) to ensure scrollable content never overlaps floating anchor panels.
-    - Imposed Responsive Viewport Height Constraints (`max-h-[85vh]`) fully optimized for 13" laptop screens without vertical overflow.
-  - **Test Suite Verification:**
-    - Verified 98/98 unit tests passing successfully.
+  - **Missing Gatefold Diagnostics & CLI Mode (`src/pipeline_v2/enrich.py`, `src/report_v2/pipeline_v2/enrich.py`):**
+    - Diagnosed missing 12" gatefold icons across 519 library albums locked out by the `WHERE e.canonical_album_key IS NULL` anti-join in `get_candidate_albums()`.
+    - Added `--missing-gatefolds` (`-m`) CLI mode to surgically re-enrich albums lacking descriptions and personnel.
+  - **Play Count Attribution & Quality Score Guard (`src/pipeline_v2/enrich.py`):**
+    - Aligned play count attribution CTE across all branches in `get_candidate_albums()` to join and group by `canonical_album_key`, correctly accumulating plays across editions and releases.
+    - Guarded quality score merge with `T.enrichment_quality_score = GREATEST(COALESCE(T.enrichment_quality_score, 0.0), S.enrichment_quality_score)` to prevent quality score downgrades.
+  - **Unit Testing & Production Deployment:**
+    - Added unit test `test_get_candidate_albums_missing_gatefolds` in `tests/test_enrich_v2.py` (102/102 unit tests passing).
+    - Executed live test batch of 5 albums, restoring gatefold liner notes, Discogs ratings, and full personnel rosters for *Murcof*, *Chilly Gonzales*, and *BADBADNOTGOOD*.
+    - Deployed to Cloud Run: revision `spotify-dashboard-beta-00079-gjd` serving 100% traffic, verified live HTTP 200 on `https://spinsleeve.cc/` and `https://spinsleeve.cc/beta/`.
 * **Why:**
-  - Finalizes UX design and layout specifications for physical vinyl gatefold record sleeves with seamless multi-section navigation and compact viewport fit.
+  - Restores missing liner notes, personnel credits, and gatefold badge indicators for previously un-enriched library albums while ensuring robust play count accumulation and preventing data quality score regressions.
 * **How:**
-  - Materialized prototype, updated roadmap and technical specifications, verified 98/98 unit tests passing.
+  - Implemented `--missing-gatefolds` enrichment logic, fixed attribution CTEs and quality score guard, added unit tests (`tests/test_enrich_v2.py`), verified 102/102 tests passing, and deployed live Cloud Run revision `spotify-dashboard-beta-00079-gjd`.
 
 ---
 
