@@ -61,7 +61,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.8.8` (12" Gatefold Enrichment Diagnostics, `--missing-gatefolds` CLI mode, Play Count Attribution CTE Alignment, Quality Score Guard, 102/102 unit tests passing).
+* **Current Production Release:** `v2.8.9` (Dominant-Genre Multi-Vote Classification, Lexicon Expansion, BigQuery Catalog Reclassification, Dropdown Alignment, 105/105 unit tests passing).
 * **Next Planned Milestone:** `Phase 8` — Live Apple Developer Account Enrollment & Web API Token Exchange (`APP-02c`).
 
 ---
@@ -88,9 +88,9 @@ When the user says **"close the build session"**, invoke `@session_closer` to ve
 
 | Release | Date | Turns | Est. Input | Est. Output | Est. Spend | Primary Deliverables |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`v2.8.6`** | 2026-11-22 | 7 | ~280,000 | ~5,500 | **~$0.02** | APP-02b MusicKit JS v3 Frontend Client & Onboarding UI, route-scoped `/beta` isolation, mock collection toggle, source filters, mock filtering, packaging updates, BQ cleanup, 98/98 unit tests passing, PR #11 (`feat/app-02b-musickit-frontend`), production revision `spotify-dashboard-beta-00073-r5n`. |
 | **`v2.8.7`** | 2026-11-23 | 5 | ~200,000 | ~4,500 | **~$0.01** | APP-18 Zero-Shot Semantic Text Classification (`sentence-transformers/all-MiniLM-L6-v2`) in `classifier.py`, profiling script & report (`classifier_comparison_report.md`), Analytics page macro-genre filter alignment, 98/98 unit tests passing, deployed Cloud Run revision `spotify-dashboard-beta-00074-9hb`. |
 | **`v2.8.8`** | 2026-11-25 | 9 | ~9,985,000 (9.1M cached) | ~28,900 | **~$0.23** | 12" Gatefold Enrichment Diagnostics, `--missing-gatefolds` (`-m`) CLI mode, Play Count Attribution CTE Alignment across editions, Quality Score Guard (`GREATEST`), 102/102 unit tests passing, live batch enrichment (Murcof, Chilly Gonzales, BADBADNOTGOOD), deployed Cloud Run revision `spotify-dashboard-beta-00079-gjd`. |
+| **`v2.8.9`** | 2026-11-25 | 7 | ~320,000 | ~6,500 | **~$0.02** | Dominant-Genre Multi-Vote Classification, Lexicon Expansion, BigQuery Catalog Reclassification (578 albums, 319 reclassified, unclassified plummeted 27% -> 12.4%), Crate filter dropdown alignment ("Other / Unclassified" pinned), 105/105 unit tests passing, deployed Cloud Run revision `spotify-dashboard-beta-00080-fvd`. |
 
 ---
 
