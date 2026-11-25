@@ -74,6 +74,9 @@ src/report_v2/
 ### Zero-Shot Semantic Text Classification (`APP-18`)
 * **Workflow:** Integrated `sentence-transformers/all-MiniLM-L6-v2` zero-shot semantic text classification into `src/pipeline_v2/classifier.py` with robust regex fallback. Evaluates sentence embeddings to classify genre and mood tags into normalized macro-genres with cosine similarity confidence scoring and threshold analysis. Backed by comparative profiling scripts (`scripts/profile_classifier_comparison.py`) and materialized distribution comparison reports (`classifier_comparison_report.md`). Aligned analytics genre filters (`src/report_v2/services/analytics.py`) and verified 98/98 unit tests passing.
 
+### Dominant-Genre Multi-Vote Classification & Lexicon Expansion (`v2.8.9`)
+* **Workflow:** Dominant-Genre Multi-Vote Scoring Engine (`_tally_macro_genre_votes()`, `_pick_dominant_macro_genre()`) replacing brittle sequential first-match classification with multi-vote tallying and hierarchical narrative description fallback (`album_description` / `discogs_notes`). Expanded sub-genre lexicon across Classical, Rock, Electronic, Latin/World, Jazz, and Pop. Executed batched catalog reclassification across 578 records (unclassified share plummeted from 27.0% to 12.4%), pinned `"Other / Unclassified"` at the end of crate filter dropdowns, and verified 105/105 unit tests passing.
+
 ---
 
 ## 4. Deep-Dive: Metadata Enrichment Pipeline (`src/pipeline_v2/enrich.py`)
