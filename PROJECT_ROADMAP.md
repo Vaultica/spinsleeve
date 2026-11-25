@@ -171,6 +171,7 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-16`**    | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~                     | Core App            | 6–8 hours        | Completed (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill.                 |
 | **`APP-17`**    | ✅ ~~Unified Crate Workspace: Combined Saved Library, Unowned Crate & Crate Digger Mode~~               | Core App            | 6–8 hours        | Completed (`v2.8.3`): Consolidated Saved Vinyl & Streamed/Unowned crates, dynamic macro-genre filtering, unified 2-row control deck. |
 | **`APP-18`**    | ✅ ~~Zero-Shot Semantic Text Classification & Adaptive Taxonomy~~                                      | Core App            | 6–8 hours        | Completed (`v2.8.7`: `sentence-transformers/all-MiniLM-L6-v2` semantic classification in `classifier.py`, profiling reports).      |
+| **`APP-19`**    | Natural Language "Vibe Digger" & Semantic Crate Discovery                                              | Core App            | 6–8 hours        | High (Natural language album selection by mood, weather, era, instruments; prototype verified in `scripts/eval_vibe_search.py`).     |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Simplify Crate Digger~~                                        | Tactical Polish     | 2–3 hours        | Completed (`v2.2.1`)                                                                                                                 |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~                                | Tactical Polish     | 1 hour           | Completed (`v2.2.2`)                                                                                                                 |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~                                        | Tactical Polish     | 1–2 hours        | Completed (`v2.2.2`)                                                                                                                 |
@@ -516,7 +517,24 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 * **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium-High**
 
 ---
+
+#### `APP-19`: Natural Language "Vibe Digger" & Semantic Crate Discovery
 * **Problem:**  
+  Standard search relies on exact keyword matches against `album_name` or `artist_name`. Users who do not know an exact artist or title, or who want music fitting an abstract mood, weather, setting, era, or instrument combination (*"melancholic rainy day jazz piano with trumpet"*, *"90s slowcore with whispery vocals and sad guitars"*, *"upbeat japanese city pop for a summer drive"*) cannot discover records through traditional search.
+* **Solution:**  
+  1. **Semantic Vector Representation:** Encode rich album documents (album title, artist, release year, macro-genre, sub-genres, Discogs styles, NLP moods, personnel roster, and Wikipedia editorial overview) into 384-dimensional dense semantic vectors using `sentence-transformers/all-MiniLM-L6-v2`.
+  2. **Hybrid Vibe Ranker:** Combine dense cosine similarity with lightweight heuristic boosts:
+     - *Temporal boost (+0.15):* Automatically detects decade and year intent (*"90s"*, *"1970s"*, *"from 2001"*).
+     - *Macro-genre boost (+0.12):* Aligns with explicit genres mentioned in the prompt (*"Jazz"*, *"Electronic"*, *"Rock"*).
+     - *Instrument & Personnel boost (+0.08):* Matches specific instruments (*"modular synth"*, *"trumpet"*, *"pedal steel"*) against personnel credits.
+  3. **Zero-Database Vector Serving:** Store pre-computed vectors in a compact flat binary file (`.npy`, ~3.2 MB for 2,115 albums) loaded into Python RAM in ~50ms on boot, executing searches in sub-20ms with $0.00 infrastructure cost and zero BigQuery schema changes.
+  4. **Unified Crate UI Integration:** Toggle in `explorer.html` between `[ 🔍 Exact Search ]` and `[ 🔮 Vibe Digger ]` with real-time similarity badges and matched mood/tag highlights.
+  5. **Verified Prototype:** Validated in `scripts/eval_vibe_search.py` across 2,115 library albums.
+* **Effort & Complexity:** ~6–8 hours (1 day) • **Complexity:** **Medium-High**
+
+---
+
+#### `APP-03`: In-App User Feedback & Liner Notes Wishlist Collector
   Friends testing SpinSleeve need a quick, seamless way to suggest missing liner notes, report bugs, or recommend features without leaving the application.
 * **Solution:**  
   A built-in floating drawer (`💬 Feedback`):
@@ -912,7 +930,9 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`APP-14`** | Headless API & Firestore/Datastore Catalog Rearchitecture (Phase 1) | Core App | 12–16h | Flask REST JSON API, Firebase CDN Reverse Proxy | **Medium:** Decouples Flask monolithic templates into clean REST endpoints and Firebase CDN proxy. |
 | **`APP-15`** | Native iOS SwiftUI Companion App & Mobile Crate Browsing (Phase 2) | Core App | 20–30h | SwiftUI, Swift, Spotify OAuth PKCE | **High:** Native iOS app with Spotify OAuth PKCE authentication and 33⅓ RPM crate browsing. |
 | **`APP-16`** | ✅ ~~Semantic Liner Notes & Description Classification for Crate Digger Relevance~~ | Core App | 6–8h | NLP Text Parsing, BigQuery Schema Expansion | ✅ **Completed** (`v2.8.0`): Two-tier enrichment architecture, NLP classifier, raw tables, golden clustering, and backfill. |
-| **`APP-17`** | Unified Crate Workspace (Saved, Unowned & Crate Digger) | Core App | 6–8h | Flask, Jinja2, BigQuery, Cloud Datastore | **High:** Consolidates library exploration, unowned discovery, and Crate Digger into a single intuitive 2-row control deck workspace. |
+| **`APP-17`** | ✅ ~~Unified Crate Workspace (Saved, Unowned & Crate Digger)~~ | Core App | 6–8h | Flask, Jinja2, BigQuery, Cloud Datastore | ✅ **Completed** (`v2.8.3`, Revision `00071-g5f`): Consolidated Saved Vinyl & Streamed/Unowned crates, dynamic macro-genre filtering, unified 2-row control deck. |
+| **`APP-18`** | ✅ ~~Zero-Shot Semantic Text Classification & Adaptive Taxonomy~~ | Core App | 6–8h | Python, SentenceTransformers, BigQuery | ✅ **Completed** (`v2.8.7`, Revision `00074-9hb`): `sentence-transformers/all-MiniLM-L6-v2` zero-shot semantic classification in `classifier.py`, profiling comparison reports, Analytics page alignment. |
+| **`APP-19`** | Natural Language "Vibe Digger" & Semantic Crate Discovery | Core App | 6–8h | Python, MiniLM, NumPy, Flask | **High:** Natural language vibe/era/instrument album selection; in-memory vector serving, hybrid ranking, zero DB cost; prototype verified in `scripts/eval_vibe_search.py`. |
 | **`POLISH-01`** | ✅ ~~Harmonise "Heavy Rotation" Filter & Crate Digger UX~~ | Tactical Polish | 2–3h | Jinja2, JavaScript, Tailwind CSS | ✅ **Completed** (`v2.2.1`): Streamlined 2-tier console, single-dimension crate target, balanced vibes. |
 | **`POLISH-02`** | ✅ ~~Library Explorer Heavy Rotation Initial Sort (Strict 30D on Load)~~ | Tactical Polish | 1h | JavaScript, DOM Lifecycle | ✅ **Completed** (`v2.2.2`): Initial sort triggers `onFilterChange()` on DOMContentLoaded for strict 30D heavy rotation sorting. |
 | **`POLISH-03`** | ✅ ~~Play Count Badge Refinement (Decimal Plays / Newly Added)~~ | Tactical Polish | 1–2h | Python, Jinja2, JavaScript | ✅ **Completed** (`v2.2.2`): Decimal fractional scrobbles, integer whole spins, and contextual "Newly Added" / "Never Played" tags. |

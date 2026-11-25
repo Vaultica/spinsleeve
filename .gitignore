@@ -118,3 +118,6 @@ my_spotify_data.zip
 
 # UI Prototypes
 prototypes/
+
+# Vibe Search Evaluation Cache
+scripts/.cache_vibe/

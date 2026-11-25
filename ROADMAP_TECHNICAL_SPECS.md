@@ -35,6 +35,9 @@
    - [`BRAND-04`: Software License & IP Protection Architecture (AGPLv3 vs. PolyForm)](#brand-04-software-license--ip-protection-architecture-agplv3-vs-polyform)
 7. [Category: Technical Documentation (`DOCS`)](#7-category-technical-documentation-docs)
    - [`DOCS-01`: Comprehensive Architecture Blueprint (Mermaid Topology)](#docs-01-comprehensive-architecture-blueprint-mermaid-topology)
+8. [Category: Machine Learning & Semantic Discovery (`ML`)](#8-category-machine-learning--semantic-discovery-ml)
+   - [`APP-18`: Zero-Shot Semantic Text Classification Architecture](#app-18-zero-shot-semantic-text-classification-architecture)
+   - [`APP-19`: Natural Language "Vibe Digger" & Semantic Crate Discovery Architecture](#app-19-natural-language-vibe-digger--semantic-crate-discovery-architecture)
 
 ---
 
@@ -682,4 +685,101 @@ All new features and architectural changes must strictly adhere to these verifie
   1. **Canonical Macro-Genre Anchors:** Define rich semantic descriptions for each macro-genre (Electronic, Rock, Pop, Hip-Hop, Jazz, Classical, Folk/Country, R&B/Soul, Ambient, Punk/Alternative, etc.).
   2. **Embedding & Similarity:** Serialize album corpus (Spotify genres + Discogs styles + MusicBrainz tags) into embedding vectors and compute cosine similarity against macro-genre anchor vectors.
   3. **Backward Compatibility:** Maintain API contract `classify_macro_genre(genres_str, styles_str, mb_tags)` so BigQuery DML and Flask routes require zero structural alterations.
+
+---
+
+### `APP-19`: Natural Language "Vibe Digger" & Semantic Crate Discovery Architecture
+
+* **Technical Objective:**
+  Build a natural language semantic retrieval and ranking engine that enables users to discover and filter albums by free-form descriptions of mood, weather, setting, era, instrument combinations, or abstract feelings (*e.g., "rainy day jazz piano with trumpet"*, *"90s slowcore with whispery vocals and sad guitars"*, *"upbeat japanese city pop for a summer drive"*). Solves discovery when users do not know exact artist or album names.
+
+* **Empirical Benchmarks & Model Evaluation (`scripts/eval_vibe_search.py`):**
+  A live benchmarking prototype was authored and evaluated against 2,115 enriched albums in the SpinSleeve catalog:
+  
+  | Evaluation Query | Model 1: Pure Vectors (`MiniLM`) | Model 2: Hybrid Vibe Ranker | Model 3: Lexical Baseline (No Vectors) |
+  | :--- | :--- | :--- | :--- |
+  | **"rainy day jazz piano with trumpet"** | #1 Ibrahim Maalouf - *Trumpets of Michel-Ange*<br>#2 Robohands - *Violet*<br>#3 Ben Webster - *Portrait* | #1 Robohands - *Violet* (+Genre, +Inst)<br>#2 Chet Baker - *In New York* (+Genre, +Inst)<br>#3 Ibrahim Maalouf (+Genre) | #1 BADBADNOTGOOD - *IV* (Hip-Hop)<br>*(Fails: false matches on "day", "with")* |
+  | **"90s slowcore with whispery vocals and sad guitars"** | #1 Michelle Gurevich (2016)<br>#2 Idaho - *This Way Out* (1994)<br>#3 Michelle Gurevich (2024) | #1 Idaho - *This Way Out* (1994, +Era [90s])<br>#2 Pulp - *Countdown* (1996, +Era [90s])<br>#3 Michelle Gurevich (2016) | #1 Idaho (Matches text)<br>#2 Radar Brothers (1999)<br>*(Misses implicit semantic mood)* |
+  | **"upbeat japanese city pop for a summer drive"** | #1 Haruomi Hosono - *Hana ni Mizu*<br>#2 Haruomi Hosono - *Shoplifters*<br>#3 Haruomi Hosono - *Bara To Yaju* | #1 Haruomi Hosono (+Genre [Pop])<br>#2 Haruomi Hosono (+Genre [Pop])<br>#3 Haruomi Hosono (+Genre [Pop]) | #1 Haruomi Hosono - *Hosono House*<br>#2 Vampire Weekend (Rock)<br>*(Fails: false matches on "city", "pop")* |
+  | **"dark hypnotic techno with modular synths"** | #1 Burnt Friedman - *Secret Rhythms 2*<br>#2 Burnt Friedman - *Secret Rhythms 4*<br>#3 Burnt Friedman - *Secret Rhythms* | #1 Burnt Friedman (+Inst [modular])<br>#2 Burnt Friedman (+Inst [modular])<br>#3 Burnt Friedman (+Inst [modular]) | #1 Pink Floyd - *Dark Side of Moon*<br>*(Fails: matches word "dark" only)* |
+
+  **Benchmark Conclusion:**
+  * **Lexical keyword search fails completely** on abstract discovery, matching unrelated albums due to stopword and incidental token collisions (*e.g., matching Pink Floyd for techno because of the word "dark"*).
+  * **Pure semantic vectors (`all-MiniLM-L6-v2`)** accurately capture nuanced musical style, timbre, and mood across disparate artists.
+  * **The Hybrid Ranker** produces the highest subjective quality by combining dense semantic embeddings with temporal decade detection and instrument roster verification.
+
+* **Document Synthesis & Vectorization:**
+  Each album is summarized into a dense semantic vibe document prior to encoding:
+  ```python
+  def build_vibe_document(album: Dict[str, Any]) -> str:
+      parts = [f"{album['album_name']} by {album['artist_name']} ({album['release_year']})"]
+      if album.get("macro_genre"): parts.append(f"Genre: {album['macro_genre']}")
+      if album.get("artist_genres"): parts.append(f"Subgenres: {album['artist_genres']}")
+      if album.get("styles"): parts.append(f"Styles: {album['styles']}")
+      if album.get("derived_moods"): parts.append(f"Moods: {', '.join(album['derived_moods'])}")
+      if album.get("descriptive_tags"): parts.append(f"Tags: {', '.join(album['descriptive_tags'])}")
+      if album.get("personnel"): parts.append(f"Personnel: {album['personnel'][:250]}")
+      if album.get("album_description"): parts.append(f"Overview: {album['album_description'][:500]}")
+      return " | ".join(parts)
+  ```
+
+* **Zero-Database Vector Serving Architecture:**
+  1. **Zero BigQuery Schema Alterations:** Embeddings do NOT require `ALTER TABLE album_enriched_metadata ADD COLUMN embedding ARRAY<FLOAT64>`. BigQuery remains a clean relational data warehouse.
+  2. **Flat Binary Storage (`.npy`):** All 2,115 album vectors are saved into a compact **~3.2 MB** binary file (`embeddings_minilm.npy`).
+  3. **In-Memory Boot & Search:**
+     - The web server downloads the 3.2 MB matrix on startup (~50ms) into Python memory.
+     - When a user issues a query, the query is embedded and evaluated against the user's filtered album slice via NumPy dot product:
+       ```python
+       scores = np.dot(user_album_embeddings, query_vector)
+       ```
+     - Vector search execution latency: **~2.5 milliseconds** for 2,000 albums on CPU.
+     - Zero BigQuery query costs incurred per search.
+
+* **Cost Model Breakdown:**
+  * **One-Time Catalog Vectorization:** **$0.00** (computed locally or within Cloud Run Enrichment Job using CPU).
+  * **Monthly Runtime Query Costs:** **$0.00 / month** (runs in-memory on existing Cloud Run container instances).
+  * **Infrastructure & Database Costs:** **$0.00 / month** (zero additional database services or vector database clusters required).
+
+* **API Contract Specification (`/api/crate/vibe-search`):**
+  * **Method:** `GET`
+  * **Query Parameters:**
+    * `q` *(string, required)*: Free-form vibe prompt (*e.g., "warm acoustic guitar on a sunny porch"*).
+    * `limit` *(int, optional, default: 15)*: Maximum albums to return.
+    * `scope` *(string, optional, default: "all")*: `"saved"`, `"unowned"`, or `"all"`.
+    * `horizon` *(string, optional, default: "all_time")*: `"30d"` or `"all_time"`.
+  * **Response Payload (JSON):**
+    ```json
+    {
+      "query": "rainy day jazz piano with trumpet",
+      "detected_intent": {
+        "decade_range": null,
+        "macro_genres": ["Jazz"],
+        "instruments": ["piano", "trumpet"]
+      },
+      "results_count": 5,
+      "results": [
+        {
+          "album_id": "4yP0hdKOJ6qH4ZORb85p5r",
+          "album_name": "Violet",
+          "artist_name": "Robohands",
+          "release_year": "2022",
+          "macro_genre": "Jazz",
+          "image_url": "https://i.scdn.co/image/ab67616d0000b273...",
+          "similarity_score": 0.801,
+          "match_reasons": ["Cosine sim: 0.521", "+Genre [Jazz]", "+Inst [trumpet, piano]"],
+          "derived_moods": ["Chill", "Nocturnal"],
+          "enriched_styles": "Contemporary Jazz, Cool Jazz"
+        }
+      ]
+    }
+    ```
+
+* **Frontend UI / UX Integration (`explorer.html`):**
+  * Add a 2-way toggle beside the search bar in the Unified Crate Control Deck:
+    `[ 🔍 Exact Search ]  [ 🔮 Vibe Digger ]`
+  * In *Vibe Digger* mode:
+    - Input placeholder dynamically updates: *"Describe the vibe (e.g., 'rainy day ambient with acoustic guitar')..."*
+    - Real-time debounced search (400ms) calls `/api/crate/vibe-search`.
+    - Renders matching vinyl stack with highlighted similarity chips (*e.g., "82% Vibe Match"*) and contextual tags.
+
 
