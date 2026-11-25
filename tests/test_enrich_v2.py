@@ -167,6 +167,21 @@ class TestEnrichV2(unittest.TestCase):
         self.assertIn("enrichment_raw_musicbrainz", query_sql)
         self.assertIn("min_quality_score", query_sql)
 
+    @patch("enrich.bigquery.Client")
+    def test_get_candidate_albums_missing_gatefolds(self, mock_bq_cls):
+        mock_bq = MagicMock()
+        mock_bq_cls.return_value = mock_bq
+
+        mock_bq.query.return_value.to_dataframe.return_value = pd.DataFrame([{"album_id": "test_id_mg"}])
+        res = enrich.get_candidate_albums(mock_bq, batch_limit=5, missing_gatefolds=True)
+        self.assertEqual(len(res), 1)
+
+        call_args = mock_bq.query.call_args
+        query_sql = call_args[0][0]
+        self.assertIn("album_description IS NULL", query_sql)
+        self.assertIn("personnel IS NULL", query_sql)
+        self.assertIn("total_plays DESC", query_sql)
+
 
 if __name__ == "__main__":
     unittest.main()

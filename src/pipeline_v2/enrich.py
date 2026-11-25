@@ -277,11 +277,14 @@ def get_candidate_albums(
     batch_limit: int = 50,
     specific_album_id: Optional[str] = None,
     re_enrich: bool = False,
-    min_quality_score: float = 0.85
+    min_quality_score: float = 0.85,
+    missing_gatefolds: bool = False
 ) -> pd.DataFrame:
     """
     Selects candidate albums from spotify_v2.user_saved_albums.
     - If specific_album_id is provided: targets that single album.
+    - If missing_gatefolds is True: targets albums currently lacking gatefold liner notes
+      (missing both album_description and personnel), prioritized by play count.
     - If re_enrich is False: targets only completely unenriched albums.
     - If re_enrich is True: targets unenriched albums, albums missing MusicBrainz tags,
       and albums with enrichment_quality_score < min_quality_score, prioritized by play count.
@@ -303,6 +306,75 @@ def get_candidate_albums(
         """
         job_cfg = bigquery.QueryJobConfig(
             query_parameters=[bigquery.ScalarQueryParameter("album_id", "STRING", specific_album_id)]
+        )
+        return bq_client.query(query, job_config=job_cfg).to_dataframe()
+
+    if missing_gatefolds:
+        query = f"""
+        WITH saved AS (
+          SELECT 
+            COALESCE(NULLIF(canonical_album_key, ''), CONCAT(LOWER(TRIM(artist_name)), '::', LOWER(TRIM(album_name)))) as canonical_album_key,
+            album_id,
+            artist_name,
+            album_name,
+            release_date,
+            release_year,
+            genres,
+            user_id
+          FROM `{PROJECT_ID}.{DATASET_V2}.user_saved_albums`
+          WHERE album_name IS NOT NULL AND artist_name IS NOT NULL
+        ),
+        albums AS (
+          SELECT 
+            canonical_album_key,
+            ANY_VALUE(album_id) as album_id,
+            ANY_VALUE(artist_name) as artist_name,
+            ANY_VALUE(album_name) as album_name,
+            ANY_VALUE(release_date) as release_date,
+            ANY_VALUE(release_year) as release_year,
+            ANY_VALUE(genres) as genres,
+            COUNT(DISTINCT user_id) as collector_count
+          FROM saved
+          GROUP BY canonical_album_key
+        ),
+        plays AS (
+          SELECT 
+            COALESCE(NULLIF(p.canonical_album_key, ''), CONCAT(LOWER(TRIM(p.artist_name)), '::', LOWER(TRIM(p.album_name)))) as canonical_album_key,
+            COUNT(*) as play_count
+          FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
+          WHERE p.album_name IS NOT NULL AND p.artist_name IS NOT NULL
+          GROUP BY 1
+        )
+        SELECT 
+          a.album_id,
+          a.artist_name,
+          a.album_name,
+          a.canonical_album_key,
+          a.release_date,
+          a.release_year,
+          a.genres,
+          COALESCE(p.play_count, 0) as total_plays,
+          a.collector_count,
+          e.enrichment_quality_score
+        FROM albums a
+        LEFT JOIN plays p ON a.canonical_album_key = p.canonical_album_key
+        LEFT JOIN `{PROJECT_ID}.{DATASET_V2}.album_enriched_metadata` e 
+          ON a.canonical_album_key = e.canonical_album_key
+        WHERE (
+            e.canonical_album_key IS NULL 
+            OR (
+              (e.album_description IS NULL OR e.album_description = '')
+              AND (e.personnel IS NULL OR e.personnel = '')
+            )
+          )
+        ORDER BY 
+          total_plays DESC,
+          a.collector_count DESC,
+          a.release_date DESC
+        LIMIT @batch_limit
+        """
+        job_cfg = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("batch_limit", "INT64", batch_limit)]
         )
         return bq_client.query(query, job_config=job_cfg).to_dataframe()
 
@@ -336,12 +408,11 @@ def get_candidate_albums(
         ),
         plays AS (
           SELECT 
-            s.canonical_album_key,
+            COALESCE(NULLIF(p.canonical_album_key, ''), CONCAT(LOWER(TRIM(p.artist_name)), '::', LOWER(TRIM(p.album_name)))) as canonical_album_key,
             COUNT(*) as play_count
           FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
-          JOIN (SELECT DISTINCT album_id, canonical_album_key FROM saved) s ON p.album_id = s.album_id
-          WHERE p.album_id IS NOT NULL AND p.album_id != ""
-          GROUP BY s.canonical_album_key
+          WHERE p.album_name IS NOT NULL AND p.artist_name IS NOT NULL
+          GROUP BY 1
         )
         SELECT 
           a.album_id,
@@ -396,12 +467,11 @@ def get_candidate_albums(
     ),
     plays AS (
       SELECT 
-        s.canonical_album_key,
+        COALESCE(NULLIF(p.canonical_album_key, ''), CONCAT(LOWER(TRIM(p.artist_name)), '::', LOWER(TRIM(p.album_name)))) as canonical_album_key,
         COUNT(*) as play_count
       FROM `{PROJECT_ID}.{DATASET_V2}.playback_history` p
-      JOIN (SELECT DISTINCT album_id, canonical_album_key FROM saved) s ON p.album_id = s.album_id
-      WHERE p.album_id IS NOT NULL AND p.album_id != ""
-      GROUP BY s.canonical_album_key
+      WHERE p.album_name IS NOT NULL AND p.artist_name IS NOT NULL
+      GROUP BY 1
     ),
     mb_scraped AS (
       SELECT DISTINCT canonical_album_key
@@ -468,13 +538,17 @@ def run_enrichment(
     specific_album_id: Optional[str] = None,
     dry_run: bool = False,
     re_enrich: bool = False,
-    min_quality_score: float = 0.85
+    min_quality_score: float = 0.85,
+    missing_gatefolds: bool = False
 ) -> int:
     """
     Runs the V2 metadata enrichment pipeline and appends records to BigQuery.
     """
     logger.info("=== Starting SpinSleeve V2 Album Metadata Enrichment ===")
-    logger.info("Target Dataset: %s.%s | Batch Size: %d | Dry Run: %s | Re-Enrich: %s", PROJECT_ID, DATASET_V2, batch_size, dry_run, re_enrich)
+    logger.info(
+        "Target Dataset: %s.%s | Batch Size: %d | Dry Run: %s | Re-Enrich: %s | Missing Gatefolds: %s",
+        PROJECT_ID, DATASET_V2, batch_size, dry_run, re_enrich, missing_gatefolds
+    )
 
     bq_client = bigquery.Client(project=PROJECT_ID)
 
@@ -483,7 +557,8 @@ def run_enrichment(
         batch_limit=batch_size,
         specific_album_id=specific_album_id,
         re_enrich=re_enrich,
-        min_quality_score=min_quality_score
+        min_quality_score=min_quality_score,
+        missing_gatefolds=missing_gatefolds
     )
     total_to_enrich = len(df_candidates)
 
@@ -717,7 +792,7 @@ def run_enrichment(
         T.macro_genre = S.macro_genre,
         T.derived_moods = S.derived_moods,
         T.descriptive_tags = S.descriptive_tags,
-        T.enrichment_quality_score = S.enrichment_quality_score,
+        T.enrichment_quality_score = GREATEST(COALESCE(T.enrichment_quality_score, 0.0), S.enrichment_quality_score),
         T.updated_at = S.updated_at
     WHEN NOT MATCHED THEN INSERT (
         album_id, artist_name, album_name, canonical_album_key, release_date, release_year, era_group,
@@ -752,6 +827,7 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Perform scraping without saving to BigQuery")
     parser.add_argument("--re-enrich", "-r", action="store_true", help="Re-enrich existing albums missing MusicBrainz or with quality score < min-score")
     parser.add_argument("--min-score", type=float, default=0.85, help="Minimum quality score threshold for re-enrichment (default: 0.85)")
+    parser.add_argument("--missing-gatefolds", "-m", action="store_true", help="Re-enrich albums currently missing gatefold liner notes (no description and no personnel)")
 
     args = parser.parse_args()
     batch = args.positional_batch if args.positional_batch is not None else args.batch_size
@@ -761,5 +837,6 @@ if __name__ == "__main__":
         specific_album_id=args.album_id,
         dry_run=args.dry_run,
         re_enrich=args.re_enrich,
-        min_quality_score=args.min_score
+        min_quality_score=args.min_score,
+        missing_gatefolds=args.missing_gatefolds
     )
