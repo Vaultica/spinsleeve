@@ -13,20 +13,79 @@ from typing import Dict, List, Optional, Any
 
 # Standard Macro Genre Categories
 MACRO_GENRE_RULES = [
-    ("Ambient", [r"\bambient\b", r"\bdrone\b", r"\bsoundscape\b", r"\bfield recordings?\b", r"\bnew age\b"]),
-    ("Metal", [r"\bmetal\b", r"\bthrash\b", r"\bdoom metal\b", r"\bblack metal\b", r"\bdeath metal\b", r"\bgrindcore\b", r"\bheavy metal\b"]),
-    ("Punk / Alternative", [r"\bpunk\b", r"\bpost-punk\b", r"\bhardcore punk\b", r"\bgrunge\b", r"\bemo\b", r"\briot grrrl\b", r"\bgarage punk\b"]),
-    ("Electronic", [r"\belectronic\b", r"\bedm\b", r"\bclub\b", r"\btechno\b", r"\bhouse\b", r"\belectro\b", r"\bidm\b", r"\bdrum and bass\b", r"\bdnb\b", r"\btrance\b", r"\bdowntempo\b", r"\btrip hop\b", r"\bsynth-?pop\b", r"\belectronica\b", r"\buk bass\b", r"\buk garage\b", r"\bgarage\b", r"\bbass\b", r"\bbreaks?\b", r"\bbreakbeat\b", r"\bhyperpop\b", r"\bglitch\b"]),
-    ("Hip-Hop", [r"\bhip[ -]?hop\b", r"\brap\b", r"\btrap\b", r"\bboom bap\b", r"\bdrill\b", r"\bconscious rap\b"]),
-    ("Jazz", [r"\bjazz\b", r"\bbebop\b", r"\bhard bop\b", r"\bmodal jazz\b", r"\bfusion\b", r"\bfree jazz\b", r"\bbig band\b", r"\bcool jazz\b"]),
-    ("R&B / Soul", [r"\br&b\b", r"\bsoul\b", r"\bfunk\b", r"\bmotown\b", r"\bneo[ -]soul\b", r"\bcontemporary r&b\b", r"\bgospel\b"]),
-    ("Classical", [r"\bclassical\b", r"\bchamber music\b", r"\bsymphon(?:y|ic)\b", r"\bchoral\b", r"\bopera\b", r"\bmodern classical\b"]),
-    ("Folk / Country", [r"\bfolk\b", r"\bcountry\b", r"\bbluegrass\b", r"\bamericana\b", r"\bappalachian\b", r"\bsinger-songwriter\b", r"\balt-country\b"]),
-    ("Reggae / Dub", [r"\breggae\b", r"\bdub\b", r"\bska\b", r"\broots reggae\b", r"\bdancehall\b", r"\brocker\b"]),
-    ("Blues", [r"\bblues\b", r"\bdelta blues\b", r"\bchicago blues\b", r"\belectric blues\b"]),
-    ("Rock", [r"\brock\b", r"\bindie rock\b", r"\bpsychedelic rock\b", r"\bprog(?:ressive)? rock\b", r"\bshoegaze\b", r"\bclassic rock\b", r"\bart rock\b", r"\bhard rock\b"]),
-    ("Pop", [r"\bpop\b", r"\bindie pop\b", r"\bdance-pop\b", r"\bchamber pop\b", r"\bbaroque pop\b", r"\bpower pop\b"]),
-    ("Latin / World", [r"\blatin\b", r"\bbossa nova\b", r"\btango\b", r"\bsamba\b", r"\bafrobeat\b", r"\bcumbia\b", r"\bflamenco\b", r"\bworld\b"]),
+    ("Ambient", [
+        r"\bambient\b", r"\bdrone\b", r"\bsoundscape\b", r"\bfield recordings?\b", r"\bnew age\b",
+        r"\bdark ambient\b", r"\bspace ambient\b"
+    ]),
+    ("Metal", [
+        r"\bmetal\b", r"\bthrash\b", r"\bdoom metal\b", r"\bblack metal\b", r"\bdeath metal\b",
+        r"\bgrindcore\b", r"\bheavy metal\b", r"\bsludge metal\b", r"\bstoner metal\b"
+    ]),
+    ("Punk / Alternative", [
+        r"\bpunk\b", r"\bpost-punk\b", r"\bhardcore punk\b", r"\bgrunge\b", r"\bemo\b",
+        r"\briot grrrl\b", r"\bgarage punk\b", r"\bnoise rock\b", r"\bmath rock\b",
+        r"\bpost-hardcore\b", r"\balternative rock\b", r"\balt-rock\b"
+    ]),
+    ("Electronic", [
+        r"\belectronic\b", r"\bedm\b", r"\bclub\b", r"\btechno\b", r"\bhouse\b", r"\belectro\b",
+        r"\bidm\b", r"\bdrum and bass\b", r"\bdnb\b", r"\btrance\b", r"\bdowntempo\b",
+        r"\btrip hop\b", r"\bsynth-?pop\b", r"\belectronica\b", r"\buk bass\b", r"\buk garage\b",
+        r"\bgarage\b", r"\bbass\b", r"\bbreaks?\b", r"\bbreakbeat\b", r"\bhyperpop\b",
+        r"\bglitch\b", r"\bchillwave\b", r"\belectroclash\b", r"\bsynthwave\b", r"\bvaporwave\b",
+        r"\bambient techno\b", r"\bminimal techno\b", r"\bdeep house\b", r"\belectronic music\b",
+        r"\bnu-disco\b"
+    ]),
+    ("Hip-Hop", [
+        r"\bhip[ -]?hop\b", r"\brap\b", r"\btrap\b", r"\bboom bap\b", r"\bdrill\b",
+        r"\bconscious rap\b", r"\bcloud rap\b", r"\beast coast hip hop\b", r"\bwest coast hip hop\b"
+    ]),
+    ("Jazz", [
+        r"\bjazz\b", r"\bbebop\b", r"\bhard bop\b", r"\bmodal jazz\b", r"\bfusion\b",
+        r"\bfree jazz\b", r"\bbig band\b", r"\bcool jazz\b", r"\bspiritual jazz\b",
+        r"\bnu jazz\b", r"\bjazz funk\b", r"\bambient jazz\b", r"\bjazz fusion\b",
+        r"\blounge\b", r"\bexotica\b", r"\beasy listening\b"
+    ]),
+    ("R&B / Soul", [
+        r"\br&b\b", r"\bsoul\b", r"\bfunk\b", r"\bmotown\b", r"\bneo[ -]soul\b",
+        r"\bcontemporary r&b\b", r"\bgospel\b", r"\bdisco\b", r"\bquiet storm\b",
+        r"\bboogie\b", r"\bdoo-wop\b"
+    ]),
+    ("Classical", [
+        r"\bclassical\b", r"\bchamber music\b", r"\bsymphon(?:y|ic)\b", r"\bchoral\b",
+        r"\bopera\b", r"\bmodern classical\b", r"\bneo[- ]?classical\b", r"\bminimalis(?:t|m)\b",
+        r"\bcontemporary classical\b", r"\bpost-classical\b", r"\bconcerto\b", r"\bsonata\b",
+        r"\bstring quartet\b", r"\bpiano solo\b", r"\bbaroque\b"
+    ]),
+    ("Folk / Country", [
+        r"\bfolk\b", r"\bcountry\b", r"\bbluegrass\b", r"\bamericana\b", r"\bappalachian\b",
+        r"\bsinger-songwriter\b", r"\balt-country\b", r"\bindie folk\b", r"\bfreak folk\b",
+        r"\btraditional folk\b", r"\bcontemporary folk\b"
+    ]),
+    ("Reggae / Dub", [
+        r"\breggae\b", r"\bdub\b", r"\bska\b", r"\broots reggae\b", r"\bdancehall\b",
+        r"\brocker\b", r"\brocksteady\b"
+    ]),
+    ("Blues", [
+        r"\bblues\b", r"\bdelta blues\b", r"\bchicago blues\b", r"\belectric blues\b",
+        r"\bacoustic blues\b"
+    ]),
+    ("Rock", [
+        r"\brock\b", r"\bindie rock\b", r"\bpsychedelic rock\b", r"\bprog(?:ressive)? rock\b",
+        r"\bshoegaze\b", r"\bclassic rock\b", r"\bart rock\b", r"\bhard rock\b",
+        r"\bslowcore\b", r"\bpsychedelic\b", r"\bneo-psychedelic\b", r"\bkrautrock\b",
+        r"\bpost-rock\b", r"\bgarage rock\b", r"\bspace rock\b", r"\bglam rock\b"
+    ]),
+    ("Pop", [
+        r"\bpop\b", r"\bindie pop\b", r"\bdance-pop\b", r"\bchamber pop\b", r"\bbaroque pop\b",
+        r"\bpower pop\b", r"\bbritpop\b", r"\bart pop\b", r"\bchanson\b", r"\byé-yé\b",
+        r"\belectropop\b", r"\bdream pop\b"
+    ]),
+    ("Latin / World", [
+        r"\blatin\b", r"\bbossa[- ]?nova\b", r"\bbossanova\b", r"\btango\b", r"\bsamba\b",
+        r"\bafrobeat\b", r"\bcumbia\b", r"\bflamenco\b", r"\bworld\b", r"\bbikutsi\b",
+        r"\bhighlife\b", r"\bshibuya-kei\b", r"\bmpb\b", r"\btropi[c|k]alia\b", r"\btropicália\b",
+        r"\bcalypso\b", r"\bsalsa\b", r"\bandean\b"
+    ]),
 ]
 
 # Standard Mood Taxonomies and Keyword Dictionaries
@@ -149,25 +208,70 @@ def classify_macro_genre_semantic(corpus: str, threshold: float = 0.35) -> Optio
     return None
 
 
-def classify_macro_genre(genres_str: Optional[str] = "", styles_str: Optional[str] = "", mb_tags: Optional[str] = "") -> str:
+def _tally_macro_genre_votes(corpus: str) -> Dict[str, int]:
     """
-    Classifies combined genres, styles, and tags into a normalized macro genre.
-    Tries zero-shot semantic classification first, falling back to deterministic regex rules.
+    Counts total regex keyword occurrences across all macro-genre pattern sets.
     """
-    corpus = f"{genres_str or ''} {styles_str or ''} {mb_tags or ''}".lower()
-    if not corpus.strip():
-        return "Other / Unclassified"
-
-    # 1. Try zero-shot semantic classification
-    semantic_result = classify_macro_genre_semantic(corpus)
-    if semantic_result:
-        return semantic_result
-
-    # 2. Fallback to regex rules
+    votes: Dict[str, int] = {}
     for macro, patterns in MACRO_GENRE_RULES:
+        count = 0
         for pat in patterns:
-            if re.search(pat, corpus):
-                return macro
+            matches = re.findall(pat, corpus)
+            count += len(matches)
+        if count > 0:
+            votes[macro] = count
+    return votes
+
+
+def _pick_dominant_macro_genre(votes: Dict[str, int]) -> str:
+    """
+    Selects the dominant macro-genre with the highest vote count.
+    Breaks ties deterministically using the canonical order in MACRO_GENRE_RULES.
+    """
+    priority = {macro: idx for idx, (macro, _) in enumerate(MACRO_GENRE_RULES)}
+    sorted_votes = sorted(votes.items(), key=lambda kv: (-kv[1], priority.get(kv[0], 999)))
+    return sorted_votes[0][0]
+
+
+def classify_macro_genre(
+    genres_str: Optional[str] = "",
+    styles_str: Optional[str] = "",
+    mb_tags: Optional[str] = "",
+    description: Optional[str] = ""
+) -> str:
+    """
+    Classifies combined genres, styles, tags, and optional narrative description into a normalized macro genre.
+    Uses multi-vote dominant-frequency scoring with zero-shot semantic support and narrative fallback:
+    1. Multi-vote dominant frequency on explicit tag corpus (genres + styles + MusicBrainz tags).
+    2. Zero-shot semantic similarity on tag corpus.
+    3. Fallback to narrative snippet (first 400 chars of album description or liner notes) via dominant voting.
+    4. Zero-shot semantic similarity on narrative snippet.
+    5. Returns 'Other / Unclassified' if completely inconclusive.
+    """
+    tag_corpus = f"{genres_str or ''} {styles_str or ''} {mb_tags or ''}".strip().lower()
+
+    # 1. Multi-vote dominant frequency on explicit tag corpus
+    if tag_corpus:
+        tag_votes = _tally_macro_genre_votes(tag_corpus)
+        if tag_votes:
+            return _pick_dominant_macro_genre(tag_votes)
+
+        # 2. Zero-shot semantic similarity on tag corpus
+        semantic_result = classify_macro_genre_semantic(tag_corpus)
+        if semantic_result:
+            return semantic_result
+
+    # 3. Fallback to narrative description snippet (first 400 chars)
+    narrative_corpus = (description or "").strip().lower()[:400]
+    if narrative_corpus:
+        narr_votes = _tally_macro_genre_votes(narrative_corpus)
+        if narr_votes:
+            return _pick_dominant_macro_genre(narr_votes)
+
+        # 4. Zero-shot semantic similarity on narrative
+        semantic_narr = classify_macro_genre_semantic(narrative_corpus)
+        if semantic_narr:
+            return semantic_narr
 
     return "Other / Unclassified"
 
@@ -272,7 +376,7 @@ def classify_album_metadata(record: Dict[str, Any]) -> Dict[str, Any]:
     notes = str(record.get("discogs_notes") or "")
     personnel = str(record.get("personnel") or "")
 
-    macro_genre = classify_macro_genre(genres, styles, mb_tags)
+    macro_genre = classify_macro_genre(genres, styles, mb_tags, description=summary or notes)
     derived_moods = extract_derived_moods(summary, notes, styles, genres)
     descriptive_tags = extract_descriptive_tags(summary, notes, styles, genres)
 

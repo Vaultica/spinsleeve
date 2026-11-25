@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.8.9] — 2026-11-25
+### 🏷️ Dominant-Genre Multi-Vote Classification, Lexicon Expansion & Catalog Reclassification
+* **What:**
+  - **Dominant-Genre Multi-Vote Scoring Engine (`src/pipeline_v2/classifier.py`, `src/report_v2/pipeline_v2/classifier.py`):**
+    - Replaced brittle sequential first-match classification with `_tally_macro_genre_votes()` and `_pick_dominant_macro_genre()`, accurately assigning the dominant macro-genre when multiple sub-genres are present.
+    - Added hierarchical narrative description fallback: inspects opening 400 characters of `album_description` or `discogs_notes` when artist/album genre tags are sparse.
+  - **Comprehensive Sub-Genre Lexicon Expansion (`MACRO_GENRE_RULES`):**
+    - Added high-frequency missing sub-genres across Classical (*neoclassical*, *minimalism*), Rock (*slowcore*, *neo-psychedelic*, *krautrock*), Electronic (*chillwave*, *electroclash*, *synthwave*), Latin / World (*bikutsi*, *afrobeat*, *mpb*, *bossanova*, *shibuya-kei*), Jazz (*exotica*, *lounge*, *easy listening*), and Pop (*britpop*, *art pop*, *chanson*).
+  - **Catalog Reclassification Batch Utility & Live Execution (`scripts/reclassify_catalog.py`):**
+    - Executed batched live updates across 578 records in `album_enriched_metadata`. Reclassified 319 albums into concrete genres, plunging unclassified library share from 27.0% down to 12.4% and establishing Rock as the #1 genre (16.2%).
+    - Purged stale Cloud Datastore `UserCatalogCache` entities and rematerialized `user_albums_features_table`.
+  - **Crate Filter Dropdown Enhancement (`src/report_v2/services/catalog.py`):**
+    - Added `"Other / Unclassified"` pinned at the end of `top_genres` in both cached and fresh query paths, enabling users to easily isolate and explore unclassified albums.
+  - **Unit Testing & Pre-Flight Verification:**
+    - Added 3 test suites in `tests/test_app16_classification.py` covering multi-voting, expanded sub-genres, and description fallback (105/105 tests passing).
+* **Why:**
+  - Drastically reduces the massive 27% "Eclectic / Other" taxonomy bottleneck, accurately attributes dominant genres to diverse records, and provides transparent UI filtering for unclassified albums.
+* **How:**
+  - Implemented multi-vote scoring and narrative fallback in `classifier.py`, updated `catalog.py`, added unit tests, executed live BigQuery reclassification and Datastore cache flush, verified 105/105 tests passing, and deployed to Cloud Run.
+
+---
+
 ## [v2.8.8] — 2026-11-23
 ### 🎵 12" Gatefold Enrichment Diagnostics, `--missing-gatefolds` CLI Mode & Attribution Alignment
 * **What:**

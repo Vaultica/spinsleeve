@@ -31,6 +31,35 @@ class TestAPP16Classification(unittest.TestCase):
         self.assertEqual(classifier.classify_macro_genre("afrobeat, bossa nova", "", ""), "Latin / World")
         self.assertEqual(classifier.classify_macro_genre("", "", ""), "Other / Unclassified")
 
+    def test_dominant_genre_multivote(self):
+        # 3 rock terms vs 1 electronic term -> dominant Rock wins
+        res = classifier.classify_macro_genre("indie rock, alternative rock, art rock, electronic", "", "")
+        self.assertEqual(res, "Rock")
+
+        # 2 jazz terms vs 1 pop term -> dominant Jazz wins
+        res2 = classifier.classify_macro_genre("modal jazz, spiritual jazz, pop", "", "")
+        self.assertEqual(res2, "Jazz")
+
+    def test_expanded_subgenre_lexicon(self):
+        self.assertEqual(classifier.classify_macro_genre("slowcore", "", ""), "Rock")
+        self.assertEqual(classifier.classify_macro_genre("neoclassical, minimalism", "", ""), "Classical")
+        self.assertEqual(classifier.classify_macro_genre("chillwave", "", ""), "Electronic")
+        self.assertEqual(classifier.classify_macro_genre("bikutsi", "", ""), "Latin / World")
+        self.assertEqual(classifier.classify_macro_genre("mpb", "", ""), "Latin / World")
+        self.assertEqual(classifier.classify_macro_genre("bossanova", "", ""), "Latin / World")
+        self.assertEqual(classifier.classify_macro_genre("exotica, lounge", "", ""), "Jazz")
+
+    def test_narrative_description_fallback(self):
+        # Empty tag corpus falls back to opening narrative snippet
+        abba_desc = "Voulez-Vous is the sixth studio album by Swedish pop group ABBA, released in 1979."
+        self.assertEqual(classifier.classify_macro_genre("", "", "", description=abba_desc), "Pop")
+
+        iw_desc = "Kiss Each Other Clean is the fourth studio album by American folk singer-songwriter Iron & Wine."
+        self.assertEqual(classifier.classify_macro_genre("", "", "", description=iw_desc), "Folk / Country")
+
+        rock_desc = "A seminal release by American rock band The Velvet Underground featuring raw distortion."
+        self.assertEqual(classifier.classify_macro_genre("", "", "", description=rock_desc), "Rock")
+
     def test_extract_derived_moods(self):
         summary = "A dark late night nocturnal album recorded at 3am with moody, smoky atmospheres."
         moods = classifier.extract_derived_moods(summary=summary)

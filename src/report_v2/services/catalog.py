@@ -163,12 +163,18 @@ def fetch_user_album_data(user_id, force_refresh=False):
 
             # Dynamically compute top_genres strictly from macro_genres present in cached albums
             macro_genre_counter = Counter()
+            unclassified_count = 0
             for a in cached_albums:
                 mg = safe_str(a.get("macro_genre"), "")
                 if mg and mg not in ("Other / Unclassified", "Unknown"):
                     macro_genre_counter[mg] += 1
+                elif mg == "Other / Unclassified":
+                    unclassified_count += 1
 
-            ds_cached["top_genres"] = [g for g, count in macro_genre_counter.most_common(15)]
+            top_genres = [g for g, count in macro_genre_counter.most_common(15)]
+            if unclassified_count > 0:
+                top_genres.append("Other / Unclassified")
+            ds_cached["top_genres"] = top_genres
 
             if "kpis" not in ds_cached:
                 tot_alb = len(cached_albums)
@@ -215,6 +221,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
         albums = []
         macro_genre_counter = Counter()
         genre_counter = Counter()
+        unclassified_count = 0
 
         for _, row in df.iterrows():
             aid = safe_str(row.get("album_id"))
@@ -223,6 +230,8 @@ def fetch_user_album_data(user_id, force_refresh=False):
             mg = safe_str(row.get("macro_genre"), "")
             if mg and mg not in ("Other / Unclassified", "Unknown"):
                 macro_genre_counter[mg] += 1
+            elif mg == "Other / Unclassified":
+                unclassified_count += 1
 
             genres_str = safe_str(row.get("album_genres"), "")
             if genres_str:
@@ -365,6 +374,8 @@ def fetch_user_album_data(user_id, force_refresh=False):
         }
 
         top_genres = [g for g, count in macro_genre_counter.most_common(15)]
+        if unclassified_count > 0:
+            top_genres.append("Other / Unclassified")
         payload = {"albums": albums, "top_genres": top_genres, "kpis": kpis}
 
         save_catalog_to_datastore(user_id, payload)
