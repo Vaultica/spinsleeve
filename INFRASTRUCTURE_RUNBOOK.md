@@ -78,12 +78,14 @@ gcloud secrets create SPOTIPY_CLIENT_ID --replication-policy="automatic"
 gcloud secrets create SPOTIPY_CLIENT_SECRET --replication-policy="automatic"
 gcloud secrets create SPOTIPY_REFRESH_TOKEN --replication-policy="automatic"
 gcloud secrets create FLASK_SECRET_KEY --replication-policy="automatic"
+gcloud secrets create ADMIN_RESCUE_KEY --replication-policy="automatic"
 
 # Add versions (pass values via stdin or files)
 echo -n "YOUR_SPOTIFY_CLIENT_ID" | gcloud secrets versions add SPOTIPY_CLIENT_ID --data-file=-
 echo -n "YOUR_SPOTIFY_CLIENT_SECRET" | gcloud secrets versions add SPOTIPY_CLIENT_SECRET --data-file=-
 echo -n "YOUR_SPOTIFY_REFRESH_TOKEN" | gcloud secrets versions add SPOTIPY_REFRESH_TOKEN --data-file=-
 echo -n "spinsleeve-beta-secure-session-key-2026" | gcloud secrets versions add FLASK_SECRET_KEY --data-file=-
+echo -n "spin2026" | gcloud secrets versions add ADMIN_RESCUE_KEY --data-file=-
 ```
 
 ---
