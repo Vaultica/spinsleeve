@@ -883,6 +883,18 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
   Refactor Apple Music client & sync logic into `src/report_v2/services/apple_music.py` (or adjust the Docker build context / Python package path) to eliminate the duplicate `pipeline_v2` directory inside the web app container.
 * **Effort & Complexity:** ~3–4 hours • **Complexity:** **Medium**
 
+#### `DEBT-03`: Pre-bake NLP Transformer Weights in Pipeline Container Image
+* **Problem:**  
+  When Cloud Run Job `spotify-v2-enrichment-job` boots on a fresh container instance, `classifier.py` downloads the ~90 MB `all-MiniLM-L6-v2` SentenceTransformer weights and vocabulary (`vocab.txt`) from Hugging Face on the fly. This introduces an unnecessary 2–3 second startup latency, burns outbound container network bandwidth, and creates an external runtime dependency on Hugging Face CDN availability.
+* **Solution:**  
+  Pre-bake the model weights directly into a cached layer within `src/pipeline_v2/Dockerfile`:
+  ```dockerfile
+  # Pre-cache SentenceTransformer model into Docker image layer
+  RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+  ```
+  This eliminates runtime network calls to Hugging Face on container initialization, accelerates cold starts, and ensures fully self-contained execution.
+* **Effort & Complexity:** ~0.5–1 hour • **Complexity:** **Low**
+
 ---
 
 <a id="docs-category"></a>
@@ -946,4 +958,5 @@ Features are indexed with unique alphanumeric category codes. Prioritization and
 | **`BRAND-03`** | ✅ ~~Public Roadmap & Release Transparency Portal (`/roadmap`)~~ | Brand & Growth | 3–4h | Flask, Jinja2, Tailwind CSS, Semantic Versioning | ✅ **Completed** (`v2.5.2`): Public release transparency portal at `/roadmap` showcasing shipped and upcoming features. |
 | **`DEBT-01`**    | Route Blueprint Data Access Decoupling (Move direct BQ/Datastore queries from routes to services)  | Technical Debt      | 4–6 hours        | Medium (Ensures strict compliance with Invariant #1: Blueprint vs. Service layer separation)             |
 | **`DEBT-02`**    | Pipeline & Web App Import Boundary Decoupling (Eliminate duplicate `pipeline_v2` inside `src/report_v2/`) | Technical Debt      | 3–4 hours        | Medium (Removes code duplication and clean separation between web service and offline batch pipelines) |
+| **`DEBT-03`**    | Pre-bake NLP Transformer Weights in Pipeline Container Image (`Dockerfile`)                         | Technical Debt      | 0.5–1 hour       | **Low:** Pre-caches `all-MiniLM-L6-v2` in container image layer, eliminating Hugging Face CDN calls on cold start |
 | **`DOCS-01`** | ✅ ~~Technical Architecture Map (README Overhaul)~~ | Documentation | 3–4h | Markdown, Mermaid Diagrams | ✅ **Completed**: Complete developer transparency and comprehensive system mapping with Mermaid topology diagram. |

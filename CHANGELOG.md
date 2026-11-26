@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - Added `"Other / Unclassified"` pinned at the end of `top_genres` in both cached and fresh query paths, enabling users to easily isolate and explore unclassified albums.
   - **Unit Testing & Pre-Flight Verification:**
     - Added 3 test suites in `tests/test_app16_classification.py` covering multi-voting, expanded sub-genres, and description fallback (105/105 tests passing).
+  - **Cloud Run Job Memory Upgrade & Stability (`INFRASTRUCTURE_RUNBOOK.md`):**
+    - Diagnosed and resolved Cloud Run Job OOM failure (`spotify-v2-enrichment-job-2rzjt`) at album 29/50 caused by the 512Mi memory limit under SentenceTransformers/PyTorch. Upgraded `spotify-v2-enrichment-job` memory to 2Gi on GCP (`europe-west2`) and successfully validated execution (`spotify-v2-enrichment-job-w9tqc`, 50/50 albums, exit 0).
+    - Documented `DEBT-03` (Pre-bake NLP Transformer Weights in Pipeline Container Image) in `PROJECT_ROADMAP.md` to eliminate runtime Hugging Face CDN dependency and accelerate cold starts.
   - **Pipeline Container Image Rebuild & Cloud Run Job Synchronization:**
     - Built and deployed updated pipeline container image (`spotify-v2-pipeline:latest`, Cloud Build ID `fa9dc05a-983d-4603-90ae-c201f9f48688`, digest `sha256:be060363f1d1c0a82ad8543589ce43fbd64efa08f09df1f0a5540fceec4b727e`) integrating v2.8.9 classifier engine and lexicon expansion.
     - Updated Cloud Run jobs `spotify-v2-enrichment-job` and `spotify-v2-pipeline-job` to execute the latest container revision.

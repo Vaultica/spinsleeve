@@ -323,7 +323,7 @@ gcloud run jobs deploy spotify-v2-enrichment-job \
     --set-env-vars=GCP_PROJECT=secret-compass-181513,BQ_DATASET=spotify_v2 \
     --max-retries=0 \
     --task-timeout=30m \
-    --memory=512Mi \
+    --memory=2Gi \
     --cpu=1
 
 # Execute on-demand batch run (e.g. 50 or 100 albums)
