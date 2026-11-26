@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - Added `"Other / Unclassified"` pinned at the end of `top_genres` in both cached and fresh query paths, enabling users to easily isolate and explore unclassified albums.
   - **Unit Testing & Pre-Flight Verification:**
     - Added 3 test suites in `tests/test_app16_classification.py` covering multi-voting, expanded sub-genres, and description fallback (105/105 tests passing).
+  - **Pipeline Container Image Rebuild & Cloud Run Job Synchronization:**
+    - Built and deployed updated pipeline container image (`spotify-v2-pipeline:latest`, Cloud Build ID `fa9dc05a-983d-4603-90ae-c201f9f48688`, digest `sha256:be060363f1d1c0a82ad8543589ce43fbd64efa08f09df1f0a5540fceec4b727e`) integrating v2.8.9 classifier engine and lexicon expansion.
+    - Updated Cloud Run jobs `spotify-v2-enrichment-job` and `spotify-v2-pipeline-job` to execute the latest container revision.
 * **Why:**
   - Drastically reduces the massive 27% "Eclectic / Other" taxonomy bottleneck, accurately attributes dominant genres to diverse records, and provides transparent UI filtering for unclassified albums.
 * **How:**
