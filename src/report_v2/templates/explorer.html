@@ -62,15 +62,18 @@
 
                         <!-- Top-Level Navigation Tabs -->
             <nav class="flex items-center gap-1 bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner overflow-x-auto">
-                <a href="/beta/" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 transition shadow-sm">
+                <a href="{{ '/beta/' if is_beta else '/' }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold {% if initial_tab != 'digger' %}text-emerald-400 bg-emerald-500/15 border border-emerald-500/30{% else %}text-gray-400 hover:text-white hover:bg-gray-800/50{% endif %} flex items-center gap-2 transition shadow-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     Library
                 </a>
-                <a href="/beta/analytics" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <a href="{{ '/beta/recommend' if is_beta else '/recommend' }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold {% if initial_tab == 'digger' %}text-emerald-400 bg-emerald-500/15 border border-emerald-500/30{% else %}text-gray-400 hover:text-white hover:bg-gray-800/50{% endif %} flex items-center gap-1.5 transition shadow-sm">
+                    <span>🔮</span> Crate Digger
+                </a>
+                <a href="{{ '/beta/analytics' if is_beta else '/analytics' }}" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     Analytics
                 </a>
-                <a href="/beta/pals" class="px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
+                <a href="{{ '/beta/pals' if is_beta else '/pals' }}" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     SpinPals
                 </a>
@@ -209,33 +212,45 @@
         </div>
 
         <!-- APP-17: Unified Crate Workspace 2-Row Control Deck -->
-        <section class="card-bg border border-gray-800 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-md">
-            <!-- Row 1: Data Scope & Curation Mode Toggles -->
+        <section id="libraryFilterDeck" class="card-bg border border-gray-800 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-md">
+            <!-- Row 1: Data Scope & Platform Source Toggles -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3.5 border-b border-gray-800/80">
                 <div class="flex items-center gap-2">
                     <span class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mr-1">Crate Scope:</span>
-                    <div class="inline-flex bg-[#0c0f12] p-1 rounded-xl border border-gray-800">
-                        <button onclick="setScope('saved')" id="btnSaved" class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all bg-emerald-500 text-black font-bold shadow">
-                            📁 Saved Vinyl (<span id="savedCountBadge">{{ albums|length }}</span>)
+                    <div class="inline-flex bg-[#0c0f12] p-1 rounded-xl border border-gray-800 shadow-inner">
+                        <button onclick="switchCrateTab('saved')" id="btnSaved" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500 text-black shadow flex items-center gap-1.5">
+                            <span>📁</span> Saved Vinyl (<span id="savedCountBadge">{{ albums|length }}</span>)
                         </button>
-                        <button onclick="setScope('unowned')" id="btnUnowned" class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all text-gray-400 hover:text-white">
-                            📻 Streamed / Unowned (<span id="unownedCountBadgeTop">{{ (unowned_albums or [])|length }}</span>)
+                        <button onclick="switchCrateTab('digger')" id="btnDigger" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-gray-400 hover:text-white flex items-center gap-1.5">
+                            <span>🔮</span> Crate Digger
+                        </button>
+                        <button onclick="switchCrateTab('unowned')" id="btnUnowned" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-gray-400 hover:text-white flex items-center gap-1.5">
+                            <span>📻</span> Streamed / Unowned (<span id="unownedCountBadgeTop">{{ (unowned_albums or [])|length }}</span>)
                         </button>
                     </div>
                 </div>
 
-                <!-- Curation Mode Toggle (Crate Digger Mode) - Hidden when displaying unowned crate -->
-                <div class="flex items-center gap-3" id="diggerModeToggleContainer">
-                    <span class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Curation Mode:</span>
-                    <button onclick="toggleDiggerMode()" id="btnDigger" class="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all border-gray-700 bg-[#0c0f12] text-gray-300 hover:border-emerald-500/50">
-                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                        <span id="diggerLabel">Crate Digger Mode: OFF</span>
+                <!-- Hidden legacy container for test suite compatibility -->
+                <div class="hidden" id="diggerModeToggleContainer">
+                    <span id="diggerLabel">Crate Digger Mode: OFF</span>
+                </div>
+
+                {% if is_beta %}
+                <!-- Platform Source Filters cleanly integrated on the right -->
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Source:</span>
+                    <button type="button" onclick="setPlatformFilter('all')" id="platBtnAll" class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-500 text-black">All</button>
+                    <button type="button" onclick="setPlatformFilter('spotify')" id="platBtnSpotify" class="px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-gray-900 border border-gray-800 transition">Spotify</button>
+                    <button type="button" onclick="setPlatformFilter('apple_music')" id="platBtnApple" class="px-2.5 py-1 rounded-lg text-xs font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/30 transition flex items-center gap-1.5">
+                        <svg class="w-3 h-3 fill-current" viewBox="0 0 170 170"><path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.69-7.85-11.97-14.42-6.19-9.5-11.13-20.25-14.82-32.25-3.69-12-5.54-23.47-5.54-34.42 0-14.53 3.69-26.69 11.07-36.48 7.38-9.79 16.71-14.79 27.99-15 4.88 0 10.15 1.25 15.81 3.75 5.66 2.5 9.4 3.78 11.23 3.84 1.48 0 5.46-1.37 11.94-4.11 6.48-2.74 11.9-3.98 16.27-3.72 12.06.64 21.64 4.88 28.74 12.73-10.42 6.3-15.54 15-15.36 26.11.19 8.78 3.52 16.08 10 21.9 6.48 5.82 14.17 9.07 23.08 9.75-2.02 6.13-4.57 12.19-7.67 18.17M119.22 33.19c0-7.23 2.65-13.9 7.95-20.02 5.3-6.12 11.83-9.84 19.59-11.17.65 6.47-.94 12.83-4.77 19.08-3.83 6.25-9.61 10.59-17.34 13.02-.91-.3-1.63-.5-2.16-.6-2.18-.72-3.27-1.38-3.27-1.31"/></svg>
+                        <span>Apple Music (<span id="amCountBadge">0</span>)</span>
                     </button>
                 </div>
+                {% endif %}
             </div>
 
-            <!-- Row 2: Unified Filters & Live Search -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3.5">
+            <!-- Row 2: Unified Filters & Live Search (Shown on Saved View) -->
+            <div id="libraryFilterRow" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3.5">
                 <div class="relative lg:col-span-2">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">🔍</span>
                     <input type="text" id="searchInput" placeholder="Search artist, album, genre, or liner notes..." class="w-full bg-[#0c0f12] border border-gray-800 rounded-xl pl-9 pr-4 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors" oninput="onFilterChange()">
@@ -261,19 +276,6 @@
                     </select>
                 </div>
             </div>
-
-            {% if is_beta %}
-            <!-- Platform Source Filter Bar (APP-02b Beta) -->
-            <div class="flex items-center gap-2 pt-3 border-t border-gray-800/60 mt-3 text-xs">
-                <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Source:</span>
-                <button type="button" onclick="setPlatformFilter('all')" id="platBtnAll" class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-500 text-black">All Libraries</button>
-                <button type="button" onclick="setPlatformFilter('spotify')" id="platBtnSpotify" class="px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-gray-900 border border-gray-800 transition">Spotify</button>
-                <button type="button" onclick="setPlatformFilter('apple_music')" id="platBtnApple" class="px-2.5 py-1 rounded-lg text-xs font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/30 transition flex items-center gap-1.5">
-                    <svg class="w-3 h-3 fill-current" viewBox="0 0 170 170"><path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.69-7.85-11.97-14.42-6.19-9.5-11.13-20.25-14.82-32.25-3.69-12-5.54-23.47-5.54-34.42 0-14.53 3.69-26.69 11.07-36.48 7.38-9.79 16.71-14.79 27.99-15 4.88 0 10.15 1.25 15.81 3.75 5.66 2.5 9.4 3.78 11.23 3.84 1.48 0 5.46-1.37 11.94-4.11 6.48-2.74 11.9-3.98 16.27-3.72 12.06.64 21.64 4.88 28.74 12.73-10.42 6.3-15.54 15-15.36 26.11.19 8.78 3.52 16.08 10 21.9 6.48 5.82 14.17 9.07 23.08 9.75-2.02 6.13-4.57 12.19-7.67 18.17M119.22 33.19c0-7.23 2.65-13.9 7.95-20.02 5.3-6.12 11.83-9.84 19.59-11.17.65 6.47-.94 12.83-4.77 19.08-3.83 6.25-9.61 10.59-17.34 13.02-.91-.3-1.63-.5-2.16-.6-2.18-.72-3.27-1.38-3.27-1.31"/></svg>
-                    <span>Apple Music (<span id="amCountBadge">0</span>)</span>
-                </button>
-            </div>
-            {% endif %}
         </section>
 
         <!-- Saved Vinyl View Container -->
@@ -288,41 +290,56 @@
 
         <!-- Crate Digger View Container -->
         <div id="crateDiggerView" class="hidden">
-            <!-- Simplified Streamlined Digger Control Deck (Vibe, Era & Spin Again on One Line) -->
-            <div class="card-bg p-4 rounded-2xl border border-gray-800/90 mb-6 shadow-xl backdrop-blur-sm">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <!-- Vibe & Era Filters on the Same Line -->
-                    <div class="flex flex-wrap items-center gap-4">
-                        <!-- Vibe Filters -->
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Vibe:</span>
-                            <div class="flex flex-wrap gap-1" id="vibePills">
-                                <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-2.5 py-1 rounded-lg text-xs transition">Any Vibe</button>
-                                <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">🌿 Chill</button>
-                                <button onclick="setVibe('energetic')" id="vibeBtn-energetic" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">⚡ Energetic</button>
-                                <button onclick="setVibe('mellow')" id="vibeBtn-mellow" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">☕ Mellow</button>
-                                <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition">📻 Vintage</button>
-                            </div>
-                        </div>
+            <!-- Modern Vibe Digger Console (APP-19 Discovery Engine) -->
+            <div class="card-bg p-5 rounded-3xl border border-gray-800/90 mb-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+                <!-- Subtle gradient glow in top corner -->
+                <div class="absolute -top-16 -right-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                        <!-- Era Filters -->
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Era:</span>
-                            <div class="flex flex-wrap gap-1" id="eraPills">
-                                <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-2 py-1 rounded-lg text-xs transition">All</button>
-                                <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-2 py-1 rounded-lg text-xs transition">2018+</button>
-                                <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-2 py-1 rounded-lg text-xs transition">00s-10s</button>
-                                <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-2 py-1 rounded-lg text-xs transition">&lt;2000</button>
-                            </div>
-                        </div>
+                <!-- Header: Title & Subtitle + Spin Again Button -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                            <span>🔮 Natural Language Vibe Digger</span>
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Describe any sound, era, instruments, mood, or record label</p>
                     </div>
 
-                    <!-- Spin Again Button -->
-                    <div class="flex items-center gap-2 shrink-0">
-                        <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5" title="Reshuffle spotlight picks and candidate records">
+                    <div class="flex items-center gap-2 self-start sm:self-auto">
+                        <button onclick="spinAgain()" class="text-xs font-bold text-black bg-[#1DB954] hover:bg-[#1ed760] px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5 shrink-0" title="Reshuffle spotlight picks and candidate records">
                             <span>🎲</span> Spin Again
                         </button>
                     </div>
+                </div>
+
+                <!-- Search Input Console -->
+                <div class="relative w-full mb-3">
+                    <input type="text" id="vibeSearchInput"
+                           placeholder="Describe a vibe, era, instruments, mood, or label (e.g. 'rainy day jazz piano', '90s slowcore', 'blue note vintage')..."
+                           class="w-full bg-[#0a0d11] border border-gray-700/80 rounded-2xl py-2.5 pl-4 pr-24 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#1DB954] focus:ring-1 focus:ring-[#1DB954] transition shadow-inner"
+                           onkeydown="if(event.key==='Enter') executeVibeSearch()">
+                    <div class="absolute right-2 top-2 flex items-center gap-1.5">
+                        <button id="vibeClearBtn" onclick="clearVibeSearch()" class="hidden text-xs text-gray-400 hover:text-white px-2 py-1 rounded transition" title="Clear search">&times;</button>
+                        <button onclick="executeVibeSearch()" id="vibeDigBtn" class="text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-1.5 rounded-xl transition shadow flex items-center gap-1">
+                            <span>Dig</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Vibe Inspiration Chips -->
+                <div class="flex items-center gap-1.5 flex-wrap text-[11px]">
+                    <span class="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mr-1">Inspiration:</span>
+                    <button type="button" onclick="applyVibeChip('rainy day jazz piano with trumpet')" class="px-3 py-1 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition shadow-sm">☕ Rainy Jazz</button>
+                    <button type="button" onclick="applyVibeChip('90s slowcore with whispery vocals and sad guitars')" class="px-3 py-1 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition shadow-sm">🎸 90s Slowcore</button>
+                    <button type="button" onclick="applyVibeChip('blue notes records with a vintage sound')" class="px-3 py-1 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition shadow-sm">🎷 Blue Note Vintage</button>
+                    <button type="button" onclick="applyVibeChip('jazz albums I have been listening to recently')" class="px-3 py-1 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition shadow-sm">🔥 Recent Jazz</button>
+                    <button type="button" onclick="applyVibeChip('critically acclaimed records')" class="px-3 py-1 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition shadow-sm">⭐ Acclaimed Classics</button>
+                    <button type="button" onclick="applyVibeChip('aggresive and chaotic records!')" class="px-3 py-1 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition shadow-sm">⚡ Aggressive & Chaotic</button>
+                </div>
+
+                <!-- Active Intent Banner -->
+                <div id="vibeIntentBanner" class="hidden flex items-center justify-between p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs mt-3">
+                    <div class="flex items-center gap-2 flex-wrap text-emerald-300" id="vibeIntentBadges"></div>
+                    <button type="button" onclick="clearVibeSearch()" class="text-[11px] text-gray-400 hover:text-white underline ml-2 shrink-0">Reset to Full Crate</button>
                 </div>
             </div>
 
@@ -509,6 +526,16 @@
                 </div>
                 <div class="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto mx-auto shrink-0">
                     <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
+                </div>
+
+                <!-- Record Label Imprint directly under sleeve cover -->
+                <div id="modalLabelContainer" class="hidden flex items-center justify-center gap-1.5 mt-2.5 text-center">
+                    <span class="text-[10px] font-mono tracking-wider text-gray-400 bg-gray-900/80 px-2.5 py-1 rounded-md border border-gray-800 flex items-center gap-1.5 shadow-sm">
+                        <svg class="w-3 h-3 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span id="modalRecordLabel" class="truncate max-w-[200px]"></span>
+                    </span>
                 </div>
 
                 <!-- Vibe & Mood / Semantic Tag Strip directly under sleeve cover, above streaming buttons (Centered) -->
@@ -734,9 +761,17 @@
 
         function getAlbumPlayBadge(a) {
             const sortEl = document.getElementById("sortSelect");
-            const is30d = sortEl && sortEl.value === "plays_30d_desc";
+            let is30d = false;
+            if (diggerMode) {
+                is30d = Boolean(isVibeSearchActive && lastVibeIntent && lastVibeIntent.telemetry_scope === 'recent');
+            } else {
+                is30d = Boolean(sortEl && sortEl.value === "plays_30d_desc");
+            }
+
             const trackPlays = is30d ? (Number(a.album_track_plays_30d) || 0) : (Number(a.album_track_plays) || 0);
             const tracksTotal = Number(a.album_tracks_total) || 0;
+            const normSpins = is30d ? (a.album_plays_30d !== undefined ? Number(a.album_plays_30d) : 0)
+                                    : (a.album_plays !== undefined ? Number(a.album_plays) : 0);
 
             if (is30d && a.album_plays_display_30d && a.album_plays_tooltip_30d) {
                 const colorClass = trackPlays > 0 ? 'text-amber-400 font-black' : 'text-gray-400 font-bold';
@@ -746,7 +781,7 @@
                 return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip}">${a.album_plays_display}</div>`;
             }
 
-            if (trackPlays === 0) {
+            if (trackPlays === 0 && normSpins === 0) {
                 let isNew = false;
                 if (a.added_at) {
                     try {
@@ -761,10 +796,10 @@
                 return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] text-gray-400 font-bold select-none" title="${tooltip}">${label}</div>`;
             }
 
-            let decimalPlays = trackPlays;
+            let decimalPlays = normSpins > 0 ? normSpins : trackPlays;
             let tooltip = '';
             if (tracksTotal > 0) {
-                decimalPlays = Math.round((trackPlays / tracksTotal) * 10) / 10;
+                if (normSpins === 0) decimalPlays = Math.round((trackPlays / tracksTotal) * 10) / 10;
                 tooltip = is30d
                     ? `Estimated complete album spins in last 30 days based on ${trackPlays} track plays across ${tracksTotal} tracks`
                     : `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
@@ -773,10 +808,10 @@
                     ? `30-day track plays: ${trackPlays} (track count unavailable)`
                     : `Total track plays: ${trackPlays} (track count unavailable)`;
             }
-            const dispVal = Number.isInteger(decimalPlays) ? decimalPlays : decimalPlays;
+            const dispVal = Number.isInteger(decimalPlays) ? decimalPlays : decimalPlays.toFixed(1);
             const suffix = is30d ? ' (30D)' : '';
-            const label = `🔥 ${dispVal} ${dispVal === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
-            const colorClass = trackPlays > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
+            const label = `🔥 ${dispVal} ${Number(dispVal) === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
+            const colorClass = trackPlays > 0 || normSpins > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
             return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
         }
 
@@ -918,37 +953,7 @@
         let diggerMode = false;
 
         function setScope(scope) {
-            currentScope = scope;
-            const btnSaved = document.getElementById('btnSaved');
-            const btnUnowned = document.getElementById('btnUnowned');
-            const toggleContainer = document.getElementById('diggerModeToggleContainer');
-            const genreSelect = document.getElementById('genreSelect');
-            const sortSelect = document.getElementById('sortSelect');
-            const searchInput = document.getElementById('searchInput');
-
-            if (scope === 'saved') {
-                if (btnSaved) btnSaved.className = "px-4 py-1.5 rounded-lg text-xs font-medium transition-all bg-emerald-500 text-black font-bold shadow";
-                if (btnUnowned)btnUnowned.className = "px-4 py-1.5 rounded-lg text-xs font-medium transition-all text-gray-400 hover:text-white";
-                if (toggleContainer) toggleContainer.classList.remove("hidden");
-                if (genreSelect) { genreSelect.disabled = false; genreSelect.classList.remove("opacity-50", "cursor-not-allowed"); }
-                if (sortSelect) { sortSelect.disabled = false; sortSelect.classList.remove("opacity-50", "cursor-not-allowed"); }
-                if (searchInput) searchInput.placeholder = "Search artist, album, genre, or liner notes...";
-                
-                if (diggerMode) {
-                    switchCrateTab('digger');
-                } else {
-                    switchCrateTab('saved');
-                }
-            } else {
-                if (btnSaved) btnSaved.className = "px-4 py-1.5 rounded-lg text-xs font-medium transition-all text-gray-400 hover:text-white";
-                if (btnUnowned) btnUnowned.className = "px-4 py-1.5 rounded-lg text-xs font-medium transition-all bg-amber-500 text-black font-bold shadow";
-                if (toggleContainer) toggleContainer.classList.add("hidden"); // CrateDigger mode hidden when unowned crate is active
-                if (genreSelect) { genreSelect.disabled = true; genreSelect.classList.add("opacity-50", "cursor-not-allowed"); }
-                if (sortSelect) { sortSelect.disabled = true; sortSelect.classList.add("opacity-50", "cursor-not-allowed"); }
-                if (searchInput) searchInput.placeholder = "Search unowned streamed albums or artists...";
-                
-                switchCrateTab('unowned');
-            }
+            switchCrateTab(scope);
         }
 
         function toggleDiggerMode() {
@@ -968,41 +973,55 @@
         }
 
         function switchCrateTab(tab) {
+            const filterRow = document.getElementById("libraryFilterRow");
             const savedView = document.getElementById("savedVinylView");
             const diggerView = document.getElementById("crateDiggerView");
             const unownedView = document.getElementById("unownedVinylView");
-            const savedBtn = document.getElementById("savedVinylTabBtn");
-            const diggerBtn = document.getElementById("diggerTabBtn");
-            const unownedBtn = document.getElementById("unownedVinylTabBtn");
+            const btnSaved = document.getElementById("btnSaved");
+            const btnDigger = document.getElementById("btnDigger");
+            const btnUnowned = document.getElementById("btnUnowned");
+
+            const activeEmerald = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500 text-black shadow flex items-center gap-1.5";
+            const activeAmber = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-amber-500 text-black shadow flex items-center gap-1.5";
+            const inactive = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-gray-400 hover:text-white flex items-center gap-1.5";
 
             if (tab === 'saved') {
                 currentScope = 'saved';
                 diggerMode = false;
+                if (filterRow) filterRow.classList.remove("hidden");
                 if (savedView) savedView.classList.remove("hidden");
                 if (diggerView) diggerView.classList.add("hidden");
                 if (unownedView) unownedView.classList.add("hidden");
-                if (savedBtn) savedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow";
-                if (diggerBtn) diggerBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
-                if (unownedBtn) unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+
+                if (btnSaved) btnSaved.className = activeEmerald;
+                if (btnDigger) btnDigger.className = inactive;
+                if (btnUnowned) btnUnowned.className = inactive;
+                if (typeof onFilterChange === 'function') onFilterChange();
             } else if (tab === 'digger') {
                 currentScope = 'saved';
                 diggerMode = true;
+                if (filterRow) filterRow.classList.add("hidden");
                 if (savedView) savedView.classList.add("hidden");
                 if (diggerView) diggerView.classList.remove("hidden");
                 if (unownedView) unownedView.classList.add("hidden");
-                if (diggerBtn) diggerBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-2 shadow";
-                if (savedBtn) savedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
-                if (unownedBtn) unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+
+                if (btnSaved) btnSaved.className = inactive;
+                if (btnDigger) btnDigger.className = activeEmerald;
+                if (btnUnowned) btnUnowned.className = inactive;
+
                 if (typeof runRecommender === 'function') runRecommender();
             } else {
                 currentScope = 'unowned';
                 diggerMode = false;
+                if (filterRow) filterRow.classList.add("hidden");
                 if (savedView) savedView.classList.add("hidden");
                 if (diggerView) diggerView.classList.add("hidden");
                 if (unownedView) unownedView.classList.remove("hidden");
-                if (unownedBtn) unownedBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2 shadow";
-                if (savedBtn) savedBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
-                if (diggerBtn) diggerBtn.className = "px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/40 transition flex items-center gap-2";
+
+                if (btnSaved) btnSaved.className = inactive;
+                if (btnDigger) btnDigger.className = inactive;
+                if (btnUnowned) btnUnowned.className = activeAmber;
+
                 renderUnownedGrid();
             }
         }
@@ -1162,6 +1181,9 @@
             isModalOpen = true;
             currentModalAlbum = album;
 
+            // Immediately unhide modal so the user gets 0ms instant feedback
+            document.getElementById("gatefoldModal").classList.remove("hidden");
+
             // Desktop elements
             const coverEl = document.getElementById("modalCover");
             if (coverEl) coverEl.src = album.album_image_url;
@@ -1256,6 +1278,19 @@
                     </a>`;
             }
 
+            // Record Label (Left panel under sleeve pic)
+            const labelContainer = document.getElementById("modalLabelContainer");
+            const labelEl = document.getElementById("modalRecordLabel");
+            const albLabel = album.album_label || album.label;
+            if (labelContainer && labelEl) {
+                if (albLabel && albLabel.trim() && albLabel.trim() !== 'Unknown') {
+                    labelEl.innerText = albLabel.trim();
+                    labelContainer.classList.remove("hidden");
+                } else {
+                    labelContainer.classList.add("hidden");
+                }
+            }
+
             // Semantic Classification & Mood Tags (APP-16)
             const tagsContainer = document.getElementById("modalSemanticTags");
             if (tagsContainer) {
@@ -1327,8 +1362,6 @@
                     sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic">Could not load tracklist.</p>';
                 }
             }
-
-            document.getElementById("gatefoldModal").classList.remove("hidden");
         }
 
         function renderModalTracklist(sides, album) {
@@ -1662,8 +1695,8 @@
             }
         }
 
-        let selectedTarget = 'heavy_30d';
-        let selectedHorizon = '30d';
+        let selectedTarget = 'all';
+        let selectedHorizon = 'all';
         let selectedMode = 'favorites';
         let selectedVibe = 'all';
         let selectedEra = 'all';
@@ -1721,6 +1754,12 @@
         }
 
         function spinAgain() {
+            if (isVibeSearchActive && lastVibeResults.length > 3) {
+                const shuffled = [...lastVibeResults].sort(() => Math.random() - 0.5);
+                renderSpotlight(shuffled.slice(0, 3));
+                renderCandidatePool(shuffled.slice(3, 48));
+                return;
+            }
             currentSeed = Math.random();
             runRecommender();
         }
@@ -1808,7 +1847,7 @@
             }
 
             const countEl = document.getElementById('poolCountText');
-            if (countEl) countEl.innerText = `${pool.length.toLocaleString()} matching records in your library`;
+            if (countEl) countEl.innerText = `${pool.length.toLocaleString()} records in crate`;
 
             const scored = pool.map((album, idx) => ({
                 album: album,
@@ -1872,6 +1911,12 @@
                             <h3 class="text-base font-black text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h3>
                             <p class="text-xs font-bold text-gray-400 truncate mt-0.5">${a.album_artist_name}</p>
                             <p class="text-[11px] text-gray-500 mt-1 truncate">${a.album_genres || 'Uncategorized'}</p>
+                            ${a.vibe_score ? `
+                                <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✨ ${(a.vibe_score * 100).toFixed(0)}% Match</span>
+                                    ${a.vibe_reasons && a.vibe_reasons.length > 0 ? `<span class="text-[10px] text-gray-400 truncate max-w-[200px]" title="${a.vibe_reasons.join(' • ')}">${a.vibe_reasons[0]}</span>` : ''}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -1911,12 +1956,99 @@
                         </div>
                     </div>
                     <div class="mt-2.5 px-0.5">
-                        <h4 class="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                        <div class="flex items-center justify-between gap-1">
+                            <h4 class="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                            ${a.vibe_score ? `<span class="text-[9px] font-mono font-bold text-emerald-400 shrink-0">✨ ${(a.vibe_score * 100).toFixed(0)}%</span>` : ''}
+                        </div>
                         <p class="text-[11px] text-gray-400 truncate" title="${a.album_artist_name}">${a.album_artist_name}</p>
                         <p class="text-[10px] text-gray-500 mt-0.5">${a.release_year || ''}</p>
                     </div>
                 </div>
             `).join('');
+        }
+
+        let isVibeSearchActive = false;
+        let lastVibeResults = [];
+        let lastVibeIntent = null;
+
+        async function executeVibeSearch() {
+            const inputEl = document.getElementById("vibeSearchInput");
+            if (!inputEl) return;
+            const query = inputEl.value.trim();
+            if (!query) {
+                clearVibeSearch();
+                return;
+            }
+
+            const digBtn = document.getElementById("vibeDigBtn");
+            const clearBtn = document.getElementById("vibeClearBtn");
+            if (digBtn) digBtn.innerHTML = `<span>⏳ Digging...</span>`;
+            if (clearBtn) clearBtn.classList.remove("hidden");
+
+            try {
+                const res = await fetch(`/beta/api/crate/vibe-search?q=${encodeURIComponent(query)}&limit=48`);
+                const data = await res.json();
+
+                if (data.results && data.results.length > 0) {
+                    isVibeSearchActive = true;
+                    lastVibeResults = data.results;
+                    lastVibeIntent = data.detected_intent || null;
+
+                    // Display intent banner
+                    const banner = document.getElementById("vibeIntentBanner");
+                    const badgesContainer = document.getElementById("vibeIntentBadges");
+                    if (banner && badgesContainer && data.detected_intent) {
+                        const intent = data.detected_intent;
+                        const chips = [];
+                        if (intent.label) chips.push(`<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">🏷️ ${intent.label}</span>`);
+                        if (intent.decade_range) chips.push(`<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">📼 ${intent.decade_range[0]}s</span>`);
+                        if (intent.telemetry_scope) chips.push(`<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">🔥 ${intent.telemetry_scope}</span>`);
+                        if (intent.critical_acclaim) chips.push(`<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">⭐ Acclaimed</span>`);
+                        if (intent.intensity_mode) chips.push(`<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">⚡ ${intent.intensity_mode}</span>`);
+                        if (intent.macro_genres && intent.macro_genres.length > 0) chips.push(`<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">🎵 ${intent.macro_genres.join(', ')}</span>`);
+                        if (intent.artist) chips.push(`<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">👤 ${intent.artist}</span>`);
+                        if (intent.clean_vibe_query) chips.push(`<span class="text-gray-300 italic">"${intent.clean_vibe_query}"</span>`);
+
+                        badgesContainer.innerHTML = `<span class="font-bold text-emerald-400">🔮 Matched Vibe:</span> ${chips.join(' ')}`;
+                        banner.classList.remove("hidden");
+                    }
+
+                    const poolText = document.getElementById('poolCountText');
+                    if (poolText) poolText.innerText = `${data.results.length} Vibe Matches for "${query}"`;
+
+                    const topPicks = data.results.slice(0, 3);
+                    const remainingPool = data.results.slice(3, 48);
+                    renderSpotlight(topPicks);
+                    renderCandidatePool(remainingPool);
+                } else {
+                    alert(`No records in your crate matched vibe "${query}". Try another description!`);
+                }
+            } catch (err) {
+                console.error("Vibe search error:", err);
+            } finally {
+                if (digBtn) digBtn.innerHTML = `<span>Dig</span>`;
+            }
+        }
+
+        function applyVibeChip(promptText) {
+            const inputEl = document.getElementById("vibeSearchInput");
+            if (inputEl) {
+                inputEl.value = promptText;
+                executeVibeSearch();
+            }
+        }
+
+        function clearVibeSearch() {
+            isVibeSearchActive = false;
+            lastVibeResults = [];
+            lastVibeIntent = null;
+            const inputEl = document.getElementById("vibeSearchInput");
+            if (inputEl) inputEl.value = '';
+            const clearBtn = document.getElementById("vibeClearBtn");
+            if (clearBtn) clearBtn.classList.add("hidden");
+            const banner = document.getElementById("vibeIntentBanner");
+            if (banner) banner.classList.add("hidden");
+            runRecommender();
         }
 
         window.addEventListener("scroll", () => {

@@ -219,40 +219,41 @@
                 </div>
             </div>
 
-            <!-- Row 2: Vibe, Era & Sub-Genre (Horizontal Flow) -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 pt-3 items-center">
-                <!-- Mood & Vibe (Col 1-5) -->
-                <div class="md:col-span-5 flex flex-col sm:flex-row sm:items-center gap-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">2. Vibe:</span>
-                    <div class="flex flex-wrap gap-1.5">
-                        <button onclick="setVibe('all')" id="vibeBtn-all" class="pill-active px-2.5 py-1 rounded-lg text-xs transition">🌌 Any</button>
-                        <button onclick="setVibe('chill')" id="vibeBtn-chill" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Ambient, Dream Pop, Shoegaze, Downtempo, Trip Hop">🌙 Chill</button>
-                        <button onclick="setVibe('energetic')" id="vibeBtn-energetic" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Punk, Alt Rock, Electronic, Dance, Techno, Hip Hop">⚡ Energetic</button>
-                        <button onclick="setVibe('mellow')" id="vibeBtn-mellow" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Acoustic, Folk, Singer-Songwriter, Jazz, Bossa Nova">☕ Mellow</button>
-                        <button onclick="setVibe('vintage')" id="vibeBtn-vintage" class="pill-inactive px-2.5 py-1 rounded-lg text-xs transition" title="Classic Soul, Motown, Blues, 60s/70s Psychedelic">📻 Vintage</button>
+            <!-- Streamlined Vibe Digger Console (APP-19 Discovery Engine) -->
+            <div class="pt-3 mt-3 border-t border-gray-800/70 flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 shrink-0 flex items-center gap-1.5">
+                        <span>🔮</span> Vibe Digger:
+                    </span>
+                    <div class="relative flex-1">
+                        <input type="text" id="vibeSearchInput"
+                               placeholder="Describe a vibe, era, instruments, mood, or label (e.g. 'rainy day jazz piano', '90s slowcore', 'blue note vintage')..."
+                               class="w-full bg-[#0a0d11] border border-gray-700/80 rounded-xl py-2 pl-3 pr-20 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#1DB954] focus:ring-1 focus:ring-[#1DB954] transition shadow-inner"
+                               onkeydown="if(event.key==='Enter') executeVibeSearch()">
+                        <div class="absolute right-1.5 top-1.5 flex items-center gap-1">
+                            <button id="vibeClearBtn" onclick="clearVibeSearch()" class="hidden text-xs text-gray-400 hover:text-white px-2 py-0.5 rounded transition" title="Clear search">&times;</button>
+                            <button onclick="executeVibeSearch()" id="vibeDigBtn" class="text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1 rounded-lg transition shadow flex items-center gap-1">
+                                <span>Dig</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Era Preference (Col 6-9) -->
-                <div class="md:col-span-4 flex items-center gap-1.5">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">3. Era:</span>
-                    <div class="flex flex-nowrap gap-1">
-                        <button onclick="setEra('all')" id="eraBtn-all" class="pill-active px-2 py-1 rounded-lg text-xs transition whitespace-nowrap">All</button>
-                        <button onclick="setEra('recent')" id="eraBtn-recent" class="pill-inactive px-2 py-1 rounded-lg text-xs transition whitespace-nowrap" title="2018 to Present">✨ 2018+</button>
-                        <button onclick="setEra('modern')" id="eraBtn-modern" class="pill-inactive px-2 py-1 rounded-lg text-xs transition whitespace-nowrap" title="2000 - 2017">💿 00s-10s</button>
-                        <button onclick="setEra('classic')" id="eraBtn-classic" class="pill-inactive px-2 py-1 rounded-lg text-xs transition whitespace-nowrap" title="Before 2000">📼 &lt;2000</button>
-                    </div>
+                <!-- Quick Vibe Inspiration Chips -->
+                <div class="flex items-center gap-1.5 flex-wrap pl-0 sm:pl-24 text-[11px]">
+                    <span class="text-gray-500 text-[10px] font-medium">Inspiration:</span>
+                    <button type="button" onclick="applyVibeChip('rainy day jazz piano with trumpet')" class="px-2 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/50 transition">☕ Rainy Jazz</button>
+                    <button type="button" onclick="applyVibeChip('90s slowcore with whispery vocals and sad guitars')" class="px-2 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/50 transition">🎸 90s Slowcore</button>
+                    <button type="button" onclick="applyVibeChip('blue notes records with a vintage sound')" class="px-2 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/50 transition">🎷 Blue Note Vintage</button>
+                    <button type="button" onclick="applyVibeChip('jazz albums I have been listening to recently')" class="px-2 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/50 transition">🔥 Recent Jazz</button>
+                    <button type="button" onclick="applyVibeChip('critically acclaimed records')" class="px-2 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/50 transition">⭐ Acclaimed Classics</button>
+                    <button type="button" onclick="applyVibeChip('aggresive and chaotic records!')" class="px-2 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/50 transition">⚡ Aggressive & Chaotic</button>
                 </div>
 
-                <!-- Sub-Genre Dropdown (Col 10-12) -->
-                <div class="md:col-span-3 flex items-center gap-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">4. Genre:</span>
-                    <select id="genreSelect" onchange="onGenreSelect(this.value)" class="w-full bg-[#11151a] border border-gray-700/80 rounded-lg py-1 px-2 text-xs text-gray-200 focus:outline-none focus:border-[#1DB954]">
-                        <option value="">Any Genre</option>
-                        {% for g in top_genres %}
-                        <option value="{{ g }}">{{ g|title }}</option>
-                        {% endfor %}
-                    </select>
+                <!-- Active Intent Banner -->
+                <div id="vibeIntentBanner" class="hidden flex items-center justify-between p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs mt-1">
+                    <div class="flex items-center gap-2 flex-wrap text-emerald-300" id="vibeIntentBadges"></div>
+                    <button type="button" onclick="clearVibeSearch()" class="text-[11px] text-gray-400 hover:text-white underline ml-2 shrink-0">Reset to Normal Crate</button>
                 </div>
             </div>
         </div>
@@ -330,6 +331,16 @@
                 </div>
                 <div class="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 my-auto mx-auto shrink-0">
                     <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
+                </div>
+
+                <!-- Record Label Imprint directly under sleeve cover -->
+                <div id="modalLabelContainer" class="hidden flex items-center justify-center gap-1.5 mt-2.5 text-center">
+                    <span class="text-[10px] font-mono tracking-wider text-gray-400 bg-gray-900/80 px-2.5 py-1 rounded-md border border-gray-800 flex items-center gap-1.5 shadow-sm">
+                        <svg class="w-3 h-3 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span id="modalRecordLabel" class="truncate max-w-[200px]"></span>
+                    </span>
                 </div>
 
                 <!-- Vibe & Mood / Semantic Tag Strip directly under sleeve cover, above streaming buttons (Centered) -->
@@ -431,7 +442,7 @@
             return !aid.startsWith('am_mock_') && !aid.startsWith('mock_') && !a.is_mock;
         });
         {% endif %}
-        let selectedTarget = 'heavy_30d';
+        let selectedTarget = 'all';
         let selectedHorizon = '30d';
         let selectedMode = 'favorites';
         let selectedVibe = 'all';
@@ -622,6 +633,12 @@
         }
 
         function spinAgain() {
+            if (isVibeSearchActive && lastVibeResults.length > 3) {
+                const shuffled = [...lastVibeResults].sort(() => Math.random() - 0.5);
+                renderSpotlight(shuffled.slice(0, 3));
+                renderCandidatePool(shuffled.slice(3, 48));
+                return;
+            }
             currentSeed = Math.random();
             runRecommender();
         }
@@ -707,7 +724,7 @@
                 if (pool.length === 0) pool = ALL_ALBUMS;
             }
 
-            document.getElementById('poolCountText').innerText = `${pool.length.toLocaleString()} matching records in your library`;
+            document.getElementById('poolCountText').innerText = `${pool.length.toLocaleString()} records in crate`;
 
             const scored = pool.map((album, idx) => ({
                 album: album,
@@ -722,9 +739,11 @@
         }
 
         function getAlbumPlayBadge(a) {
-            const is30d = (typeof selectedHorizon !== 'undefined') && selectedHorizon === '30d';
+            const is30d = Boolean(isVibeSearchActive && lastVibeIntent && lastVibeIntent.telemetry_scope === 'recent');
             const trackPlays = is30d ? (Number(a.album_track_plays_30d) || 0) : (Number(a.album_track_plays) || 0);
             const tracksTotal = Number(a.album_tracks_total) || 0;
+            const normSpins = is30d ? (a.album_plays_30d !== undefined ? Number(a.album_plays_30d) : 0)
+                                    : (a.album_plays !== undefined ? Number(a.album_plays) : 0);
 
             if (is30d && a.album_plays_display_30d && a.album_plays_tooltip_30d) {
                 const colorClass = trackPlays > 0 ? 'text-amber-400 font-black' : 'text-gray-400 font-bold';
@@ -734,22 +753,37 @@
                 return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${a.album_plays_tooltip}">${a.album_plays_display}</div>`;
             }
 
-            let normPlays = 0;
+            if (trackPlays === 0 && normSpins === 0) {
+                let isNew = false;
+                if (a.added_at) {
+                    try {
+                        const dt = new Date(a.added_at);
+                        const now = new Date();
+                        const diffDays = (now - dt) / (1000 * 60 * 60 * 24);
+                        if (diffDays <= 14) isNew = true;
+                    } catch(e) {}
+                }
+                const label = isNew ? "✨ Newly Added" : "💤 Never Played";
+                const tooltip = isNew ? "Newly added album (0 plays)" : "Never played (0 plays)";
+                return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] text-gray-400 font-bold select-none" title="${tooltip}">${label}</div>`;
+            }
+
+            let decimalPlays = normSpins > 0 ? normSpins : trackPlays;
             let tooltip = '';
             if (tracksTotal > 0) {
-                normPlays = Math.floor(trackPlays / tracksTotal);
+                if (normSpins === 0) decimalPlays = Math.round((trackPlays / tracksTotal) * 10) / 10;
                 tooltip = is30d
                     ? `Estimated complete album spins in last 30 days based on ${trackPlays} track plays across ${tracksTotal} tracks`
                     : `Estimated complete album spins based on ${trackPlays} track plays across ${tracksTotal} tracks`;
             } else {
-                normPlays = trackPlays;
                 tooltip = is30d
                     ? `30-day track plays: ${trackPlays} (track count unavailable)`
                     : `Total track plays: ${trackPlays} (track count unavailable)`;
             }
+            const dispVal = Number.isInteger(decimalPlays) ? decimalPlays : decimalPlays.toFixed(1);
             const suffix = is30d ? ' (30D)' : '';
-            const label = `🔥 ${normPlays} ${normPlays === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
-            const colorClass = trackPlays > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
+            const label = `🔥 ${dispVal} ${Number(dispVal) === 1 ? 'Play' + suffix : 'Plays' + suffix}`;
+            const colorClass = trackPlays > 0 || normSpins > 0 ? (is30d ? 'text-amber-400 font-black' : 'text-emerald-400 font-black') : 'text-gray-400 font-bold';
             return `<div class="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-lg px-2 py-0.5 border border-white/10 text-[10px] ${colorClass} select-none" title="${tooltip}">${label}</div>`;
         }
 
@@ -801,6 +835,12 @@
                             <h3 class="text-base font-black text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h3>
                             <p class="text-xs font-bold text-gray-400 truncate mt-0.5">${a.album_artist_name}</p>
                             <p class="text-[11px] text-gray-500 mt-1 truncate">${a.album_genres || 'Uncategorized'}</p>
+                            ${a.vibe_score ? `
+                                <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✨ ${(a.vibe_score * 100).toFixed(0)}% Match</span>
+                                    ${a.vibe_reasons && a.vibe_reasons.length > 0 ? `<span class="text-[10px] text-gray-400 truncate max-w-[200px]" title="${a.vibe_reasons.join(' • ')}">${a.vibe_reasons[0]}</span>` : ''}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -837,7 +877,10 @@
                         </div>
                     </div>
                     <div class="mt-2.5 px-0.5">
-                        <h4 class="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                        <div class="flex items-center justify-between gap-1">
+                            <h4 class="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition" title="${a.album_name}">${a.album_name}</h4>
+                            ${a.vibe_score ? `<span class="text-[9px] font-mono font-bold text-emerald-400 shrink-0">✨ ${(a.vibe_score * 100).toFixed(0)}%</span>` : ''}
+                        </div>
                         <p class="text-[11px] text-gray-400 truncate" title="${a.album_artist_name}">${a.album_artist_name}</p>
                         <p class="text-[10px] text-gray-500 mt-0.5">${a.release_year || ''}</p>
                     </div>
@@ -845,9 +888,92 @@
             `).join('');
         }
 
+        let isVibeSearchActive = false;
+        let lastVibeResults = [];
+
+        async function executeVibeSearch() {
+            const inputEl = document.getElementById("vibeSearchInput");
+            if (!inputEl) return;
+            const query = inputEl.value.trim();
+            if (!query) {
+                clearVibeSearch();
+                return;
+            }
+
+            const digBtn = document.getElementById("vibeDigBtn");
+            const clearBtn = document.getElementById("vibeClearBtn");
+            if (digBtn) digBtn.innerHTML = `<span>⏳ Digging...</span>`;
+            if (clearBtn) clearBtn.classList.remove("hidden");
+
+            try {
+                const res = await fetch(`/beta/api/crate/vibe-search?q=${encodeURIComponent(query)}&limit=48`);
+                const data = await res.json();
+
+                if (data.results && data.results.length > 0) {
+                    isVibeSearchActive = true;
+                    lastVibeResults = data.results;
+
+                    // Display intent banner
+                    const banner = document.getElementById("vibeIntentBanner");
+                    const badgesContainer = document.getElementById("vibeIntentBadges");
+                    if (banner && badgesContainer && data.detected_intent) {
+                        const intent = data.detected_intent;
+                        const chips = [];
+                        if (intent.label) chips.push(`<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">🏷️ ${intent.label}</span>`);
+                        if (intent.decade_range) chips.push(`<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">📼 ${intent.decade_range[0]}s</span>`);
+                        if (intent.telemetry_scope) chips.push(`<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">🔥 ${intent.telemetry_scope}</span>`);
+                        if (intent.critical_acclaim) chips.push(`<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">⭐ Acclaimed</span>`);
+                        if (intent.intensity_mode) chips.push(`<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">⚡ ${intent.intensity_mode}</span>`);
+                        if (intent.macro_genres && intent.macro_genres.length > 0) chips.push(`<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">🎵 ${intent.macro_genres.join(', ')}</span>`);
+                        if (intent.artist) chips.push(`<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">👤 ${intent.artist}</span>`);
+                        if (intent.clean_vibe_query) chips.push(`<span class="text-gray-300 italic">"${intent.clean_vibe_query}"</span>`);
+
+                        badgesContainer.innerHTML = `<span class="font-bold text-emerald-400">🔮 Matched Vibe:</span> ${chips.join(' ')}`;
+                        banner.classList.remove("hidden");
+                    }
+
+                    document.getElementById('poolCountText').innerText = `${data.results.length} Vibe Matches for "${query}"`;
+
+                    const topPicks = data.results.slice(0, 3);
+                    const remainingPool = data.results.slice(3, 48);
+                    renderSpotlight(topPicks);
+                    renderCandidatePool(remainingPool);
+                } else {
+                    alert(`No records in your crate matched vibe "${query}". Try another description!`);
+                }
+            } catch (err) {
+                console.error("Vibe search error:", err);
+            } finally {
+                if (digBtn) digBtn.innerHTML = `<span>Dig</span>`;
+            }
+        }
+
+        function applyVibeChip(promptText) {
+            const inputEl = document.getElementById("vibeSearchInput");
+            if (inputEl) {
+                inputEl.value = promptText;
+                executeVibeSearch();
+            }
+        }
+
+        function clearVibeSearch() {
+            isVibeSearchActive = false;
+            lastVibeResults = [];
+            const inputEl = document.getElementById("vibeSearchInput");
+            if (inputEl) inputEl.value = '';
+            const clearBtn = document.getElementById("vibeClearBtn");
+            if (clearBtn) clearBtn.classList.add("hidden");
+            const banner = document.getElementById("vibeIntentBanner");
+            if (banner) banner.classList.add("hidden");
+            runRecommender();
+        }
+
         async function openGatefold(album) {
             isModalOpen = true;
             currentModalAlbum = album;
+
+            // Immediately unhide modal so the user gets 0ms instant feedback
+            document.getElementById("gatefoldModal").classList.remove("hidden");
 
             // Desktop elements
             const coverEl = document.getElementById("modalCover");
@@ -943,6 +1069,19 @@
                     </a>`;
             }
 
+            // Record Label (Left panel under sleeve pic)
+            const labelContainer = document.getElementById("modalLabelContainer");
+            const labelEl = document.getElementById("modalRecordLabel");
+            const albLabel = album.album_label || album.label;
+            if (labelContainer && labelEl) {
+                if (albLabel && albLabel.trim() && albLabel.trim() !== 'Unknown') {
+                    labelEl.innerText = albLabel.trim();
+                    labelContainer.classList.remove("hidden");
+                } else {
+                    labelContainer.classList.add("hidden");
+                }
+            }
+
             // Semantic Classification & Mood Tags (APP-16)
             const tagsContainer = document.getElementById("modalSemanticTags");
             if (tagsContainer) {
@@ -996,7 +1135,6 @@
             }
 
             document.getElementById("modalMetaInfo").innerText = `${album.release_year || 'Unknown Year'} • ${album.album_tracks_total || 0} tracks • ${album.album_track_plays || 0} total plays`;
-            document.getElementById("gatefoldModal").classList.remove("hidden");
         }
 
         async function toggleModalAudioPlayback() {

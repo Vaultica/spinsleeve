@@ -39,6 +39,17 @@ class TestReportV2Gatefold(unittest.TestCase):
                 for token in mobile_tokens:
                     self.assertIn(token, html, f"Missing mobile token '{token}' in {name}")
 
+    def test_gatefold_record_label_elements(self):
+        label_tokens = [
+            'id="modalLabelContainer"',
+            'id="modalRecordLabel"',
+            'album.album_label || album.label'
+        ]
+        for name, html in self.templates.items():
+            with self.subTest(template=name):
+                for token in label_tokens:
+                    self.assertIn(token, html, f"Missing record label token '{token}' in {name}")
+
     def test_interactive_audio_scrubber_elements(self):
         scrubber_tokens = [
             'id="gatefoldAudioBar"',

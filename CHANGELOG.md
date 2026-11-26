@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v2.9.0] — 2026-11-26
+### 🔮 Natural Language "Vibe Digger" (APP-19), Gatefold Record Labels & Crate Workspace Redesign
+* **What:**
+  - **Natural Language "Vibe Digger" & Semantic Crate Discovery Engine (`src/report_v2/services/vibe_search.py`):**
+    - Implemented Model 2 Multi-Intent Hybrid Ranker supporting free-form semantic discovery across user vinyl crates with sub-300ms latency.
+    - Added multi-intent query deconstruction: parses iconic record labels (`Blue Note`, `Warp`, `4AD`, `Impulse!`, etc.), listening telemetry (`recent`, `heavy_rotation`, `unplayed`), critical acclaim criteria, intensity modes (high vs calm), artist entity matching, and era/instrument tags.
+    - Packaged precomputed catalog vector embeddings matrix (`embeddings_minilm.npy`, ~3.1 MB) in `src/report_v2/data/` for zero-database, zero-GCP-cost in-memory scoring.
+  - **12" Gatefold Modal Record Label Imprint Badge:**
+    - Integrated clean record label badge on the left panel directly underneath the desktop album sleeve across all application views (`explorer.html`, `recommend.html`, `pals.html`).
+    - Made gatefold modal unhide immediately on click (0ms instant opening) while streaming tracklists and audio asynchronously in the background.
+  - **Streamlined Crate Digger UI & Navigation Unification (`src/report_v2/templates/explorer.html`):**
+    - Added permanent top navbar link (`🔮 Crate Digger`) and unified 3-way crate workspace segmented switcher (`📁 Saved Vinyl`, `🔮 Crate Digger`, `📻 Streamed / Unowned`).
+    - Eliminated obsolete legacy Vibe and Era pill buttons in favor of the clean Vibe Digger console with quick-inspiration chips.
+    - Hidden redundant library filter row when in Crate Digger view, preventing duplicate search/sort clutter.
+    - Updated sleeve play count badge (`getAlbumPlayBadge`) to accurately display all-time plays in Crate Digger unless a recent listening scope is explicitly queried.
+  - **Container & CI/CD Enhancements (`Dockerfile`, `requirements.txt`):**
+    - Pre-cached SentenceTransformer model into Docker image layer (`DEBT-03`).
+    - Upgraded Cloud Run deployment spec to `--memory=2Gi` for seamless PyTorch CPU inference.
+    - Added comprehensive unit test suite in `tests/test_vibe_search_and_labels.py` (118/118 unit tests passing).
+* **Why:**
+  - Delivers magical, conversational crate discovery allowing listeners to explore their personal records by mood, era, instruments, record labels, and listening history with sub-second performance.
+* **How:**
+  - Built `vibe_search.py` service, added `/api/crate/vibe-search` route, redesigned `explorer.html`, bundled data assets, and deployed Cloud Run revision `spotify-dashboard-beta-00081-6n7`.
+
+---
+
 ## [v2.8.9] — 2026-11-25
 ### 🏷️ Dominant-Genre Multi-Vote Classification, Lexicon Expansion & Catalog Reclassification
 * **What:**

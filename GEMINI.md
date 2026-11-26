@@ -61,7 +61,7 @@ Automatically loaded by Gemini CLI at session start. Defines non-negotiable arch
 
 ## 4. Active State & Next Milestones
 
-* **Current Production Release:** `v2.8.9` (Dominant-Genre Multi-Vote Classification, Lexicon Expansion, BigQuery Catalog Reclassification, Dropdown Alignment, 105/105 unit tests passing).
+* **Current Production Release:** `v2.9.0` (Natural Language Vibe Digger APP-19, Gatefold Record Labels, Crate Workspace Redesign, 118/118 unit tests passing).
 * **Next Planned Milestone:** `Phase 8` — Live Apple Developer Account Enrollment & Web API Token Exchange (`APP-02c`).
 
 ---

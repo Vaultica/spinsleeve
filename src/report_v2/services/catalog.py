@@ -155,6 +155,11 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 elif "summary" not in a and "album_description" in a:
                     a["summary"] = a["album_description"]
 
+                if "album_label" not in a and "label" in a:
+                    a["album_label"] = a["label"]
+                elif "label" not in a and "album_label" in a:
+                    a["label"] = a["album_label"]
+
                 aid = safe_str(a.get("album_id"))
                 if aid.startswith("am_") or aid.startswith("mock_"):
                     a["platform"] = "apple_music"
@@ -206,7 +211,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
         SELECT 
             album_id, album_name, album_artist_name, album_image_url, release_year, added_at,
             album_genres, album_track_plays, album_plays, album_track_plays_30d, album_plays_30d,
-            album_tracks_total, album_description, personnel, pitchfork_score, discogs_rating, enriched_styles,
+            album_tracks_total, album_label, album_description, personnel, pitchfork_score, discogs_rating, enriched_styles,
             macro_genre, derived_moods, descriptive_tags, enrichment_quality_score
         FROM `{PROJECT_ID}.{DATASET_V2}.user_albums_features_table`
         WHERE user_id = @user_id
@@ -261,6 +266,7 @@ def fetch_user_album_data(user_id, force_refresh=False):
             tr_plays_30d = safe_int(row.get("album_track_plays_30d"), 0)
             alb_plays_30d = safe_float(row.get("album_plays_30d"), 0.0)
             tr_total = safe_int(row.get("album_tracks_total"), 0)
+            alb_label = safe_str(row.get("album_label"))
             desc = safe_str(row.get("album_description"))
             raw_personnel = row.get("personnel")
             personnel_list = []
@@ -323,6 +329,8 @@ def fetch_user_album_data(user_id, force_refresh=False):
                 "album_track_plays_30d": tr_plays_30d,
                 "album_plays_30d": alb_plays_30d,
                 "album_tracks_total": tr_total,
+                "album_label": alb_label,
+                "label": alb_label,
                 "album_description": desc,
                 "personnel": pers,
                 "pitchfork_score": pf,

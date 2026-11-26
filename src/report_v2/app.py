@@ -122,6 +122,18 @@ def favicon():
     return Response(ICON_FAVICON_SVG, mimetype="image/svg+xml")
 
 
+import threading
+
+def _async_warmup():
+    try:
+        from services.vibe_search import warmup_vibe_engine
+        warmup_vibe_engine()
+    except Exception as e:
+        logger.debug("Async vibe warmup notice: %s", e)
+
+threading.Thread(target=_async_warmup, daemon=True).start()
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=True)

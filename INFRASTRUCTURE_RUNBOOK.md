@@ -268,6 +268,7 @@ CLOUDSDK_PYTHON=/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 \
   gcloud run deploy spotify-dashboard-beta \
     --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard-v2:latest \
     --region=europe-west2 \
+    --memory=2Gi \
     --service-account=spotify-data@secret-compass-181513.iam.gserviceaccount.com \
     --set-env-vars=GCP_PROJECT=secret-compass-181513 \
     --allow-unauthenticated

@@ -435,6 +435,16 @@
                     <img id="modalCover" src="" class="w-full h-full object-cover" alt="Album Cover">
                 </div>
 
+                <!-- Record Label Imprint directly under sleeve cover -->
+                <div id="modalLabelContainer" class="hidden flex items-center justify-center gap-1.5 mt-2.5 text-center">
+                    <span class="text-[10px] font-mono tracking-wider text-gray-400 bg-gray-900/80 px-2.5 py-1 rounded-md border border-gray-800 flex items-center gap-1.5 shadow-sm">
+                        <svg class="w-3 h-3 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span id="modalRecordLabel" class="truncate max-w-[200px]"></span>
+                    </span>
+                </div>
+
                 <!-- Vibe & Mood / Semantic Tag Strip directly under sleeve cover, above streaming buttons (Centered) -->
                 <div id="modalSemanticTags" class="flex flex-wrap items-center justify-center gap-1.5 mt-3 text-center hidden"></div>
 
@@ -646,6 +656,9 @@
             isModalOpen = true;
             currentModalAlbum = album;
 
+            // Immediately unhide modal so the user gets 0ms instant feedback
+            document.getElementById("gatefoldModal").classList.remove("hidden");
+
             // Desktop elements
             const coverEl = document.getElementById("modalCover");
             if (coverEl) coverEl.src = album.album_image_url;
@@ -740,6 +753,19 @@
                     </a>`;
             }
 
+            // Record Label (Left panel under sleeve pic)
+            const labelContainer = document.getElementById("modalLabelContainer");
+            const labelEl = document.getElementById("modalRecordLabel");
+            const albLabel = album.album_label || album.label;
+            if (labelContainer && labelEl) {
+                if (albLabel && albLabel.trim() && albLabel.trim() !== 'Unknown') {
+                    labelEl.innerText = albLabel.trim();
+                    labelContainer.classList.remove("hidden");
+                } else {
+                    labelContainer.classList.add("hidden");
+                }
+            }
+
             // Semantic Classification & Mood Tags (APP-16)
             const tagsContainer = document.getElementById("modalSemanticTags");
             if (tagsContainer) {
@@ -793,7 +819,6 @@
             }
 
             document.getElementById("modalMetaInfo").innerText = `${album.release_year || 'Unknown Year'} • ${album.album_tracks_total || 0} tracks • ${album.album_track_plays || 0} total plays`;
-            document.getElementById("gatefoldModal").classList.remove("hidden");
         }
 
         async function toggleModalAudioPlayback() {

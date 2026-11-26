@@ -16,6 +16,7 @@ from app_config import PROJECT_ID, DATASET_V2, ICON_A_SVG, ICON_GATEFOLD_SVG, lo
 from routes.auth import login_required
 from services.datastore import get_datastore_client
 from services.spotify import get_token_for_user
+from services.catalog import safe_int
 
 crate_bp = Blueprint("crate", __name__)
 
@@ -178,6 +179,30 @@ def api_save_album():
     except Exception as e:
         logger.error("Error saving album %s: %s", album_id, e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@crate_bp.route("/api/crate/vibe-search")
+@crate_bp.route("/beta/api/crate/vibe-search")
+@login_required
+def api_vibe_search():
+    """Natural Language 'Vibe Digger' semantic search across user crate (APP-19)."""
+    user_id = session.get("user_id")
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"query": "", "detected_intent": None, "results_count": 0, "results": []})
+
+    limit = min(safe_int(request.args.get("limit", 15), 15), 50)
+    scope = request.args.get("scope", "saved")
+    horizon = request.args.get("horizon", "all_time")
+
+    from services.vibe_search import search_user_crate
+    results, intent = search_user_crate(user_id, query, scope=scope, horizon=horizon, top_k=limit)
+    return jsonify({
+        "query": query,
+        "detected_intent": intent,
+        "results_count": len(results),
+        "results": results
+    })
 
 
 @crate_bp.route("/")

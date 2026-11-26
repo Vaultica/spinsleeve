@@ -9,6 +9,9 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-cache SentenceTransformer model into Docker image layer (DEBT-03)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
 # Copy application source and modules
 COPY app_config.py .
 COPY app.py .
@@ -16,6 +19,7 @@ COPY routes/ routes/
 COPY services/ services/
 COPY templates/ templates/
 COPY pipeline_v2/ pipeline_v2/
+COPY data/ data/
 
 EXPOSE 8080
 
