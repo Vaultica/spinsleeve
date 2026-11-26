@@ -180,6 +180,35 @@ class TestAdminAndPalsFeatures(unittest.TestCase):
         self.assertIn("toggleUserSyncPause", rendered)
         self.assertIn("toggleUserPalsOptIn", rendered)
 
+    def test_admin_rescue_key_and_auto_revert(self):
+        """Verify /admin/rescue security gate and logout auto-revert logic."""
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "report_v2")))
+        from app import app
+        from app_config import ADMIN_RESCUE_KEY
+
+        with app.test_client() as client:
+            # 1. Invalid rescue key -> 403
+            resp = client.get("/admin/rescue?key=wrongkey")
+            self.assertEqual(resp.status_code, 403)
+
+            # 2. Valid rescue key -> sets sergebou admin session and redirects
+            resp = client.get(f"/admin/rescue?key={ADMIN_RESCUE_KEY}")
+            self.assertEqual(resp.status_code, 302)
+            with client.session_transaction() as sess:
+                self.assertEqual(sess.get("user_id"), "sergebou")
+                self.assertEqual(sess.get("role"), "admin")
+                self.assertFalse(sess.get("is_impersonating"))
+
+            # 3. Impersonate another user, then hit /logout -> should auto-revert to /admin/revert
+            with client.session_transaction() as sess:
+                sess["user_id"] = "test_user"
+                sess["admin_user_id"] = "sergebou"
+                sess["is_impersonating"] = True
+
+            resp = client.get("/logout")
+            self.assertEqual(resp.status_code, 302)
+            self.assertIn("/admin/revert", resp.headers.get("Location", ""))
+
 
 if __name__ == "__main__":
     unittest.main()

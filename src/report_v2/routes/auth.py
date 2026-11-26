@@ -12,7 +12,7 @@ from flask import Blueprint, render_template, request, redirect, session
 import spotipy
 from google.cloud import datastore, bigquery
 
-from app_config import PROJECT_ID, DATASET_V2, ADMIN_USER_IDS, ICON_A_SVG, logger
+from app_config import PROJECT_ID, DATASET_V2, ADMIN_USER_IDS, ADMIN_RESCUE_KEY, ICON_A_SVG, logger
 from services.datastore import get_datastore_client
 from services.spotify import get_oauth_client
 
@@ -51,6 +51,12 @@ def login():
 @auth_bp.route("/beta/dev-login")
 def dev_login():
     """Local development login helper to bypass Spotify OAuth when running locally."""
+    host = request.headers.get("X-Forwarded-Host") or request.host or ""
+    is_local = any(h in host for h in ("localhost", "127.0.0.1", "0.0.0.0"))
+    key = request.args.get("key", "").strip()
+    if not is_local and (not ADMIN_RESCUE_KEY or key != ADMIN_RESCUE_KEY):
+        return "Dev login is restricted to local environments. Use /admin/rescue?key=... on production.", 403
+
     user = request.args.get("user", "sergebou")
     session["user_id"] = user
     session["display_name"] = "Serge" if user == "sergebou" else user
@@ -58,6 +64,25 @@ def dev_login():
     session["admin_user_id"] = "sergebou"
     session["pals_opt_in"] = True
     session["is_impersonating"] = False
+    target = "/beta" if request.path.startswith("/beta") else "/"
+    return redirect(target)
+
+
+@auth_bp.route("/admin/rescue")
+@auth_bp.route("/beta/admin/rescue")
+def admin_rescue():
+    """Emergency admin rescue endpoint to recover admin session using a secure rescue key."""
+    key = request.args.get("key", "").strip()
+    if not ADMIN_RESCUE_KEY or key != ADMIN_RESCUE_KEY:
+        return "Invalid or missing emergency admin rescue key.", 403
+
+    session["user_id"] = "sergebou"
+    session["display_name"] = "sergebou"
+    session["role"] = "admin"
+    session["admin_user_id"] = "sergebou"
+    session["pals_opt_in"] = True
+    session["is_impersonating"] = False
+    logger.info("Admin emergency rescue successfully activated for sergebou")
     target = "/beta" if request.path.startswith("/beta") else "/"
     return redirect(target)
 
@@ -194,6 +219,11 @@ def callback():
 @auth_bp.route("/logout")
 @auth_bp.route("/beta/logout")
 def logout():
+    # Auto-revert guard: if an admin is currently impersonating another user, revert back to admin identity
+    if session.get("is_impersonating") and session.get("admin_user_id"):
+        logger.info("Admin %s clicked logout while impersonating %s; auto-reverting to admin identity", session.get("admin_user_id"), session.get("user_id"))
+        return redirect("/admin/revert")
+
     session.clear()
     resp = redirect("/login")
     resp.delete_cookie("__session", path="/")
