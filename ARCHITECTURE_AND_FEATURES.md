@@ -12,6 +12,7 @@ This document serves as the definitive technical reference for SpinSleeve's **ex
    - [Smart Crate Digger (`/recommend`) & Time Horizons](#smart-crate-digger-recommend--time-horizons)
    - [SpinPals Social CrateMates (`/pals`) & Acoustic Chemistry](#spinpals-social-cratemates-pals--acoustic-chemistry)
    - [12" Gatefold Archival Reader & Needle-Drop Preview](#12-gatefold-archival-reader--needle-drop-preview)
+   - [Natural Language "Vibe Digger" & Semantic Crate Discovery Engine (`APP-19`)](#natural-language-vibe-digger--semantic-crate-discovery-engine-app-19---v290)
    - [Spotify Full Scrobble Historical Upload (`APP-13`)](#spotify-full-scrobble-historical-upload-app-13)
 4. [Deep-Dive: Metadata Enrichment Pipeline (`src/pipeline_v2/enrich.py`)](#4-deep-dive-metadata-enrichment-pipeline-srcpipeline_v2enrichpy)
    - [Pipeline Execution Flow](#pipeline-execution-flow)
@@ -76,6 +77,16 @@ src/report_v2/
 
 ### Dominant-Genre Multi-Vote Classification & Lexicon Expansion (`v2.8.9`)
 * **Workflow:** Dominant-Genre Multi-Vote Scoring Engine (`_tally_macro_genre_votes()`, `_pick_dominant_macro_genre()`) replacing brittle sequential first-match classification with multi-vote tallying and hierarchical narrative description fallback (`album_description` / `discogs_notes`). Expanded sub-genre lexicon across Classical, Rock, Electronic, Latin/World, Jazz, and Pop. Executed batched catalog reclassification across 578 records (unclassified share plummeted from 27.0% to 12.4%), pinned `"Other / Unclassified"` at the end of crate filter dropdowns, and verified 105/105 unit tests passing.
+
+### Natural Language "Vibe Digger" & Semantic Crate Discovery Engine (`APP-19` - `v2.9.0`)
+* **Workflow:** Conversational and semantic crate exploration engine (`src/report_v2/services/vibe_search.py`, `src/report_v2/routes/crate.py`, `src/report_v2/templates/explorer.html`) powered by Model 2 Multi-Intent Hybrid Ranking. Deconstructs free-form user prompts into structured search intents (`extract_query_intent`):
+  - **Entity & Label Extraction:** Identifies iconic record labels (`Blue Note`, `Warp`, `4AD`, `Impulse!`, `ECM`, `Sub Pop`, `Domino`, `XL`, etc.) and boosts authentic label releases (+0.45).
+  - **Stateful Listening Telemetry:** Intersects queries with user scrobble history (`album_plays_30d`, `album_plays`) when detecting temporal scopes (`recent` -> +0.40 boost for active 30d scrobbles; `heavy_rotation` -> +0.35 boost for high all-time play volume; `unplayed` -> +0.30 boost for unlistened crate gems).
+  - **Critical Acclaim Validation:** Detects quality intent (`critically acclaimed`, `masterpiece`, `essential`) and evaluates synthetic document acclaim tokens against Discogs (>=4.20), Pitchfork (>=8.0/10), and Metacritic (>=80) thresholds (+0.40).
+  - **Intensity & Vibe Calibration:** Dynamically penalizes ambient/classical (-0.40) and boosts punk/alternative/metal (+0.35) when high-intensity chaotic queries are detected.
+  - **Zero-Database Vector Architecture:** Evaluates residual sonic prompts via in-memory NumPy dot products against a precomputed 384-dimensional flat binary embeddings matrix (`src/report_v2/data/embeddings_minilm.npy`, ~3.1 MB) at ~2.5ms latency and $0.00 BigQuery query cost.
+  - **12" Gatefold Modal Record Label Imprint Badge:** Displays the album's record label on the left panel directly underneath the desktop sleeve cover across all views (`explorer.html`, `recommend.html`, `pals.html`), with 0ms instantaneous modal popup and asynchronous background audio/tracklist streaming.
+  - **Crate Workspace Redesign:** Unifies navigation with a permanent top navbar link (`🔮 Crate Digger`) and a 3-way segmented workspace switcher (`[ 📁 Saved Vinyl ] [ 🔮 Crate Digger ] [ 📻 Streamed / Unowned ]`), removing obsolete legacy Vibe/Era pills and hiding library search/sort clutter in Digger mode. Verified by 118/118 unit tests passing.
 
 ---
 
