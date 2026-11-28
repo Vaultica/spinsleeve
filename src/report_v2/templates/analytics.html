@@ -32,8 +32,8 @@
         <!-- Persistent Header -->
         <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
             <div>
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 flex-shrink-0">
+                <a href="{{ '/beta/' if is_beta else '/' }}" class="flex items-center gap-3 group cursor-pointer inline-flex" title="Go to SpinSleeve Library">
+                    <div class="w-10 h-10 flex-shrink-0 group-hover:scale-105 transition">
                         {{ brand_icon | safe }}
                     </div>
                     <div class="flex items-center gap-2">
@@ -42,7 +42,7 @@
                         </h1>
                         <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">ANALYTICS</span>
                     </div>
-                </div>
+                </a>
                 <p class="text-xs text-gray-400 mt-1">Deep listening telemetry, taste velocity &amp; acoustic habits for {{ user.display_name }}</p>
             </div>
 

@@ -7,6 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [v2.9.0] — 2026-11-26
+### 🛡️ Admin Emergency Rescue, Crate Polish & Gatefold Stability (PR #12)
+* **What:**
+  - **Admin Emergency Rescue Key & Zero-Lockout Protocol (`src/report_v2/routes/auth.py`, `src/report_v2/services/catalog.py`):**
+    - Added admin emergency rescue endpoint (`/admin/rescue?key=...`) utilizing `ADMIN_RESCUE_KEY` secret to instantly clear assumed state and restore full administrative privileges in the event of auth loops or lockout.
+    - Implemented auto-revert interceptor on `/logout` and added a prominent ↩ Revert button on pending/locked screens.
+    - Added comprehensive unit test suite in `tests/test_admin_and_pals.py` covering rescue, impersonation, and logout flow (119/119 unit tests passing).
+  - **Gatefold Datastore & Crate Workspace Polish (`src/report_v2/routes/crate.py`, `src/report_v2/services/catalog.py`):**
+    - Resolved gatefold datastore index limit constraints and eliminated track flash during async audio preview loading.
+    - Unified crate navigation and refined UI templates (`explorer.html`, `pals.html`, `recommend.html`, `analytics.html`).
+  - **Deployment Assistant & CLI Reliability (`.gemini/agents/deploy_assistant.md`, `INFRASTRUCTURE_RUNBOOK.md`):**
+    - Enforced `CLOUDSDK_PYTHON` environment variable configuration for `gcloud run deploy` and logging commands in `deploy_assistant`.
+    - Documented emergency rescue protocol in infrastructure runbook and test runbooks.
+* **Why:**
+  - Guarantees zero-lockout administrative safety during testing and impersonation workflows while resolving gatefold datastore constraints and UI rendering polish.
+* **How:**
+  - Added rescue endpoint, logout interceptor, test suites, and documentation updates, verifying 119/119 unit tests passing on branch `fix/admin-emergency-rescue` (PR #12).
+
+---
+
+## [v2.9.0] — 2026-11-26
 ### 🔮 Natural Language "Vibe Digger" (APP-19), Gatefold Record Labels & Crate Workspace Redesign
 * **What:**
   - **Natural Language "Vibe Digger" & Semantic Crate Discovery Engine (`src/report_v2/services/vibe_search.py`):**

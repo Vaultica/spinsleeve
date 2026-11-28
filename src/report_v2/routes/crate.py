@@ -238,15 +238,6 @@ def beta_index():
             or a.get("is_mock") is True
         )
     ]
-    if not is_beta:
-        # Default route (live app root) is reserved strictly for Spotify-only experience
-        albums = [
-            a for a in albums
-            if a.get("platform") != "apple_music"
-            and not str(a.get("album_id", "")).startswith("am_")
-            and not str(a.get("album_id", "")).startswith("mock_")
-            and not a.get("is_mock")
-        ]
 
     return render_template(
         'explorer.html',
@@ -281,14 +272,6 @@ def beta_recommend():
             or a.get("is_mock") is True
         )
     ]
-    if not is_beta:
-        albums = [
-            a for a in albums
-            if a.get("platform") != "apple_music"
-            and not str(a.get("album_id", "")).startswith("am_")
-            and not str(a.get("album_id", "")).startswith("mock_")
-            and not a.get("is_mock")
-        ]
 
     return render_template(
         'explorer.html',

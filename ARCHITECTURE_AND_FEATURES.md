@@ -126,7 +126,7 @@ src/report_v2/
 * **Composite Album Key Sibling Deduplication:** Merging edition variants (*RAM* vs *RAM (Archive Collection)*) via regex normalization (`canonical_album_key`) prevents telemetry double-counting and clutter in library explorer and recommendations.
 * **Cloud Datastore Document Store Cache (`UserCatalogCache`):** Gzip-compressing cached catalog JSON payloads reduced cold load latency from ~3,800ms down to ~50ms (70x speedup) at zero additional infrastructure cost.
 * **BigQuery Partition & Cluster Guardrails:** Partitioning and clustering tenant tables by `user_id` ensures O(1) multi-tenant isolation and strict ad-hoc cost limits (`maximum_bytes_billed`).
-* **Zero-Lockout Admin Session Assumption (`/admin/assume/<id>`):** Housing impersonation strictly within the admin portal with persistent revert banners guarantees administrative security without user lockout risk.
+* **Zero-Lockout Admin Session Assumption & Emergency Rescue (`/admin/assume/<id>`, `/admin/rescue`):** Housing impersonation strictly within the admin portal with persistent revert banners guarantees administrative security without user lockout risk. Supported by an emergency rescue key (`ADMIN_RESCUE_KEY`) endpoint (`/admin/rescue?key=...`) and auto-revert interceptor on `/logout` to prevent accidental admin lockout during testing.
 
 ---
 

@@ -34,8 +34,8 @@
         <!-- Persistent Header -->
         <header class="flex flex-col lg:flex-row lg:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
             <div>
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 flex-shrink-0">
+                <a href="{{ '/beta/' if is_beta else '/' }}" class="flex items-center gap-3 group cursor-pointer inline-flex" title="Go to SpinSleeve Library">
+                    <div class="w-10 h-10 flex-shrink-0 group-hover:scale-105 transition">
                         {{ brand_icon | safe }}
                     </div>
                     <div class="flex items-center gap-2">
@@ -44,7 +44,7 @@
                         </h1>
                         <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-500/30" title="SpinSleeve {{ app_version }}">{{ app_version }}</span>
                     </div>
-                </div>
+                </a>
                 <p class="text-xs text-gray-400 mt-1">Personal albums crate &amp; gatefold archive</p>
             </div>
 
@@ -65,9 +65,6 @@
                 <a href="{{ '/beta/' if is_beta else '/' }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold {% if initial_tab != 'digger' %}text-emerald-400 bg-emerald-500/15 border border-emerald-500/30{% else %}text-gray-400 hover:text-white hover:bg-gray-800/50{% endif %} flex items-center gap-2 transition shadow-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     Library
-                </a>
-                <a href="{{ '/beta/recommend' if is_beta else '/recommend' }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold {% if initial_tab == 'digger' %}text-emerald-400 bg-emerald-500/15 border border-emerald-500/30{% else %}text-gray-400 hover:text-white hover:bg-gray-800/50{% endif %} flex items-center gap-1.5 transition shadow-sm">
-                    <span>🔮</span> Crate Digger
                 </a>
                 <a href="{{ '/beta/analytics' if is_beta else '/analytics' }}" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 transition">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -645,17 +642,10 @@
     </div>
 
     <script>
-        {% if not is_beta %}
-        const ALL_ALBUMS = ({{ albums | tojson }}).filter(a => {
-            const aid = (a.album_id || '');
-            return a.platform !== 'apple_music' && !aid.startsWith('am_') && !aid.startsWith('mock_') && !a.is_mock;
-        });
-        {% else %}
         const ALL_ALBUMS = ({{ albums | tojson }}).filter(a => {
             const aid = (a.album_id || '');
             return !aid.startsWith('am_mock_') && !aid.startsWith('mock_') && !a.is_mock;
         });
-        {% endif %}
         const UNOWNED_ALBUMS = {{ (unowned_albums or []) | tojson }};
         let filteredAlbums = [...ALL_ALBUMS];
         let filteredUnowned = [...UNOWNED_ALBUMS];
@@ -1105,10 +1095,6 @@
 
             // Sync with Crate Digger mode state
             selectedGenre = (genre === "all" ? "" : genre);
-            if (sort === "plays_30d_desc") selectedTarget = 'heavy_30d';
-            else if (sort === "plays_desc") selectedTarget = 'classics';
-            else if (sort === "plays_asc") selectedTarget = 'unplayed';
-            else selectedTarget = 'all';
 
             filteredAlbums = ALL_ALBUMS.filter(a => {
                 const aid = (a.album_id || '');
@@ -1183,6 +1169,12 @@
 
             // Immediately unhide modal so the user gets 0ms instant feedback
             document.getElementById("gatefoldModal").classList.remove("hidden");
+
+            // Immediately clear previous tracklist and show loading state to prevent flash of old tracks
+            const sidesContainer = document.getElementById("modalSidesContainer");
+            if (sidesContainer) {
+                sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic animate-pulse py-4 text-center">Loading physical vinyl tracklist...</p>';
+            }
 
             // Desktop elements
             const coverEl = document.getElementById("modalCover");
@@ -1346,7 +1338,6 @@
             document.getElementById("modalMetaInfo").innerText = `${album.release_year || 'Unknown Year'} • ${album.album_tracks_total || 0} tracks • ${album.album_track_plays || 0} total plays`;
             
             // Fetch 12" gatefold tracklisting (APP-01)
-            const sidesContainer = document.getElementById("modalSidesContainer");
             if (sidesContainer) {
                 sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic animate-pulse">Loading physical vinyl tracklist...</p>';
                 try {

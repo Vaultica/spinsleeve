@@ -31,7 +31,9 @@ You are the release guardian for **SpinSleeve** (`https://spinsleeve.cc`). Ensur
 4. **Deploy, Push & Health Verification (Post-Approval):**
    - Deploy to Cloud Run:
      ```bash
-     gcloud run deploy spotify-dashboard-beta        --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard-v2:latest        --region=europe-west2
+     CLOUDSDK_PYTHON=/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 gcloud run deploy spotify-dashboard-beta \
+       --image=europe-west2-docker.pkg.dev/secret-compass-181513/spotify-repo/spotify-dashboard-v2:latest \
+       --region=europe-west2
      ```
    - Push to GitHub:
      ```bash
@@ -42,4 +44,4 @@ You are the release guardian for **SpinSleeve** (`https://spinsleeve.cc`). Ensur
      curl -s -o /dev/null -w "%{http_code}" https://spinsleeve.cc/
      curl -s -o /dev/null -w "%{http_code}" https://spinsleeve.cc/beta/
      ```
-   - Confirm both return `200` or `302`. If either fails, immediately fetch recent Cloud Run logs (`gcloud run services logs read spotify-dashboard-beta --region=europe-west2 --limit=30`).
+   - Confirm both return `200` or `302`. If either fails, immediately fetch recent Cloud Run logs (`CLOUDSDK_PYTHON=/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 gcloud run services logs read spotify-dashboard-beta --region=europe-west2 --limit=30`).

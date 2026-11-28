@@ -34,6 +34,7 @@ def get_secret(secret_name, default=""):
 
 SPOTIPY_CLIENT_ID = get_secret("SPOTIPY_CLIENT_ID")
 SPOTIPY_CLIENT_SECRET = get_secret("SPOTIPY_CLIENT_SECRET")
+ADMIN_RESCUE_KEY = get_secret("ADMIN_RESCUE_KEY", default="spin2026")
 
 # Brand Logo: Original 33 RPM Rotating Platter + Spotify Soundwaves + Tonearm
 ICON_A_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">

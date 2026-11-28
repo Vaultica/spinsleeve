@@ -975,6 +975,12 @@
             // Immediately unhide modal so the user gets 0ms instant feedback
             document.getElementById("gatefoldModal").classList.remove("hidden");
 
+            // Immediately clear previous tracklist and show loading state to prevent flash of old tracks
+            const sidesContainer = document.getElementById("modalSidesContainer");
+            if (sidesContainer) {
+                sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic animate-pulse py-4 text-center">Loading physical vinyl tracklist...</p>';
+            }
+
             // Desktop elements
             const coverEl = document.getElementById("modalCover");
             if (coverEl) coverEl.src = album.album_image_url;
