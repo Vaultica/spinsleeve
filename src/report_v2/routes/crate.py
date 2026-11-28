@@ -185,7 +185,12 @@ def api_save_album():
 @crate_bp.route("/beta/api/crate/vibe-search")
 @login_required
 def api_vibe_search():
-    """Natural Language 'Vibe Digger' semantic search across user crate (APP-19)."""
+    """Natural Language 'Vibe Digger' semantic search across user crate (APP-19, LLM-upgraded).
+
+    Optional params: `provider` (auto|mistral|gemini|heuristic) and `mode`
+    (compiler|rerank). All orchestration, caching, and LLM fallback logic lives in
+    services/vibe_llm.py; this handler stays HTTP-only per blueprint invariants.
+    """
     user_id = session.get("user_id")
     query = request.args.get("q", "").strip()
     if not query:
@@ -194,15 +199,15 @@ def api_vibe_search():
     limit = min(safe_int(request.args.get("limit", 15), 15), 50)
     scope = request.args.get("scope", "saved")
     horizon = request.args.get("horizon", "all_time")
+    provider = request.args.get("provider", "auto")
+    mode = request.args.get("mode", "compiler")
 
-    from services.vibe_search import search_user_crate
-    results, intent = search_user_crate(user_id, query, scope=scope, horizon=horizon, top_k=limit)
-    return jsonify({
-        "query": query,
-        "detected_intent": intent,
-        "results_count": len(results),
-        "results": results
-    })
+    from services.vibe_llm import llm_vibe_search
+    payload = llm_vibe_search(
+        user_id, query, scope=scope, horizon=horizon,
+        provider=provider, mode=mode, top_k=limit
+    )
+    return jsonify(payload)
 
 
 @crate_bp.route("/")

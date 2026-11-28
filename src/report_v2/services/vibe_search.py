@@ -6,6 +6,13 @@ Provides in-memory semantic retrieval and hybrid ranking across user vinyl crate
 - Fast NumPy dot-product vector scoring against precomputed catalog embeddings.
 - Layered hybrid boosts ensuring precision ranking for authentic labels and critical masterworks.
 - Graceful lexical fallback if sentence-transformers is unavailable.
+- LLM integration surface (APP-19 LLM upgrade): public candidate-pool fetcher, query/album
+  embedding helpers, and optional precomputed-intent injection used by services/vibe_llm.py
+  (Option 1 Vibe Compiler) and Top-N reranking (Option 3). This module remains the single
+  deterministic scoring engine and the guaranteed fallback path.
+
+Key exports: search_user_crate, fetch_candidate_pool, extract_query_intent,
+normalize_query, get_query_embedding, get_album_embedding, warmup_vibe_engine.
 """
 
 import os
@@ -134,6 +141,8 @@ def extract_query_intent(query: str, catalog: Optional[List[Dict[str, Any]]] = N
         "critical_acclaim": False,
         "intensity_mode": None,
         "artist": None,
+        "moods": [],
+        "excluded_moods": [],
         "clean_vibe_query": norm_q
     }
 
@@ -240,24 +249,21 @@ def warmup_vibe_engine():
         logger.debug("Vibe engine warmup notice: %s", e)
 
 
-def search_user_crate(
-    user_id: str,
-    query: str,
-    scope: str = "saved",
-    horizon: str = "all_time",
-    top_k: int = 15
-) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+def fetch_candidate_pool(user_id: str, scope: str = "saved", horizon: str = "all_time") -> List[Dict[str, Any]]:
     """
-    Executes Model 2 Multi-Intent Hybrid Search across the user's crate.
-    Returns: (ranked_albums_list, detected_intent_dict)
+    Builds the ranked-search candidate pool for a user (APP-19 LLM upgrade surface).
+
+    Combines the user's owned library with unowned borrow candidates depending on scope
+    ("saved", "unowned", or "all"), flagging unowned records with is_unowned=True.
+    Shared by the deterministic hybrid ranker and the LLM Vibe Compiler / reranker paths
+    so both operate over one identical, cached candidate pool.
     """
     from services.catalog import fetch_user_album_data, fetch_unowned_album_data
 
     catalog_data = fetch_user_album_data(user_id) or {}
-    owned_albums = catalog_data.get("albums", [])
+    candidate_albums = list(catalog_data.get("albums", []))
 
-    candidate_albums = list(owned_albums)
-    if scope == "unowned":
+    if scope in ("unowned", "all"):
         try:
             unowned = fetch_unowned_album_data(user_id, horizon=horizon)
             if unowned:
@@ -267,12 +273,80 @@ def search_user_crate(
                     candidate_albums.append(u_copy)
         except Exception as e:
             logger.warning("Could not fetch unowned albums for vibe search: %s", e)
+    return candidate_albums
+
+
+def get_query_embedding(text: str) -> Optional[np.ndarray]:
+    """Encodes a single free-text query into a normalized MiniLM vector (None if unavailable)."""
+    _load_data_assets()
+    model = _get_transformer_model()
+    if not model or model is False or _EMBEDDINGS_MATRIX is None:
+        return None
+    try:
+        return model.encode([text], normalize_embeddings=True)[0]
+    except Exception as e:
+        logger.warning("Query embedding failed: %s", e)
+        return None
+
+
+def get_album_embedding(canon_key: str) -> Optional[np.ndarray]:
+    """Returns the precomputed catalog embedding for a canonical album key (None if missing)."""
+    _load_data_assets()
+    if _EMBEDDINGS_MATRIX is None:
+        return None
+    idx = _CATALOG_KEY_INDEX.get(str(canon_key).strip().lower())
+    if idx is None or idx < 0 or idx >= len(_EMBEDDINGS_MATRIX):
+        return None
+    return _EMBEDDINGS_MATRIX[idx]
+
+
+def _album_mood_tokens(album: Dict[str, Any]) -> List[str]:
+    """Normalizes derived_moods / descriptive_tags (list or comma string) into lowercase tokens."""
+    tokens: List[str] = []
+    for field in ("derived_moods", "descriptive_tags"):
+        raw = album.get(field)
+        if isinstance(raw, (list, tuple)):
+            tokens.extend(str(x) for x in raw)
+        elif raw:
+            tokens.extend(str(raw).split(","))
+    return [t.strip().lower() for t in tokens if t and t.strip()]
+
+
+def _mood_overlap(album_moods: List[str], intent_moods: Any) -> List[str]:
+    """Returns intent moods matched against album mood tokens via bidirectional substring containment."""
+    matched = []
+    for m in intent_moods or []:
+        m_low = str(m).strip().lower()
+        if len(m_low) >= 4 and any(m_low in t or t in m_low for t in album_moods):
+            matched.append(m_low)
+    return matched
+
+
+def search_user_crate(
+    user_id: str,
+    query: str,
+    scope: str = "saved",
+    horizon: str = "all_time",
+    top_k: int = 15,
+    candidate_pool: Optional[List[Dict[str, Any]]] = None,
+    precomputed_intent: Optional[Dict[str, Any]] = None
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Executes Model 2 Multi-Intent Hybrid Search across the user's crate.
+    Returns: (ranked_albums_list, detected_intent_dict)
+
+    Optional injection points for the LLM pipeline (services/vibe_llm.py): a pre-fetched
+    candidate_pool avoids a second catalog lookup, and a precomputed_intent (heuristic
+    intent merged with validated LLM "Vibe Compiler" output) drives the deterministic
+    scorer directly. Both parameters default to None for unchanged heuristic behavior.
+    """
+    candidate_albums = list(candidate_pool) if candidate_pool is not None else fetch_candidate_pool(user_id, scope, horizon)
 
     if not candidate_albums:
         return [], {"error": "No albums in library"}
 
     _load_data_assets()
-    intent = extract_query_intent(query, catalog=candidate_albums)
+    intent = precomputed_intent if precomputed_intent is not None else extract_query_intent(query, catalog=candidate_albums)
     vibe_query = intent["clean_vibe_query"]
 
     model = _get_transformer_model()
@@ -435,6 +509,17 @@ def search_user_crate(
         if matched_insts:
             boost += 0.08 * len(matched_insts)
             reasons.append(f"+Inst [{', '.join(matched_insts)}]")
+
+        # 9. LLM Vibe Compiler Mood Alignment (APP-19 LLM upgrade)
+        alb_moods = _album_mood_tokens(a)
+        excluded_hits = _mood_overlap(alb_moods, intent.get("excluded_moods"))
+        if excluded_hits:
+            boost -= 0.30
+            reasons.append(f"-Excluded Mood [{', '.join(excluded_hits)}]")
+        mood_hits = _mood_overlap(alb_moods, intent.get("moods"))
+        if mood_hits:
+            boost += 0.12 * min(2, len(mood_hits))
+            reasons.append(f"+Mood [{', '.join(mood_hits)}]")
 
         final_score = max(0.01, min(0.99, base_sim + boost))
         a_result = dict(a)

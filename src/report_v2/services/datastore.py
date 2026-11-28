@@ -3,7 +3,8 @@ SpinSleeve V2 Cloud Datastore Service Module (`services/datastore.py`)
 --------------------------------------------------------------------
 Manages Cloud Datastore client connections and gzipped document store caching
 for user catalogs (`UserCatalogCache`), pal compatibility (`PalCompatibilityCache`),
-and listening telemetry (`UserAnalyticsCache`).
+listening telemetry (`UserAnalyticsCache`), and normalized Vibe Digger LLM responses
+(`VibeSearchCache`, APP-19 LLM upgrade).
 """
 import time
 import json
@@ -14,6 +15,7 @@ from google.cloud import datastore
 from app_config import PROJECT_ID, logger
 
 DATASTORE_CACHE_TTL = 86400  # 24 hours
+VIBE_SEARCH_CACHE_TTL = 21600  # 6 hours (APP-19 LLM Vibe Digger responses)
 
 _user_album_cache = {}
 _user_album_cache_time = {}
@@ -33,6 +35,7 @@ def invalidate_user_catalog_cache(user_id):
             del _user_album_cache[user_id]
         if user_id in _user_album_cache_time:
             del _user_album_cache_time[user_id]
+        invalidate_vibe_search_cache(user_id)
         logger.info("[%s] Invalidated Datastore UserCatalogCache & in-memory cache.", user_id)
     except Exception as e:
         logger.warning("[%s] Failed to invalidate Datastore UserCatalogCache: %s", user_id, e)
@@ -123,6 +126,59 @@ def save_catalog_to_datastore(user_id, data):
                     user_id, entity["album_count"], entity["uncompressed_kb"], entity["compressed_kb"])
     except Exception as e:
         logger.warning("[%s] Failed to save catalog to Cloud Datastore cache: %s", user_id, e)
+
+
+def get_vibe_search_from_datastore(user_id, cache_key_name):
+    """Retrieves a cached Vibe Digger LLM response payload from Cloud Datastore (APP-19)."""
+    try:
+        ds_client = get_datastore_client()
+        key = ds_client.key("VibeSearchCache", cache_key_name)
+        entity = ds_client.get(key)
+        if not entity:
+            return None
+        updated_at = entity.get("updated_at")
+        if updated_at:
+            age = time.time() - updated_at.timestamp() if hasattr(updated_at, "timestamp") else 0
+            if age > VIBE_SEARCH_CACHE_TTL:
+                return None
+        raw_bytes = entity.get("compressed_payload")
+        if not raw_bytes:
+            return None
+        return json.loads(gzip.decompress(raw_bytes).decode("utf-8"))
+    except Exception as e:
+        logger.warning("[%s] Failed to read vibe search from Datastore cache: %s", user_id, e)
+        return None
+
+
+def save_vibe_search_to_datastore(user_id, cache_key_name, payload):
+    """Serializes, gzips, and stores a Vibe Digger LLM response in Cloud Datastore (APP-19)."""
+    try:
+        ds_client = get_datastore_client()
+        key = ds_client.key("VibeSearchCache", cache_key_name)
+        entity = datastore.Entity(key=key, exclude_from_indexes=["compressed_payload"])
+        raw_json = json.dumps(payload)
+        compressed_bytes = gzip.compress(raw_json.encode("utf-8"))
+        entity["compressed_payload"] = compressed_bytes
+        entity["updated_at"] = datetime.datetime.now(datetime.timezone.utc)
+        entity["result_count"] = len(payload.get("results", []))
+        ds_client.put(entity)
+        logger.info("[%s] Saved vibe search to Datastore cache (key=%s, %.1fKB compressed)",
+                    user_id, cache_key_name, len(compressed_bytes) / 1024.0)
+    except Exception as e:
+        logger.warning("[%s] Failed to save vibe search to Datastore cache: %s", user_id, e)
+
+
+def invalidate_vibe_search_cache(user_id):
+    """Deletes all cached Vibe Digger responses for a user when their library mutates (APP-19)."""
+    try:
+        ds_client = get_datastore_client()
+        query = ds_client.query(kind="VibeSearchCache")
+        keys_to_delete = [e.key for e in query.fetch() if e.key.name and e.key.name.startswith(f"{user_id}::")]
+        if keys_to_delete:
+            ds_client.delete_multi(keys_to_delete)
+            logger.info("[%s] Invalidated %d Datastore VibeSearchCache entities.", user_id, len(keys_to_delete))
+    except Exception as e:
+        logger.warning("[%s] Failed to invalidate VibeSearchCache: %s", user_id, e)
 
 
 def get_pal_compatibility_from_datastore(current_user_id, pal_id, horizon):
