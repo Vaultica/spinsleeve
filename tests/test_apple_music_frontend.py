@@ -210,9 +210,9 @@ class TestAppleMusicFrontendAndMockSync(unittest.TestCase):
                 self.assertNotIn("Connect Apple Music", html_root)
                 self.assertNotIn("appleMusicModal", html_root)
                 self.assertNotIn("appleMusicSyncToast", html_root)
-                # Apple Music albums and mock albums are filtered out on default root route
-                self.assertNotIn("OK Computer", html_root)
+                # Mock albums are purged, but Apple Music albums are visible in unified library across both routes
                 self.assertNotIn("Discovery Mock", html_root)
+                self.assertIn("OK Computer", html_root)
                 self.assertIn("In Rainbows", html_root)
 
     @patch("services.catalog.get_catalog_from_datastore")

@@ -28,8 +28,8 @@
         <!-- Persistent Header -->
         <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-4 border-b border-gray-800 gap-4">
             <div>
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 flex-shrink-0">
+                <a href="{{ '/beta/' if is_beta else '/' }}" class="flex items-center gap-3 group cursor-pointer inline-flex" title="Go to SpinSleeve Library">
+                    <div class="w-10 h-10 flex-shrink-0 group-hover:scale-105 transition">
                         {{ brand_icon | safe }}
                     </div>
                     <div class="flex items-center gap-2">
@@ -38,7 +38,7 @@
                         </h1>
                         <span class="bg-rose-500/20 text-rose-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-rose-500/30">SPINPALS: CRATEMATES</span>
                     </div>
-                </div>
+                </a>
                 <p class="text-xs text-gray-400 mt-1">Acoustic chemistry, taste overlap &amp; vinyl shelf borrowing</p>
             </div>
 
@@ -658,6 +658,12 @@
 
             // Immediately unhide modal so the user gets 0ms instant feedback
             document.getElementById("gatefoldModal").classList.remove("hidden");
+
+            // Immediately clear previous tracklist and show loading state to prevent flash of old tracks
+            const sidesContainer = document.getElementById("modalSidesContainer");
+            if (sidesContainer) {
+                sidesContainer.innerHTML = '<p class="text-xs text-gray-500 italic animate-pulse py-4 text-center">Loading physical vinyl tracklist...</p>';
+            }
 
             // Desktop elements
             const coverEl = document.getElementById("modalCover");

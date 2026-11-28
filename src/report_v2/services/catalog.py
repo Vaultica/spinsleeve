@@ -19,6 +19,7 @@ from services.bigquery import safe_int, safe_float, safe_str
 
 _user_album_cache = {}
 _user_album_cache_time = {}
+_album_tracks_memory_cache = {}
 CATALOG_IN_MEMORY_TTL = 300  # 5 minutes
 
 
@@ -108,9 +109,9 @@ def fetch_user_album_data(user_id, force_refresh=False):
         ds_cached = get_catalog_from_datastore(user_id)
         if ds_cached:
             cached_albums = ds_cached.get("albums", [])
-            # Schema upgrade guard: ensure cached albums have added_at populated
-            if cached_albums and ("added_at" not in cached_albums[0] or cached_albums[0].get("added_at") is None):
-                logger.info("[%s] Datastore UserCatalogCache has legacy schema (missing added_at). Refreshing from BigQuery...", user_id)
+            # Schema upgrade & empty cache guard: ensure cached albums are present and have added_at populated
+            if not cached_albums or ("added_at" not in cached_albums[0] or cached_albums[0].get("added_at") is None):
+                logger.info("[%s] Datastore UserCatalogCache has 0 albums or legacy schema. Refreshing from BigQuery...", user_id)
                 ds_cached = None
 
         if ds_cached:
@@ -578,12 +579,21 @@ def split_vinyl_sides(tracks):
 
 def fetch_album_tracks(album_id, user_id=None):
     """
-    Fetches tracklisting for an album with Cloud Datastore cache (AlbumTracksCache, 30-day TTL).
+    Fetches tracklisting for an album with in-memory cache & Cloud Datastore cache (AlbumTracksCache, 30-day TTL).
     Prioritizes logged-in user's active Spotify OAuth token, falling back to ClientCredentials.
     Returns a dict with sides breakdown: {"Side A": [...], "Side B": [...]}. (APP-01)
     """
     if not album_id:
         return {"status": "error", "message": "Missing album_id", "sides": {}}
+
+    if album_id in _album_tracks_memory_cache:
+        return {
+            "status": "success",
+            "album_id": album_id,
+            "sides": split_vinyl_sides(_album_tracks_memory_cache[album_id]),
+            "cached": True,
+            "memory_cached": True
+        }
 
     ds_client = get_datastore_client()
     if ds_client:
@@ -596,6 +606,7 @@ def fetch_album_tracks(album_id, user_id=None):
                     tracks_json = entity.get("tracks_json")
                     if tracks_json:
                         tracks = json.loads(tracks_json)
+                        _album_tracks_memory_cache[album_id] = tracks
                         return {
                             "status": "success",
                             "album_id": album_id,
@@ -651,11 +662,12 @@ def fetch_album_tracks(album_id, user_id=None):
             
         sides = split_vinyl_sides(tracks)
         
+        _album_tracks_memory_cache[album_id] = tracks
         # Save to Datastore cache
         if ds_client:
             try:
                 key = ds_client.key("AlbumTracksCache", album_id)
-                entity = datastore.Entity(key=key)
+                entity = datastore.Entity(key=key, exclude_from_indexes=["tracks_json"])
                 entity.update({
                     "album_id": album_id,
                     "tracks_json": json.dumps(tracks),
